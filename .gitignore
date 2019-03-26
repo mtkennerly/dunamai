@@ -1,0 +1,15 @@
+__pycache__/
+.cache/
+.coverage
+.env/
+.idea/
+.pytest_cache/
+.tox/
+.venv/
+.vscode/
+*.egg-info/
+/setup.py
+build/
+dist/
+htmlcov/
+pip-wheel-metadata/
