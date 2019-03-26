@@ -15,7 +15,7 @@ from dunamai import Version
 # outputs `v0.1.0rc5-44-g644252b-dirty`.
 version = Version.from_git_describe(flag_dirty=True)
 
-assert version.serialize() == "0.1.0.post44.dev0+g644252b.dirty"
+assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b.dirty"
 assert version.base == "0.1.0"
 assert version.epoch is None
 assert version.pre_type == "rc"

@@ -72,6 +72,7 @@ def test__version__from_git_describe__4_parts_with_distance_and_with_dirty(run):
     run.return_value = (0, "v0.1.0rc5-44-g644252b-dirty")
     v = Version.from_git_describe(flag_dirty=True)
     assert v.base == "0.1.0"
+    assert v.epoch is None
     assert v.pre_type == "rc"
     assert v.pre_number == 5
     assert v.post == 44
@@ -85,6 +86,7 @@ def test__version__from_git_describe__4_parts_with_distance_and_without_dirty(ru
     run.return_value = (0, "v0.1.0rc5-44-g644252b-dirty")
     v = Version.from_git_describe()
     assert v.base == "0.1.0"
+    assert v.epoch is None
     assert v.pre_type == "rc"
     assert v.pre_number == 5
     assert v.post == 44
@@ -98,6 +100,7 @@ def test__version__from_git_describe__4_parts_without_distance_or_dirty(run):
     run.return_value = (0, "v0.1.0rc5-0-g644252b-dirty")
     v = Version.from_git_describe()
     assert v.base == "0.1.0"
+    assert v.epoch is None
     assert v.pre_type == "rc"
     assert v.pre_number == 5
     assert v.post is None
