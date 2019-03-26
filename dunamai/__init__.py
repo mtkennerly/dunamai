@@ -13,7 +13,7 @@ from typing import Callable, Optional, Tuple
 
 def _run_cmd(command: str) -> Tuple[int, str]:
     result = subprocess.run(
-        "git describe --tags --long --dirty",
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
