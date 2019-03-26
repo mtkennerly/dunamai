@@ -52,10 +52,16 @@ def test__version__serialize():
     assert Version("0.1.0").serialize() == "0.1.0"
     assert Version(
         "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abcd1234", dirty=True,
-    ).serialize() == "2!1a3.post4.dev5+abcd1234.dirty"
+    ).serialize() == "2!1a3.post4.dev5"
+    assert Version(
+        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abcd1234", dirty=True,
+    ).serialize(with_metadata=True) == "2!1a3.post4.dev5+abcd1234.dirty"
     assert Version(
         "1", epoch=0, pre=("a", 0), post=0, dev=0, commit="00000000", dirty=False,
-    ).serialize() == "0!1a0.post0.dev0+00000000"
+    ).serialize() == "0!1a0.post0.dev0"
+    assert Version(
+        "1", epoch=0, pre=("a", 0), post=0, dev=0, commit="00000000", dirty=False,
+    ).serialize(with_metadata=True) == "0!1a0.post0.dev0+00000000"
     assert Version("1", pre=("b", 3)).serialize() == "1b3"
     assert Version("1", pre=("rc", 3)).serialize() == "1rc3"
 

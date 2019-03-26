@@ -76,9 +76,11 @@ class Version:
             raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
         return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(other.serialize())
 
-    def serialize(self) -> str:
+    def serialize(self, with_metadata: bool = False) -> str:
         """
         Create a string from the version info.
+
+        :param with_metadata: Add the local version metadata if any exists.
         """
         out = ""
 
@@ -94,10 +96,11 @@ class Version:
         if self.dev is not None:
             out += ".dev{}".format(self.dev)
 
-        metadata_parts = [self.commit, "dirty" if self.dirty else None]
-        metadata = ".".join(x for x in metadata_parts if x is not None)
-        if metadata:
-            out += "+{}".format(metadata)
+        if with_metadata:
+            metadata_parts = [self.commit, "dirty" if self.dirty else None]
+            metadata = ".".join(x for x in metadata_parts if x is not None)
+            if metadata:
+                out += "+{}".format(metadata)
 
         self._validate(out)
         return out
@@ -159,7 +162,8 @@ class Version:
         try:
             pre_type = pattern_match.group("pre_type")
             pre_number = pattern_match.group("pre_number")
-            pre = (pre_type, int(pre_number))
+            if pre_type is not None and pre_number is not None:
+                pre = (pre_type, int(pre_number))
         except IndexError:
             pass
 
