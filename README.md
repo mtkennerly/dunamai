@@ -37,6 +37,10 @@ for you to use and inspect as you please.
 library for dynamic versions, but there are some design decisions that
 prompted the creation of Dunamai as an alternative:
 
+* Versioneer requires a setup.py file to exist, or else `versioneer install`
+  will fail, rendering it incompatible with non-setuptools-based projects
+  such as those using Poetry or Flit. Dunamai can be used regardless of the
+  project's build system.
 * Versioneer has a CLI that generates Python code which needs to be committed
   into your repository, whereas Dunamai is just a normal importable library.
 * Versioneer produces the version as an opaque string, whereas Dunamai provides
