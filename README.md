@@ -78,7 +78,7 @@ prompted the creation of Dunamai as an alternative:
   from dunamai import Version
 
   version = Version.from_git_describe()
-  subprocess.run("poetry run version {}".format(version))
+  subprocess.run("poetry version {}".format(version))
   ```
 
   Or as an [Invoke](https://www.pyinvoke.org) task:
@@ -90,7 +90,7 @@ prompted the creation of Dunamai as an alternative:
   @task
   def set_version(ctx):
       version = Version.from_git_describe()
-      ctx.run("poetry run version {}".format(version))
+      ctx.run("poetry version {}".format(version))
   ```
 
 ## Development
