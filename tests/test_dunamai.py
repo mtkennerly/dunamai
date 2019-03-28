@@ -7,7 +7,7 @@ from dunamai import get_version, Version
 
 
 def test__version__init():
-    v = Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True, source="1a3-4-abc-dirty")
+    v = Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True)
     assert v.base == "1"
     assert v.epoch == 2
     assert v.pre_type == "a"
@@ -16,7 +16,6 @@ def test__version__init():
     assert v.dev == 5
     assert v.commit == "abc"
     assert v.dirty
-    assert v.source == "1a3-4-abc-dirty"
 
     with pytest.raises(ValueError):
         Version("1", pre=("x", 3))
@@ -31,11 +30,11 @@ def test__version__str():
 
 def test__version__repr():
     v = Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True, source="1a3",
+        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
     )
     assert repr(v) == (
         "Version(base='1', epoch=2, pre_type='a', pre_number=3,"
-        " post=4, dev=5, commit='abc', dirty=True, source='1a3')"
+        " post=4, dev=5, commit='abc', dirty=True)"
     )
 
 

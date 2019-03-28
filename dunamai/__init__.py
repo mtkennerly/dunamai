@@ -11,6 +11,8 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
+_VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>a|b|rc)(?P<pre_number>\d+))?"
+
 
 def _run_cmd(command: str) -> Tuple[int, str]:
     result = subprocess.run(
@@ -30,6 +32,28 @@ def _find_higher_dir(*names: str) -> Optional[str]:
     return None
 
 
+def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tuple[str, str]]]:
+    pattern_match = re.search(pattern, source)
+    pre = None
+
+    if pattern_match is None:
+        raise ValueError("Pattern '{}' did not match the source '{}'".format(pattern, source))
+    try:
+        base = pattern_match.group("base")
+    except IndexError:
+        raise ValueError("Pattern '{}' did not include required capture group 'base'".format(pattern))
+
+    try:
+        pre_type = pattern_match.group("pre_type")
+        pre_number = pattern_match.group("pre_number")
+        if pre_type is not None and pre_number is not None:
+            pre = (pre_type, int(pre_number))
+    except IndexError:
+        pass
+
+    return (base, pre)
+
+
 @total_ordering
 class Version:
     def __init__(
@@ -41,8 +65,7 @@ class Version:
             post: int = None,
             dev: int = None,
             commit: str = None,
-            dirty: bool = None,
-            source: str = None
+            dirty: bool = None
         ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -52,7 +75,6 @@ class Version:
         :param dev: Development release number.
         :param commit: Commit hash/identifier.
         :param dirty: True if the working directory does not match the commit.
-        :param source: Original reference string, such as from Git output.
         """
         #: Release segment.
         self.base = base
@@ -74,15 +96,13 @@ class Version:
         self.commit = commit
         #: Whether there are uncommitted changes.
         self.dirty = dirty
-        #: Original reference string, such as from Git output.
-        self.source = source
 
     def __str__(self) -> str:
         return self.serialize()
 
     def __repr__(self) -> str:
-        return "Version(base={!r}, epoch={!r}, pre_type={!r}, pre_number={!r}, post={!r}, dev={!r}, commit={!r}, dirty={!r}, source={!r})" \
-            .format(self.base, self.epoch, self.pre_type, self.pre_number, self.post, self.dev, self.commit, self.dirty, self.source)
+        return "Version(base={!r}, epoch={!r}, pre_type={!r}, pre_number={!r}, post={!r}, dev={!r}, commit={!r}, dirty={!r})" \
+            .format(self.base, self.epoch, self.pre_type, self.pre_number, self.post, self.dev, self.commit, self.dirty)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Version):
@@ -137,10 +157,7 @@ class Version:
             raise ValueError("Version '{}' does not conform to PEP 440".format(serialized))
 
     @classmethod
-    def from_git(
-            cls,
-            pattern: str = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>a|b|rc)(?P<pre_number>\d+))?",
-        ) -> "Version":
+    def from_git(cls, pattern: str = _VERSION_PATTERN) -> "Version":
         r"""
         Determine a version based on Git tags.
 
@@ -151,22 +168,14 @@ class Version:
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
         """
-        tag = None
-        distance = None
-        commit = None
-        dirty = False
-        pre = None
-        post = None
-        dev = None
-
         code, description = _run_cmd("git describe --tags --long --dirty")
         if code == 128:
             code, description = _run_cmd("git describe --always --dirty")
             if code == 128:
-                return cls("0.0.0", post=0, dev=0, commit="initial")
+                return cls("0.0.0", post=0, dev=0, dirty=True)
             elif code == 0:
                 commit, *dirty = description.split("-")
-                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=bool(dirty), source=description)
+                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=bool(dirty))
             else:
                 raise RuntimeError("Git returned code {}".format(code))
         elif code == 0:
@@ -175,42 +184,77 @@ class Version:
         else:
             raise RuntimeError("Git returned code {}".format(code))
 
-        pattern_match = re.search(pattern, tag)
-        if pattern_match is None:
-            raise ValueError("Pattern '{}' did not match the tag '{}'".format(pattern, tag))
-        try:
-            base = pattern_match.group("base")
-        except IndexError:
-            raise ValueError("Pattern '{}' did not include required capture group 'base'".format(pattern))
-        try:
-            pre_type = pattern_match.group("pre_type")
-            pre_number = pattern_match.group("pre_number")
-            if pre_type is not None and pre_number is not None:
-                pre = (pre_type, int(pre_number))
-        except IndexError:
-            pass
+        base, pre = _match_version_pattern(pattern, tag)
 
         if distance > 0:
             post = distance
             dev = 0
+        else:
+            post = None
+            dev = None
 
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty), source=description)
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty))
+
+    @classmethod
+    def from_mercurial(cls, pattern: str = _VERSION_PATTERN) -> "Version":
+        r"""
+        Determine a version based on Mercurial tags.
+
+        :param pattern: Regular expression matched against the version source.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
+            and number of prerelease. For example, with a tag like v0.1.0, the
+            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        """
+        code, msg = _run_cmd("hg summary")
+        if code == 0:
+            dirty = "commit: (clean)" not in msg.splitlines()
+        else:
+            raise RuntimeError("Mercurial returned code {}".format(code))
+
+        code, description = _run_cmd('hg id')
+        if code == 0:
+            commit = description.split()[0].strip("+")
+        else:
+            raise RuntimeError("Mercurial returned code {}".format(code))
+
+        code, description = _run_cmd('hg parent --template "{latesttag} {latesttagdistance}"')
+        if code == 0:
+            if not description or description.split()[0] == "null":
+                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            tag, distance = description.split()
+            # Distance is 1 immediately after creating tag.
+            distance = int(distance) - 1
+        else:
+            raise RuntimeError("Mercurial returned code {}".format(code))
+
+        base, pre = _match_version_pattern(pattern, tag)
+
+        if distance > 0:
+            post = distance
+            dev = 0
+        else:
+            post = None
+            dev = None
+
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
     def from_detected_vcs(cls, pattern: str = None) -> "Version":
         """
         Determine a version based on a detected version control system.
-        Right now, this only supports Git.
 
         :param pattern: Regular expression matched against the version source.
             The default value defers to the VCS-specific `from_` functions.
         """
-        vcs = _find_higher_dir(".git")
+        vcs = _find_higher_dir(".git", ".hg")
         if not vcs:
             raise RuntimeError("Unable to detect version control system.")
 
         callbacks = {
             ".git": cls.from_git,
+            ".hg": cls.from_mercurial,
         }
 
         arguments = []

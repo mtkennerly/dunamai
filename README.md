@@ -4,6 +4,13 @@
 Dunamai is a Python 3.5+ library for producing dynamic version strings
 compatible with [PEP 440](https://www.python.org/dev/peps/pep-0440).
 
+## Features
+
+* Supports non-setuptools-based projects, so no need for a setup.py.
+* Version control system support:
+  * Git
+  * Mercurial
+
 ## Usage
 
 Install with `pip install dunamai`, and then use as a library:
