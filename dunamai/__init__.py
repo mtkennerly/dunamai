@@ -8,6 +8,7 @@ import pkg_resources
 import re
 import subprocess
 from functools import total_ordering
+from pathlib import Path
 from typing import Callable, Optional, Tuple
 
 
@@ -18,6 +19,15 @@ def _run_cmd(command: str) -> Tuple[int, str]:
         stderr=subprocess.STDOUT,
     )
     return (result.returncode, result.stdout.decode().strip())
+
+
+def _find_higher_dir(*names: str) -> Optional[str]:
+    start = Path().resolve()
+    for level in [start, *start.parents]:
+        for name in names:
+            if (level / name).is_dir():
+                return name
+    return None
 
 
 @total_ordering
@@ -35,7 +45,7 @@ class Version:
             source: str = None
         ) -> None:
         """
-        :param base: Primary version part, such as 0.1.0.
+        :param base: Release segment, such as 0.1.0.
         :param epoch: Epoch number.
         :param pre: Pair of prerelease type ("a", "b", "rc") and number.
         :param post: Postrelease number.
@@ -44,19 +54,27 @@ class Version:
         :param dirty: True if the working directory does not match the commit.
         :param source: Original reference string, such as from Git output.
         """
+        #: Release segment.
         self.base = base
+        #: Epoch number.
         self.epoch = epoch
-        if pre is None:
-            self.pre_type = None
-            self.pre_number = None
-        else:
+        #: Alphabetical part of prerelease segment.
+        self.pre_type = None
+        #: Numerical part of prerelease segment.
+        self.pre_number = None
+        if pre is not None:
             self.pre_type, self.pre_number = pre
             if self.pre_type not in ["a", "b", "rc"]:
                 raise ValueError("Unknown prerelease type: {}".format(self.pre_type))
+        #: Postrelease number.
         self.post = post
+        #: Development release number.
         self.dev = dev
+        #: Commit ID.
         self.commit = commit
+        #: Whether there are uncommitted changes.
         self.dirty = dirty
+        #: Original reference string, such as from Git output.
         self.source = source
 
     def __str__(self) -> str:
@@ -76,11 +94,15 @@ class Version:
             raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
         return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(other.serialize())
 
-    def serialize(self, with_metadata: bool = False) -> str:
+    def serialize(self, with_metadata: bool = None, with_dirty: bool = False) -> str:
         """
         Create a string from the version info.
 
-        :param with_metadata: Add the local version metadata if any exists.
+        :param with_metadata: Metadata (commit, dirty) is normally included in
+            the local version part if post or dev are set. Set this to True to
+            always include metadata, or set it to False to always exclude it.
+        :param with_dirty: Set this to True to include a dirty flag in the
+            metadata if applicable. Inert when with_metadata=False.
         """
         out = ""
 
@@ -96,8 +118,12 @@ class Version:
         if self.dev is not None:
             out += ".dev{}".format(self.dev)
 
-        if with_metadata:
-            metadata_parts = [self.commit, "dirty" if self.dirty else None]
+        if with_metadata is not False:
+            metadata_parts = []
+            if with_metadata or self.post is not None or self.dev is not None:
+                metadata_parts.append(self.commit)
+            if with_dirty and self.dirty:
+                metadata_parts.append("dirty")
             metadata = ".".join(x for x in metadata_parts if x is not None)
             if metadata:
                 out += "+{}".format(metadata)
@@ -111,22 +137,19 @@ class Version:
             raise ValueError("Version '{}' does not conform to PEP 440".format(serialized))
 
     @classmethod
-    def from_git_describe(
+    def from_git(
             cls,
             pattern: str = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>a|b|rc)(?P<pre_number>\d+))?",
-            flag_dirty: bool = False
         ) -> "Version":
         r"""
-        Create a version based on the output of `git describe`.
+        Determine a version based on Git tags.
 
-        :param pattern: Regular expression to be matched against the current
-            Git tag. This should contain one capture group named `base`
-            corresponding to the version part of the version part of the tag,
-            and optionally another two groups named `pre_type` and `pre_number`
-            corresponding to the type and number of prerelease. For example,
-            with a tag like v0.1.0, the pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
-        :param flag_dirty: If true, add `dirty` to metadata if the working
-            directory has uncommitted changes.
+        :param pattern: Regular expression matched against the version source.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
+            and number of prerelease. For example, with a tag like v0.1.0, the
+            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
         """
         tag = None
         distance = None
@@ -171,9 +194,30 @@ class Version:
             post = distance
             dev = 0
 
-        dirty = bool(dirty) if flag_dirty else None
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty), source=description)
 
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty, source=description)
+    @classmethod
+    def from_detected_vcs(cls, pattern: str = None) -> "Version":
+        """
+        Determine a version based on a detected version control system.
+        Right now, this only supports Git.
+
+        :param pattern: Regular expression matched against the version source.
+            The default value defers to the VCS-specific `from_` functions.
+        """
+        vcs = _find_higher_dir(".git")
+        if not vcs:
+            raise RuntimeError("Unable to detect version control system.")
+
+        callbacks = {
+            ".git": cls.from_git,
+        }
+
+        arguments = []
+        if pattern:
+            arguments.append(pattern)
+
+        return callbacks[vcs](*arguments)
 
 
 def get_version(
@@ -214,6 +258,6 @@ def get_version(
 
 __version__ = get_version(
     "dunamai",
-    first_choice=lambda: Version.from_git_describe() if "DUNAMAI_DEV" in os.environ else None,
-    third_choice=Version.from_git_describe,
+    first_choice=lambda: Version.from_git() if "DUNAMAI_DEV" in os.environ else None,
+    third_choice=Version.from_git,
 ).serialize()

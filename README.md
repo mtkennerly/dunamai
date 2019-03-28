@@ -11,11 +11,23 @@ Install with `pip install dunamai`, and then use as a library:
 ```python
 from dunamai import Version
 
-# Assume that `git describe --tags --long --dirty`
-# outputs `v0.1.0rc5-44-g644252b-dirty`.
-version = Version.from_git_describe(flag_dirty=True)
+# If `git describe` says `v0.1.0` or `v0.1.0-0-g644252b`
+version = Version.from_git()
+assert version.serialize() == "0.1.0"
 
-assert version.serialize(with_metadata=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
+# Or if `git describe` says `v0.1.0rc5-44-g644252b-dirty`
+version = Version.from_detected_vcs()
+assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b"
+assert version.serialize(with_metadata=False) == "0.1.0rc5.post44.dev0"
+assert version.serialize(with_dirty=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
+```
+
+The `serialize()` method gives you an opinionated, PEP 440-compliant default
+that ensures that pre/post/development releases are compatible with Pip's
+`--pre` flag. The individual parts of the version are also available for you
+to use and inspect as you please:
+
+```python
 assert version.base == "0.1.0"
 assert version.epoch is None
 assert version.pre_type == "rc"
@@ -25,11 +37,6 @@ assert version.dev == 0
 assert version.commit == "g644252b"
 assert version.dirty
 ```
-
-The `serialize()` method gives you an opinionated, PEP 440-compliant default
-that ensures that prerelease/postrelease/development versions are compatible
-with Pip's `--pre` flag. The individual parts of the version are also available
-for you to use and inspect as you please.
 
 ## Comparison to Versioneer
 
@@ -56,7 +63,7 @@ prompted the creation of Dunamai as an alternative:
 
   ```python
   import dunamai as _dunamai
-  __version__ = _dunamai.get_version("your-library", third_choice=_dunamai.Version.from_git_describe).serialize()
+  __version__ = _dunamai.get_version("your-library", third_choice=_dunamai.Version.from_git).serialize()
   ```
 
 * setup.py:
@@ -67,7 +74,7 @@ prompted the creation of Dunamai as an alternative:
 
   setup(
       name="your-library",
-      version=Version.from_git_describe().serialize(),
+      version=Version.from_git().serialize(),
   )
   ```
 
@@ -77,7 +84,7 @@ prompted the creation of Dunamai as an alternative:
   import subprocess
   from dunamai import Version
 
-  version = Version.from_git_describe()
+  version = Version.from_git()
   subprocess.run("poetry version {}".format(version))
   ```
 
@@ -89,7 +96,7 @@ prompted the creation of Dunamai as an alternative:
 
   @task
   def set_version(ctx):
-      version = Version.from_git_describe()
+      version = Version.from_git()
       ctx.run("poetry version {}".format(version))
   ```
 
