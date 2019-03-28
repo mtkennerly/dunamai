@@ -14,11 +14,12 @@ from typing import Callable, Optional, Tuple
 _VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>a|b|rc)(?P<pre_number>\d+))?"
 
 
-def _run_cmd(command: str) -> Tuple[int, str]:
+def _run_cmd(command: str, where: Path = None) -> Tuple[int, str]:
     result = subprocess.run(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        cwd=str(where) if where is not None else None,
     )
     return (result.returncode, result.stdout.decode().strip())
 
@@ -216,6 +217,8 @@ class Version:
         code, description = _run_cmd('hg id')
         if code == 0:
             commit = description.split()[0].strip("+")
+            if set(commit) == {0}:
+                commit = None
         else:
             raise RuntimeError("Mercurial returned code {}".format(code))
 

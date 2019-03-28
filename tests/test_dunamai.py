@@ -1,9 +1,45 @@
+import os
 import pkg_resources
+import shutil
+import subprocess
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Callable
 from unittest import mock
 
 import pytest
 
-from dunamai import get_version, Version
+from dunamai import get_version, Version, _run_cmd
+
+
+@contextmanager
+def chdir(where: Path) -> None:
+    start = Path.cwd()
+    os.chdir(str(where))
+    try:
+        yield
+    finally:
+        os.chdir(str(start))
+
+
+def make_run_callback(where: Path) -> Callable:
+    def inner(command):
+        code, out = _run_cmd(command, where=where)
+        if code != 0:
+            raise RuntimeError("Got exit code {} from command '{}'. Output: {}".format(code, command, out))
+    return inner
+
+
+def make_from_callback(function: Callable) -> Callable:
+    def inner():
+        version = function()
+        if version.commit:
+            version.commit = "abc"
+        return version
+    return inner
+
+
+from_detected_vcs = make_from_callback(Version.from_detected_vcs)
 
 
 def test__version__init():
@@ -181,7 +217,7 @@ def test__version__from_git__fallback(run):
     assert v.base == "0.0.0"
     assert v.post == 0
     assert v.dev == 0
-    assert v.commit == "initial"
+    assert v.commit == None
 
 
 @mock.patch("dunamai._run_cmd")
@@ -235,3 +271,63 @@ def test__get_version__third_choice():
 
 def test__get_version__fallback():
     assert get_version("dunamai_nonexistent_test") == Version("0.0.0")
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git(tmp_path):
+    vcs = tmp_path / "dunamai-git"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_git)
+
+    with chdir(vcs):
+        run("git init")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
+
+        (vcs / "foo.txt").write_text("hi")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
+
+        run('git add .')
+        run('git commit -m "Initial commit"')
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+
+        run("git tag v0.1.0")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+
+        (vcs / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
+
+        run('git add .')
+        run('git commit -m "Second"')
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+        assert from_detected_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+
+
+@pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
+def test__version__from_mercurial(tmp_path):
+    vcs = tmp_path / "dunamai-hg"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_mercurial)
+
+    with chdir(vcs):
+        run("hg init")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+
+        (vcs / "foo.txt").write_text("hi")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=True)
+
+        run('hg add .')
+        run('hg commit -m "Initial commit"')
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+
+        run("hg tag v0.1.0")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+
+        (vcs / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
+
+        run('hg add .')
+        run('hg commit -m "Second"')
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+        assert from_detected_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
