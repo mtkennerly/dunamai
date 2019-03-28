@@ -312,10 +312,10 @@ def test__version__from_mercurial(tmp_path):
 
     with chdir(vcs):
         run("hg init")
-        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=False)
 
         (vcs / "foo.txt").write_text("hi")
-        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=True)
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
 
         run('hg add .')
         run('hg commit -m "Initial commit"')
@@ -331,3 +331,9 @@ def test__version__from_mercurial(tmp_path):
         run('hg commit -m "Second"')
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
         assert from_detected_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+
+
+def test__version__from_detected_vcs(tmp_path):
+    with chdir(tmp_path):
+        with pytest.raises(RuntimeError):
+            Version.from_detected_vcs()

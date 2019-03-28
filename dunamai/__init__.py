@@ -217,7 +217,7 @@ class Version:
         code, description = _run_cmd('hg id')
         if code == 0:
             commit = description.split()[0].strip("+")
-            if set(commit) == {0}:
+            if set(commit) == {"0"}:
                 commit = None
         else:
             raise RuntimeError("Mercurial returned code {}".format(code))
