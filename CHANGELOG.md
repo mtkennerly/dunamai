@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.4.0 (2019-03-29)
 
 * Added support for custom serialization formats.
 
