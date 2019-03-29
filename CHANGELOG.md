@@ -1,4 +1,8 @@
 
+## Unreleased
+
+* Added support for custom serialization formats.
+
 ## v0.3.0 (2019-03-29)
 
 * Added Mercurial support.

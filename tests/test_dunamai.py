@@ -139,6 +139,14 @@ def test__version__serialize__with_dirty():
     assert Version("0.1.0", post=1, dirty=True).serialize(with_dirty=True) == "0.1.0.post1+dirty"
 
 
+def test__version__serialize__format():
+    format = "{epoch},{base},{pre_type},{pre_number},{post},{dev},{commit},{dirty}"
+    assert Version("0.1.0").serialize(format=format) == ",0.1.0,,,,,,clean"
+    assert Version(
+        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
+    ).serialize(format=format) == "2,1,a,3,4,5,abc,dirty"
+
+
 def test__version__serialize__error_conditions():
     with pytest.raises(ValueError):
         Version("x").serialize()
@@ -296,6 +304,7 @@ def test__version__from_git(tmp_path):
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
         assert run("dunamai from git") == "0.1.0"
         assert run("dunamai from any") == "0.1.0"
+        assert run('dunamai from any --format "v{base}"') == "v0.1.0"
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)

@@ -115,7 +115,7 @@ class Version:
             raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
         return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(other.serialize())
 
-    def serialize(self, with_metadata: bool = None, with_dirty: bool = False) -> str:
+    def serialize(self, with_metadata: bool = None, with_dirty: bool = False, format: str = None) -> str:
         """
         Create a string from the version info.
 
@@ -124,7 +124,34 @@ class Version:
             always include metadata, or set it to False to always exclude it.
         :param with_dirty: Set this to True to include a dirty flag in the
             metadata if applicable. Inert when with_metadata=False.
+        :param format: Custom output format. You can use substitutions, such as
+            "v{base}" to get "v0.1.0". However, note that PEP 440 compliance
+            is not validated with custom formats. Available substitutions:
+
+            * {base}
+            * {epoch}
+            * {pre_type}
+            * {pre_number}
+            * {post}
+            * {dev}
+            * {commit}
+            * {dirty} which expands to either "dirty" or "clean"
         """
+        if format is not None:
+            def blank(value):
+                return value if value is not None else ""
+
+            return format.format(
+                base=self.base,
+                epoch=blank(self.epoch),
+                pre_type=blank(self.pre_type),
+                pre_number=blank(self.pre_number),
+                post=blank(self.post),
+                dev=blank(self.dev),
+                commit=blank(self.commit),
+                dirty="dirty" if self.dirty else "clean",
+            )
+
         out = ""
 
         if self.epoch is not None:

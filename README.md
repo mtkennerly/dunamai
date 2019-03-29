@@ -6,10 +6,12 @@ compatible with [PEP 440](https://www.python.org/dev/peps/pep-0440).
 
 ## Features
 
-* Supports non-setuptools-based projects, so no need for a setup.py.
+* Support for non-setuptools-based projects, so no need for a setup.py.
 * Version control system support:
   * Git
   * Mercurial
+* Custom output formats.
+* A CLI that allows use with non-Python projects.
 
 ## Usage
 
@@ -25,6 +27,10 @@ $ dunamai from any
 # Or use an explicit VCS:
 $ dunamai from git --no-metadata
 0.2.0.post7.dev0
+
+# Custom formats:
+$ dunamai from git --format "v{base}+{post}.{commit}"
+v0.2.0+7.g29045e8
 ```
 
 Or as a library:
