@@ -15,7 +15,7 @@ compatible with [PEP 440](https://www.python.org/dev/peps/pep-0440).
 
 Install with `pip install dunamai`, and then use as either a CLI:
 
-```bash
+```console
 $ dunamai --help
 
 # Display dynamic version from a detected version control system:
@@ -83,7 +83,7 @@ prompted the creation of Dunamai as an alternative:
 
 * Setting a `__version__` statically:
 
-  ```bash
+  ```console
   $ echo "__version__ = '$(dunamai from any)'" > your_library/_version.py
   ```
   ```python
@@ -115,7 +115,7 @@ prompted the creation of Dunamai as an alternative:
 
 * [Poetry](https://poetry.eustace.io):
 
-  ```bash
+  ```console
   $ poetry version $(dunamai from any)
   ```
 
