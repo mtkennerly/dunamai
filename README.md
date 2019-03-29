@@ -19,8 +19,6 @@ derived from tags in your version control system.
 Install with `pip install dunamai`, and then use as either a CLI:
 
 ```console
-$ dunamai --help
-
 # Display dynamic version from a detected version control system:
 $ dunamai from any
 0.2.0.post7.dev0+g29045e8
@@ -32,6 +30,9 @@ $ dunamai from git --no-metadata
 # Custom formats:
 $ dunamai from git --format "v{base}+{post}.{commit}"
 v0.2.0+7.g29045e8
+
+# More info
+$ dunamai --help
 ```
 
 Or as a library:
