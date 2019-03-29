@@ -66,14 +66,33 @@ prompted the creation of Dunamai as an alternative:
 
 ## Integration
 
-* Setting a `__version__`:
+* Setting a `__version__` statically (sample [Invoke](https://www.pyinvoke.org) task):
 
   ```python
-  import dunamai as _dunamai
-  __version__ = _dunamai.get_version("your-library", third_choice=_dunamai.Version.from_git).serialize()
+  # tasks.py
+  from invoke import task
+  from pathlib import Path
+  from dunamai import Version
+
+  @task
+  def set_version(ctx):
+      version = Version.from_detected_vcs()
+      Path("your_library/_version.py").write_text("__version__ = '{}'".format(version))
+  ```
+  ```python
+  # your_library/__init__.py
+  from your_library._version import __version__
   ```
 
-* setup.py:
+  Or dynamically (but Dunamai becomes a runtime dependency):
+
+  ```python
+  # your_library/__init__.py
+  import dunamai as _dunamai
+  __version__ = _dunamai.get_version("your-library", third_choice=_dunamai.Version.from_detected_vcs).serialize()
+  ```
+
+* setup.py (no install-time dependency on Dunamai as long as you use wheels):
 
   ```python
   from setuptools import setup
@@ -81,29 +100,22 @@ prompted the creation of Dunamai as an alternative:
 
   setup(
       name="your-library",
-      version=Version.from_git().serialize(),
+      version=Version.from_detected_vcs().serialize(),
   )
   ```
 
-* [Poetry](https://poetry.eustace.io):
+  Or you could use a static inclusion approach as in the prior example.
+
+* [Poetry](https://poetry.eustace.io) (sample [Invoke](https://www.pyinvoke.org) task):
 
   ```python
-  import subprocess
-  from dunamai import Version
-
-  version = Version.from_git()
-  subprocess.run("poetry version {}".format(version))
-  ```
-
-  Or as an [Invoke](https://www.pyinvoke.org) task:
-
-  ```python
+  # tasks.py
   from invoke import task
   from dunamai import Version
 
   @task
   def set_version(ctx):
-      version = Version.from_git()
+      version = Version.from_detected_vcs()
       ctx.run("poetry version {}".format(version))
   ```
 
