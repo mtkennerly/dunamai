@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.3.0 (2019-03-29)
 
 * Added Mercurial support.
 * Added a CLI.
