@@ -27,6 +27,7 @@ def make_run_callback(where: Path) -> Callable:
         code, out = _run_cmd(command, where=where)
         if code != 0:
             raise RuntimeError("Got exit code {} from command '{}'. Output: {}".format(code, command, out))
+        return out
     return inner
 
 
@@ -39,7 +40,7 @@ def make_from_callback(function: Callable) -> Callable:
     return inner
 
 
-from_detected_vcs = make_from_callback(Version.from_detected_vcs)
+from_any_vcs = make_from_callback(Version.from_any_vcs)
 
 
 def test__version__init():
@@ -293,6 +294,8 @@ def test__version__from_git(tmp_path):
 
         run("git tag v0.1.0")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+        assert run("dunamai from git") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
@@ -300,7 +303,7 @@ def test__version__from_git(tmp_path):
         run('git add .')
         run('git commit -m "Second"')
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
-        assert from_detected_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+        assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
 
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
@@ -323,6 +326,8 @@ def test__version__from_mercurial(tmp_path):
 
         run("hg tag v0.1.0")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+        assert run("dunamai from mercurial") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
@@ -330,10 +335,10 @@ def test__version__from_mercurial(tmp_path):
         run('hg add .')
         run('hg commit -m "Second"')
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
-        assert from_detected_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+        assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
 
 
-def test__version__from_detected_vcs(tmp_path):
+def test__version__from_any_vcs(tmp_path):
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):
-            Version.from_detected_vcs()
+            Version.from_any_vcs()

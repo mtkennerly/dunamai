@@ -244,7 +244,7 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
-    def from_detected_vcs(cls, pattern: str = None) -> "Version":
+    def from_any_vcs(cls, pattern: str = None) -> "Version":
         """
         Determine a version based on a detected version control system.
 
