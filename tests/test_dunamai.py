@@ -418,6 +418,37 @@ def test__version__from_mercurial(tmp_path):
         assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
 
 
+@pytest.mark.skipif(shutil.which("darcs") is None, reason="Requires Darcs")
+def test__version__from_darcs(tmp_path):
+    vcs = tmp_path / "dunamai-darcs"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_darcs)
+
+    with chdir(vcs):
+        run("darcs init")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=False)
+
+        (vcs / "foo.txt").write_text("hi")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
+
+        run('darcs add foo.txt')
+        run('darcs record -am "Initial commit"')
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+
+        run("darcs tag v0.1.0")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+        assert run("dunamai from darcs") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
+
+        (vcs / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
+
+        run('darcs record -am "Second"')
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+        assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+
+
 def test__version__from_any_vcs(tmp_path):
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):

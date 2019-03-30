@@ -318,6 +318,62 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
+    def from_darcs(cls, pattern: str = _VERSION_PATTERN) -> "Version":
+        r"""
+        Determine a version based on Darcs tags.
+
+        :param pattern: Regular expression matched against the version source.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
+            and number of prerelease. For example, with a tag like v0.1.0, the
+            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        """
+        code, msg = _run_cmd("darcs status")
+        if code in [0, 1]:
+            dirty = msg != "No changes!"
+        else:
+            raise RuntimeError("Darcs returned code {}".format(code))
+
+        code, description = _run_cmd('darcs log --last 1')
+        if code == 0:
+            if not description:
+                commit = None
+            else:
+                commit = description.split()[1].strip()
+        else:
+            raise RuntimeError("Darcs returned code {}".format(code))
+
+        code, description = _run_cmd('darcs show tags')
+        if code == 0:
+            if not description:
+                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            tag = description.split()[0]
+        else:
+            raise RuntimeError("Darcs returned code {}".format(code))
+
+        code, description = _run_cmd('darcs log --from-tag {}'.format(tag))
+        if code == 0:
+            # The tag itself is in the list, so offset by 1.
+            distance = -1
+            for line in description.splitlines():
+                if line.startswith("patch "):
+                    distance += 1
+        else:
+            raise RuntimeError("Darcs returned code {}".format(code))
+
+        base, pre = _match_version_pattern(pattern, tag)
+
+        if distance > 0:
+            post = distance
+            dev = 0
+        else:
+            post = None
+            dev = None
+
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+
+    @classmethod
     def from_any_vcs(cls, pattern: str = None) -> "Version":
         """
         Determine a version based on a detected version control system.
@@ -325,13 +381,14 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             The default value defers to the VCS-specific `from_` functions.
         """
-        vcs = _find_higher_dir(".git", ".hg")
+        vcs = _find_higher_dir(".git", ".hg", "_darcs")
         if not vcs:
             raise RuntimeError("Unable to detect version control system.")
 
         callbacks = {
             ".git": cls.from_git,
             ".hg": cls.from_mercurial,
+            "_darcs": cls.from_darcs,
         }
 
         arguments = []

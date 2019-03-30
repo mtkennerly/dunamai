@@ -10,6 +10,7 @@ def test__parse_args__from():
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "mercurial"]).vcs == "mercurial"
+    assert parse_args(["from", "darcs"]).vcs == "darcs"
     assert parse_args(["from", "any", "--pattern", r"\d+"]).pattern == r"\d+"
     assert parse_args(["from", "any", "--metadata"]).metadata is True
     assert parse_args(["from", "any", "--no-metadata"]).metadata is False

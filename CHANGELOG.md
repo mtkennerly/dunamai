@@ -3,6 +3,7 @@
 
 * Added built-in Semantic Versioning output style in addition to PEP 440.
 * Added style validation for custom output formats.
+* Added Darcs support.
 
 ## v0.4.0 (2019-03-29)
 

@@ -10,6 +10,7 @@ control system.
 * Version control system support:
   * Git
   * Mercurial
+  * Darcs
 * Version styles:
   * [PEP 440](https://www.python.org/dev/peps/pep-0440)
   * [Semantic Versioning](https://semver.org)

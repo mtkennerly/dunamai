@@ -11,6 +11,7 @@ class Vcs(Enum):
     Any = "any"
     Git = "git"
     Mercurial = "mercurial"
+    Darcs = "darcs"
 
 
 class Style(Enum):
@@ -85,6 +86,7 @@ def from_vcs(
         Vcs.Any: Version.from_any_vcs,
         Vcs.Git: Version.from_git,
         Vcs.Mercurial: Version.from_mercurial,
+        Vcs.Darcs: Version.from_darcs,
     }
 
     arguments = []
