@@ -1,4 +1,9 @@
 
+## Unreleased
+
+* Added built-in Semantic Versioning output style in addition to PEP 440.
+* Added style validation for custom output formats.
+
 ## v0.4.0 (2019-03-29)
 
 * Added support for custom serialization formats.

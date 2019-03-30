@@ -1,5 +1,6 @@
 
 import argparse
+import sys
 from enum import Enum
 from typing import Optional
 
@@ -12,6 +13,11 @@ class Vcs(Enum):
     Mercurial = "mercurial"
 
 
+class Style(Enum):
+    Pep440 = "pep440"
+    SemVer = "semver"
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate dynamic versions",
@@ -19,7 +25,11 @@ def parse_args(argv=None) -> argparse.Namespace:
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    from_sp = subparsers.add_parser("from", help="Generate version from VCS")
+    from_sp = subparsers.add_parser(
+        "from",
+        help="Generate version from VCS",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     from_sp.add_argument(
         "vcs", choices=[x.value for x in Vcs],
         help="Version control system to interrogate for version info",
@@ -50,6 +60,15 @@ def parse_args(argv=None) -> argparse.Namespace:
             " {base}, {epoch}, {pre_type}, {pre_number}, {post}, {dev}, {commit}, {dirty}"
         )
     )
+    from_sp.add_argument(
+        "--style", choices=[x.value for x in Style],
+        help=(
+            "Preconfigured output format."
+            " Will default to PEP 440 if not set and no custom format given."
+            " If you specify both a style and a custom format, then the format"
+            " will be validated against the style's rules"
+        )
+    )
 
     return parser.parse_args(argv)
 
@@ -60,6 +79,7 @@ def from_vcs(
         with_metadata: Optional[bool],
         with_dirty: bool,
         format: Optional[str],
+        style: Optional[str],
     ) -> None:
     callbacks = {
         Vcs.Any: Version.from_any_vcs,
@@ -72,10 +92,14 @@ def from_vcs(
         arguments.append(pattern)
 
     version = callbacks[vcs](*arguments)
-    print(version.serialize(with_metadata, with_dirty, format))
+    print(version.serialize(with_metadata, with_dirty, format, style))
 
 
 def main() -> None:
     args = parse_args()
-    if args.command == "from":
-        from_vcs(Vcs(args.vcs), args.pattern, args.metadata, args.dirty, args.format)
+    try:
+        if args.command == "from":
+            from_vcs(Vcs(args.vcs), args.pattern, args.metadata, args.dirty, args.format, args.style)
+    except Exception as e:
+        print(e)
+        sys.exit(1)

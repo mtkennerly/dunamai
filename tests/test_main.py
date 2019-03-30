@@ -6,30 +6,14 @@ from dunamai.__main__ import parse_args
 
 def test__parse_args__from():
     assert parse_args(["from", "any"]) == Namespace(
-        command="from", vcs="any", pattern=None, dirty=False, metadata=None, format=None,
+        command="from", vcs="any", pattern=None, dirty=False, metadata=None, format=None, style=None,
     )
-    assert parse_args(["from", "git"]) == Namespace(
-        command="from", vcs="git", pattern=None, dirty=False, metadata=None, format=None,
-    )
-    assert parse_args(["from", "mercurial"]) == Namespace(
-        command="from", vcs="mercurial", pattern=None, dirty=False, metadata=None, format=None,
-    )
-
-    assert parse_args(["from", "any", "--pattern", r"\d+"]) == Namespace(
-        command="from", vcs="any", pattern=r"\d+", dirty=False, metadata=None, format=None,
-    )
-
-    assert parse_args(["from", "any", "--metadata"]) == Namespace(
-        command="from", vcs="any", pattern=None, dirty=False, metadata=True, format=None,
-    )
-    assert parse_args(["from", "any", "--no-metadata"]) == Namespace(
-        command="from", vcs="any", pattern=None, dirty=False, metadata=False, format=None,
-    )
-
-    assert parse_args(["from", "any", "--dirty"]) == Namespace(
-        command="from", vcs="any", pattern=None, dirty=True, metadata=None, format=None,
-    )
-
-    assert parse_args(["from", "any", "--format", "v{base}"]) == Namespace(
-        command="from", vcs="any", pattern=None, dirty=False, metadata=None, format="v{base}",
-    )
+    assert parse_args(["from", "git"]).vcs == "git"
+    assert parse_args(["from", "mercurial"]).vcs == "mercurial"
+    assert parse_args(["from", "any", "--pattern", r"\d+"]).pattern == r"\d+"
+    assert parse_args(["from", "any", "--metadata"]).metadata is True
+    assert parse_args(["from", "any", "--no-metadata"]).metadata is False
+    assert parse_args(["from", "any", "--dirty"]).dirty is True
+    assert parse_args(["from", "any", "--format", "v{base}"]).format == "v{base}"
+    assert parse_args(["from", "any", "--style", "pep440"]).style == "pep440"
+    assert parse_args(["from", "any", "--style", "semver"]).style == "semver"

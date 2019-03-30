@@ -11,7 +11,10 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
-_VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>a|b|rc)(?P<pre_number>\d+))?"
+_VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>[a-zA-Z]+)(?P<pre_number>\d+))?"
+# PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
+_VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
+_VALID_SEMVER = r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
 
 
 def _run_cmd(command: str, where: Path = None) -> Tuple[int, str]:
@@ -71,7 +74,7 @@ class Version:
         """
         :param base: Release segment, such as 0.1.0.
         :param epoch: Epoch number.
-        :param pre: Pair of prerelease type ("a", "b", "rc") and number.
+        :param pre: Pair of prerelease type (e.g., "a", "alpha", "b", "rc") and number.
         :param post: Postrelease number.
         :param dev: Development release number.
         :param commit: Commit hash/identifier.
@@ -87,8 +90,6 @@ class Version:
         self.pre_number = None
         if pre is not None:
             self.pre_type, self.pre_number = pre
-            if self.pre_type not in ["a", "b", "rc"]:
-                raise ValueError("Unknown prerelease type: {}".format(self.pre_type))
         #: Postrelease number.
         self.post = post
         #: Development release number.
@@ -115,7 +116,13 @@ class Version:
             raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
         return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(other.serialize())
 
-    def serialize(self, with_metadata: bool = None, with_dirty: bool = False, format: str = None) -> str:
+    def serialize(
+        self,
+        with_metadata: bool = None,
+        with_dirty: bool = False,
+        format: str = None,
+        style: str = None,
+    ) -> str:
         """
         Create a string from the version info.
 
@@ -136,12 +143,16 @@ class Version:
             * {dev}
             * {commit}
             * {dirty} which expands to either "dirty" or "clean"
+        :param style: Built-in output formats. Options: "pep440", "semver".
+            Will default to PEP 440 if not set and no custom format given.
+            If you specify both a style and a custom format, then the format
+            will be validated against the style's rules.
         """
         if format is not None:
             def blank(value):
                 return value if value is not None else ""
 
-            return format.format(
+            out = format.format(
                 base=self.base,
                 epoch=blank(self.epoch),
                 pre_type=blank(self.pre_type),
@@ -151,38 +162,74 @@ class Version:
                 commit=blank(self.commit),
                 dirty="dirty" if self.dirty else "clean",
             )
+            if style is not None:
+                self._validate(out, style)
+            return out
 
+        if style is None:
+            style = "pep440"
         out = ""
 
-        if self.epoch is not None:
-            out += "{}!".format(self.epoch)
+        if style == "pep440":
+            if self.epoch is not None:
+                out += "{}!".format(self.epoch)
 
-        out += self.base
+            out += self.base
 
-        if self.pre_type is not None and self.pre_number is not None:
-            out += "{}{}".format(self.pre_type, self.pre_number)
-        if self.post is not None:
-            out += ".post{}".format(self.post)
-        if self.dev is not None:
-            out += ".dev{}".format(self.dev)
+            if self.pre_type is not None and self.pre_number is not None:
+                out += "{}{}".format(self.pre_type, self.pre_number)
+            if self.post is not None:
+                out += ".post{}".format(self.post)
+            if self.dev is not None:
+                out += ".dev{}".format(self.dev)
 
-        if with_metadata is not False:
-            metadata_parts = []
-            if with_metadata or self.post is not None or self.dev is not None:
-                metadata_parts.append(self.commit)
-            if with_dirty and self.dirty:
-                metadata_parts.append("dirty")
-            metadata = ".".join(x for x in metadata_parts if x is not None)
-            if metadata:
-                out += "+{}".format(metadata)
+            if with_metadata is not False:
+                metadata_parts = []
+                if with_metadata or self.post is not None or self.dev is not None:
+                    metadata_parts.append(self.commit)
+                if with_dirty and self.dirty:
+                    metadata_parts.append("dirty")
+                metadata = ".".join(x for x in metadata_parts if x is not None)
+                if metadata:
+                    out += "+{}".format(metadata)
+        elif style == "semver":
+            out += self.base
 
-        self._validate(out)
+            pre_parts = []
+            if self.epoch is not None:
+                pre_parts.append(("epoch", self.epoch))
+            if None not in [self.pre_type, self.pre_number]:
+                pre_parts.append((self.pre_type, self.pre_number))
+            if self.post is not None:
+                pre_parts.append(("post", self.post))
+            if self.dev is not None:
+                pre_parts.append(("dev", self.dev))
+            if pre_parts:
+                out += "-{}".format(".".join("{}.{}".format(k, v) for k, v in pre_parts))
+
+            if with_metadata is not False:
+                metadata_parts = []
+                if with_metadata or self.post is not None or self.dev is not None:
+                    metadata_parts.append(self.commit)
+                if with_dirty and self.dirty:
+                    metadata_parts.append("dirty")
+                metadata = ".".join(x for x in metadata_parts if x is not None)
+                if metadata:
+                    out += "+{}".format(metadata)
+        else:
+            raise ValueError("Unknown style '{}'".format(style))
+
+        self._validate(out, style)
         return out
 
-    def _validate(self, serialized: str) -> None:
-        # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
-        if not re.match(r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$", serialized):
-            raise ValueError("Version '{}' does not conform to PEP 440".format(serialized))
+    def _validate(self, serialized: str, style: str) -> None:
+        groups = {
+            "pep440": ("PEP 440", _VALID_PEP440),
+            "semver": ("Semantic Versioning", _VALID_SEMVER),
+        }
+        name, pattern = groups[style]
+        if not re.search(pattern, serialized):
+            raise ValueError("Version '{}' does not conform to the {} style".format(serialized, name))
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN) -> "Version":

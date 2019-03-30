@@ -1,18 +1,21 @@
 
 # Dunamai
 
-Dunamai is a Python 3.5+ library for producing dynamic version strings
-compatible with [PEP 440](https://www.python.org/dev/peps/pep-0440),
-derived from tags in your version control system.
+Dunamai is a Python 3.5+ library and CLI for producing dynamic,
+standards-compliant version strings, derived from tags in your version
+control system.
 
 ## Features
 
-* Support for non-setuptools-based projects, so no need for a setup.py.
 * Version control system support:
   * Git
   * Mercurial
-* Custom output formats.
-* A CLI that allows use with non-Python projects.
+* Version styles:
+  * [PEP 440](https://www.python.org/dev/peps/pep-0440)
+  * [Semantic Versioning](https://semver.org)
+  * Custom output formats
+* Can be used for projects written in any programming language.
+  For Python, this means you do not need a setup.py.
 
 ## Usage
 
@@ -23,13 +26,17 @@ Install with `pip install dunamai`, and then use as either a CLI:
 $ dunamai from any
 0.2.0.post7.dev0+g29045e8
 
-# Or use an explicit VCS:
-$ dunamai from git --no-metadata
-0.2.0.post7.dev0
+# Or use an explicit VCS and style:
+$ dunamai from git --no-metadata --style semver
+0.2.0-post.7.dev.0
 
 # Custom formats:
-$ dunamai from git --format "v{base}+{post}.{commit}"
+$ dunamai from any --format "v{base}+{post}.{commit}"
 v0.2.0+7.g29045e8
+
+# Validation of custom formats:
+$ dunamai from any --format "v{base}" --style pep440
+Version 'v0.2.0' does not conform to the PEP 440 style
 
 # More info
 $ dunamai --help
@@ -49,6 +56,7 @@ version = Version.from_any_vcs()
 assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b"
 assert version.serialize(with_metadata=False) == "0.1.0rc5.post44.dev0"
 assert version.serialize(with_dirty=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
+assert version.serialize(style="semver") == "0.1.0-rc.5.post.44.dev.0+g644252b"
 ```
 
 The `serialize()` method gives you an opinionated, PEP 440-compliant default
