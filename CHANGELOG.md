@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.5.0 (2019-03-31)
 
 * Added built-in Semantic Versioning output style in addition to PEP 440.
 * Added style validation for custom output formats.
