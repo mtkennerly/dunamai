@@ -1,9 +1,11 @@
 
 # Dunamai
 
-Dunamai is a Python 3.5+ library and CLI for producing dynamic,
+Dunamai is a Python 3.5+ library and command line tool for producing dynamic,
 standards-compliant version strings, derived from tags in your version
-control system.
+control system. This facilitates uniquely identifying nightly or per-commit
+builds in continuous integration and releasing new versions of your software
+simply by creating a tag.
 
 ## Features
 
