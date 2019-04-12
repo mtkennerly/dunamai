@@ -1,10 +1,9 @@
 import os
 import pkg_resources
 import shutil
-import subprocess
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 from unittest import mock
 
 import pytest
@@ -13,7 +12,7 @@ from dunamai import get_version, Version, _run_cmd
 
 
 @contextmanager
-def chdir(where: Path) -> None:
+def chdir(where: Path) -> Iterator[None]:
     start = Path.cwd()
     os.chdir(str(where))
     try:
@@ -26,8 +25,11 @@ def make_run_callback(where: Path) -> Callable:
     def inner(command, expected_code=0):
         code, out = _run_cmd(command, where=where)
         if code != expected_code:
-            raise RuntimeError("Got exit code {} from command '{}'. Output: {}".format(code, command, out))
+            raise RuntimeError(
+                "Got exit code {} from command '{}'. Output: {}".format(code, command, out)
+            )
         return out
+
     return inner
 
 
@@ -37,6 +39,7 @@ def make_from_callback(function: Callable) -> Callable:
         if version.commit:
             version.commit = "abc"
         return version
+
     return inner
 
 
@@ -56,16 +59,12 @@ def test__version__init():
 
 
 def test__version__str():
-    v = Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    )
+    v = Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True)
     assert str(v) == v.serialize()
 
 
 def test__version__repr():
-    v = Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    )
+    v = Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True)
     assert repr(v) == (
         "Version(base='1', epoch=2, pre_type='a', pre_number=3,"
         " post=4, dev=5, commit='abc', dirty=True)"
@@ -84,22 +83,33 @@ def test__version__ordering():
 def test__version__serialize__pep440():
     assert Version("0.1.0").serialize() == "0.1.0"
 
-    assert Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize() == "2!1a3.post4.dev5+abc"
-    assert Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(with_dirty=True) == "2!1a3.post4.dev5+abc.dirty"
-    assert Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(with_metadata=False) == "2!1a3.post4.dev5"
-    assert Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(with_metadata=False, with_dirty=True) == "2!1a3.post4.dev5"
+    assert (
+        Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True).serialize()
+        == "2!1a3.post4.dev5+abc"
+    )
+    assert (
+        Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True).serialize(
+            with_dirty=True
+        )
+        == "2!1a3.post4.dev5+abc.dirty"
+    )
+    assert (
+        Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True).serialize(
+            with_metadata=False
+        )
+        == "2!1a3.post4.dev5"
+    )
+    assert (
+        Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True).serialize(
+            with_metadata=False, with_dirty=True
+        )
+        == "2!1a3.post4.dev5"
+    )
 
-    assert Version(
-        "1", epoch=0, pre=("a", 0), post=0, dev=0, commit="000", dirty=False,
-    ).serialize() == "0!1a0.post0.dev0+000"
+    assert (
+        Version("1", epoch=0, pre=("a", 0), post=0, dev=0, commit="000", dirty=False).serialize()
+        == "0!1a0.post0.dev0+000"
+    )
 
     assert Version("1", pre=("b", 3)).serialize() == "1b3"
     assert Version("1", pre=("rc", 3)).serialize() == "1rc3"
@@ -108,22 +118,37 @@ def test__version__serialize__pep440():
 def test__version__serialize__semver():
     assert Version("0.1.0").serialize(style="semver") == "0.1.0"
 
-    assert Version(
-        "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(style="semver") == "0.1.0-epoch.2.alpha.3.post.4.dev.5+abc"
-    assert Version(
-        "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(with_dirty=True, style="semver") == "0.1.0-epoch.2.alpha.3.post.4.dev.5+abc.dirty"
-    assert Version(
-        "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(with_metadata=False, style="semver") == "0.1.0-epoch.2.alpha.3.post.4.dev.5"
-    assert Version(
-        "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(with_metadata=False, with_dirty=True, style="semver") == "0.1.0-epoch.2.alpha.3.post.4.dev.5"
+    assert (
+        Version(
+            "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True
+        ).serialize(style="semver")
+        == "0.1.0-epoch.2.alpha.3.post.4.dev.5+abc"
+    )
+    assert (
+        Version(
+            "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True
+        ).serialize(with_dirty=True, style="semver")
+        == "0.1.0-epoch.2.alpha.3.post.4.dev.5+abc.dirty"
+    )
+    assert (
+        Version(
+            "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True
+        ).serialize(with_metadata=False, style="semver")
+        == "0.1.0-epoch.2.alpha.3.post.4.dev.5"
+    )
+    assert (
+        Version(
+            "0.1.0", epoch=2, pre=("alpha", 3), post=4, dev=5, commit="abc", dirty=True
+        ).serialize(with_metadata=False, with_dirty=True, style="semver")
+        == "0.1.0-epoch.2.alpha.3.post.4.dev.5"
+    )
 
-    assert Version(
-        "0.1.0", epoch=0, pre=("alpha", 0), post=0, dev=0, commit="000", dirty=False,
-    ).serialize(style="semver") == "0.1.0-epoch.0.alpha.0.post.0.dev.0+000"
+    assert (
+        Version(
+            "0.1.0", epoch=0, pre=("alpha", 0), post=0, dev=0, commit="000", dirty=False
+        ).serialize(style="semver")
+        == "0.1.0-epoch.0.alpha.0.post.0.dev.0+000"
+    )
 
     assert Version("0.1.0", pre=("beta", 3)).serialize(style="semver") == "0.1.0-beta.3"
     assert Version("0.1.0", pre=("rc", 3)).serialize(style="semver") == "0.1.0-rc.3"
@@ -135,7 +160,9 @@ def test__version__serialize__pep440_with_metadata():
     assert Version("0.1.0").serialize(with_metadata=False) == "0.1.0"
 
     assert Version("0.1.0", pre=("a", 1), commit="abc").serialize() == "0.1.0a1"
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=True) == "0.1.0a1+abc"
+    assert (
+        Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=True) == "0.1.0a1+abc"
+    )
     assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=False) == "0.1.0a1"
 
     assert Version("0.1.0", post=1, commit="abc").serialize() == "0.1.0.post1+abc"
@@ -153,16 +180,34 @@ def test__version__serialize__semver_with_metadata():
     assert Version("0.1.0").serialize(with_metadata=False, style="semver") == "0.1.0"
 
     assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(style="semver") == "0.1.0-a.1"
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=True, style="semver") == "0.1.0-a.1+abc"
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=False, style="semver") == "0.1.0-a.1"
+    assert (
+        Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=True, style="semver")
+        == "0.1.0-a.1+abc"
+    )
+    assert (
+        Version("0.1.0", pre=("a", 1), commit="abc").serialize(with_metadata=False, style="semver")
+        == "0.1.0-a.1"
+    )
 
     assert Version("0.1.0", post=1, commit="abc").serialize(style="semver") == "0.1.0-post.1+abc"
-    assert Version("0.1.0", post=1, commit="abc").serialize(with_metadata=True, style="semver") == "0.1.0-post.1+abc"
-    assert Version("0.1.0", post=1, commit="abc").serialize(with_metadata=False, style="semver") == "0.1.0-post.1"
+    assert (
+        Version("0.1.0", post=1, commit="abc").serialize(with_metadata=True, style="semver")
+        == "0.1.0-post.1+abc"
+    )
+    assert (
+        Version("0.1.0", post=1, commit="abc").serialize(with_metadata=False, style="semver")
+        == "0.1.0-post.1"
+    )
 
     assert Version("0.1.0", dev=1, commit="abc").serialize(style="semver") == "0.1.0-dev.1+abc"
-    assert Version("0.1.0", dev=1, commit="abc").serialize(with_metadata=True, style="semver") == "0.1.0-dev.1+abc"
-    assert Version("0.1.0", dev=1, commit="abc").serialize(with_metadata=False, style="semver") == "0.1.0-dev.1"
+    assert (
+        Version("0.1.0", dev=1, commit="abc").serialize(with_metadata=True, style="semver")
+        == "0.1.0-dev.1+abc"
+    )
+    assert (
+        Version("0.1.0", dev=1, commit="abc").serialize(with_metadata=False, style="semver")
+        == "0.1.0-dev.1"
+    )
 
 
 def test__version__serialize__pep440_with_dirty():
@@ -173,7 +218,9 @@ def test__version__serialize__pep440_with_dirty():
     assert Version("0.1.0", dirty=False).serialize(with_dirty=True) == "0.1.0"
 
     assert Version("0.1.0", dirty=True).serialize(with_metadata=True) == "0.1.0"
-    assert Version("0.1.0", dirty=True).serialize(with_metadata=True, with_dirty=True) == "0.1.0+dirty"
+    assert (
+        Version("0.1.0", dirty=True).serialize(with_metadata=True, with_dirty=True) == "0.1.0+dirty"
+    )
 
     assert Version("0.1.0", dirty=True).serialize(with_metadata=False) == "0.1.0"
     assert Version("0.1.0", dirty=True).serialize(with_metadata=False, with_dirty=True) == "0.1.0"
@@ -187,18 +234,27 @@ def test__version__serialize__semver_with_dirty():
     assert Version("0.1.0", dirty=False).serialize(with_dirty=True, style="semver") == "0.1.0"
 
     assert Version("0.1.0", dirty=True).serialize(with_metadata=True, style="semver") == "0.1.0"
-    assert Version("0.1.0", dirty=True).serialize(with_metadata=True, with_dirty=True, style="semver") == "0.1.0+dirty"
+    assert (
+        Version("0.1.0", dirty=True).serialize(with_metadata=True, with_dirty=True, style="semver")
+        == "0.1.0+dirty"
+    )
 
     assert Version("0.1.0", dirty=True).serialize(with_metadata=False, style="semver") == "0.1.0"
-    assert Version("0.1.0", dirty=True).serialize(with_metadata=False, with_dirty=True, style="semver") == "0.1.0"
+    assert (
+        Version("0.1.0", dirty=True).serialize(with_metadata=False, with_dirty=True, style="semver")
+        == "0.1.0"
+    )
 
 
 def test__version__serialize__format():
     format = "{epoch},{base},{pre_type},{pre_number},{post},{dev},{commit},{dirty}"
     assert Version("0.1.0").serialize(format=format) == ",0.1.0,,,,,,clean"
-    assert Version(
-        "1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True,
-    ).serialize(format=format) == "2,1,a,3,4,5,abc,dirty"
+    assert (
+        Version("1", epoch=2, pre=("a", 3), post=4, dev=5, commit="abc", dirty=True).serialize(
+            format=format
+        )
+        == "2,1,a,3,4,5,abc,dirty"
+    )
 
     assert Version("0.1.0").serialize(format="{base}", style="pep440") == "0.1.0"
     with pytest.raises(ValueError):
@@ -291,7 +347,7 @@ def test__version__from_git__fallback(run):
     assert v.base == "0.0.0"
     assert v.post == 0
     assert v.dev == 0
-    assert v.commit == None
+    assert v.commit is None
 
 
 @mock.patch("dunamai._run_cmd")
@@ -340,7 +396,9 @@ def test__get_version__first_choice():
 
 
 def test__get_version__third_choice():
-    assert get_version("dunamai_nonexistent_test", third_choice=lambda: Version("3")) == Version("3")
+    assert get_version("dunamai_nonexistent_test", third_choice=lambda: Version("3")) == Version(
+        "3"
+    )
 
 
 def test__get_version__fallback():
@@ -361,7 +419,7 @@ def test__version__from_git(tmp_path):
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
 
-        run('git add .')
+        run("git add .")
         run('git commit -m "Initial commit"')
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
 
@@ -374,13 +432,15 @@ def test__version__from_git(tmp_path):
         assert run(r'dunamai from any --pattern "(?P<base>\d\.\d\.\d)"') == "0.1.0"
         assert run('dunamai from any --format "v{base}"') == "v0.1.0"
         assert run('dunamai from any --style "semver"') == "0.1.0"
-        assert run('dunamai from any --format "v{base}" --style "semver"', 1) \
+        assert (
+            run('dunamai from any --format "v{base}" --style "semver"', 1)
             == "Version 'v0.1.0' does not conform to the Semantic Versioning style"
+        )
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
 
-        run('git add .')
+        run("git add .")
         run('git commit -m "Second"')
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
         assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
@@ -400,7 +460,7 @@ def test__version__from_mercurial(tmp_path):
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
 
-        run('hg add .')
+        run("hg add .")
         run('hg commit -m "Initial commit"')
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
 
@@ -412,7 +472,7 @@ def test__version__from_mercurial(tmp_path):
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
 
-        run('hg add .')
+        run("hg add .")
         run('hg commit -m "Second"')
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
         assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
@@ -432,7 +492,7 @@ def test__version__from_darcs(tmp_path):
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
 
-        run('darcs add foo.txt')
+        run("darcs add foo.txt")
         run('darcs record -am "Initial commit"')
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
 

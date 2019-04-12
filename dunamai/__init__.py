@@ -1,7 +1,4 @@
-__all__ = [
-    "get_version",
-    "Version",
-]
+__all__ = ["get_version", "Version"]
 
 import os
 import pkg_resources
@@ -14,7 +11,9 @@ from typing import Callable, Optional, Tuple
 _VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>[a-zA-Z]+)(?P<pre_number>\d+))?"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
 _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
-_VALID_SEMVER = r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
+_VALID_SEMVER = (
+    r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
+)
 
 
 def _run_cmd(command: str, where: Path = None) -> Tuple[int, str]:
@@ -36,7 +35,7 @@ def _find_higher_dir(*names: str) -> Optional[str]:
     return None
 
 
-def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tuple[str, str]]]:
+def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tuple[str, int]]]:
     pattern_match = re.search(pattern, source)
     pre = None
 
@@ -45,7 +44,9 @@ def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tup
     try:
         base = pattern_match.group("base")
     except IndexError:
-        raise ValueError("Pattern '{}' did not include required capture group 'base'".format(pattern))
+        raise ValueError(
+            "Pattern '{}' did not include required capture group 'base'".format(pattern)
+        )
 
     try:
         pre_type = pattern_match.group("pre_type")
@@ -61,16 +62,16 @@ def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tup
 @total_ordering
 class Version:
     def __init__(
-            self,
-            base: str,
-            *,
-            epoch: int = None,
-            pre: Tuple[str, int] = None,
-            post: int = None,
-            dev: int = None,
-            commit: str = None,
-            dirty: bool = None
-        ) -> None:
+        self,
+        base: str,
+        *,
+        epoch: int = None,
+        pre: Tuple[str, int] = None,
+        post: int = None,
+        dev: int = None,
+        commit: str = None,
+        dirty: bool = None
+    ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
         :param epoch: Epoch number.
@@ -103,18 +104,37 @@ class Version:
         return self.serialize()
 
     def __repr__(self) -> str:
-        return "Version(base={!r}, epoch={!r}, pre_type={!r}, pre_number={!r}, post={!r}, dev={!r}, commit={!r}, dirty={!r})" \
-            .format(self.base, self.epoch, self.pre_type, self.pre_number, self.post, self.dev, self.commit, self.dirty)
+        return (
+            "Version(base={!r}, epoch={!r}, pre_type={!r}, pre_number={!r},"
+            " post={!r}, dev={!r}, commit={!r}, dirty={!r})"
+        ).format(
+            self.base,
+            self.epoch,
+            self.pre_type,
+            self.pre_number,
+            self.post,
+            self.dev,
+            self.commit,
+            self.dirty,
+        )
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Version):
-            raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
-        return pkg_resources.parse_version(self.serialize()) == pkg_resources.parse_version(other.serialize())
+            raise TypeError(
+                "Cannot compare Version with type {}".format(other.__class__.__qualname__)
+            )
+        return pkg_resources.parse_version(self.serialize()) == pkg_resources.parse_version(
+            other.serialize()
+        )
 
     def __lt__(self, other) -> bool:
         if not isinstance(other, Version):
-            raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
-        return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(other.serialize())
+            raise TypeError(
+                "Cannot compare Version with type {}".format(other.__class__.__qualname__)
+            )
+        return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(
+            other.serialize()
+        )
 
     def serialize(
         self,
@@ -149,6 +169,7 @@ class Version:
             will be validated against the style's rules.
         """
         if format is not None:
+
             def blank(value):
                 return value if value is not None else ""
 
@@ -198,7 +219,7 @@ class Version:
             pre_parts = []
             if self.epoch is not None:
                 pre_parts.append(("epoch", self.epoch))
-            if None not in [self.pre_type, self.pre_number]:
+            if self.pre_type is not None and self.pre_number is not None:
                 pre_parts.append((self.pre_type, self.pre_number))
             if self.post is not None:
                 pre_parts.append(("post", self.post))
@@ -229,7 +250,9 @@ class Version:
         }
         name, pattern = groups[style]
         if not re.search(pattern, serialized):
-            raise ValueError("Version '{}' does not conform to the {} style".format(serialized, name))
+            raise ValueError(
+                "Version '{}' does not conform to the {} style".format(serialized, name)
+            )
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN) -> "Version":
@@ -254,19 +277,18 @@ class Version:
             else:
                 raise RuntimeError("Git returned code {}".format(code))
         elif code == 0:
-            tag, distance, commit, *dirty = description.split("-")
-            distance = int(distance)
+            tag, raw_distance, commit, *dirty = description.split("-")
+            distance = int(raw_distance)
         else:
             raise RuntimeError("Git returned code {}".format(code))
 
         base, pre = _match_version_pattern(pattern, tag)
 
+        post = None
+        dev = None
         if distance > 0:
             post = distance
             dev = 0
-        else:
-            post = None
-            dev = None
 
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty))
 
@@ -288,10 +310,10 @@ class Version:
         else:
             raise RuntimeError("Mercurial returned code {}".format(code))
 
-        code, description = _run_cmd('hg id')
+        code, description = _run_cmd("hg id")
         if code == 0:
-            commit = description.split()[0].strip("+")
-            if set(commit) == {"0"}:
+            commit = description.split()[0].strip("+")  # type: Optional[str]
+            if commit and set(commit) == {"0"}:
                 commit = None
         else:
             raise RuntimeError("Mercurial returned code {}".format(code))
@@ -300,20 +322,19 @@ class Version:
         if code == 0:
             if not description or description.split()[0] == "null":
                 return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-            tag, distance = description.split()
+            tag, raw_distance = description.split()
             # Distance is 1 immediately after creating tag.
-            distance = int(distance) - 1
+            distance = int(raw_distance) - 1
         else:
             raise RuntimeError("Mercurial returned code {}".format(code))
 
         base, pre = _match_version_pattern(pattern, tag)
 
+        post = None
+        dev = None
         if distance > 0:
             post = distance
             dev = 0
-        else:
-            post = None
-            dev = None
 
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
@@ -335,7 +356,7 @@ class Version:
         else:
             raise RuntimeError("Darcs returned code {}".format(code))
 
-        code, description = _run_cmd('darcs log --last 1')
+        code, description = _run_cmd("darcs log --last 1")
         if code == 0:
             if not description:
                 commit = None
@@ -344,7 +365,7 @@ class Version:
         else:
             raise RuntimeError("Darcs returned code {}".format(code))
 
-        code, description = _run_cmd('darcs show tags')
+        code, description = _run_cmd("darcs show tags")
         if code == 0:
             if not description:
                 return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
@@ -352,7 +373,7 @@ class Version:
         else:
             raise RuntimeError("Darcs returned code {}".format(code))
 
-        code, description = _run_cmd('darcs log --from-tag {}'.format(tag))
+        code, description = _run_cmd("darcs log --from-tag {}".format(tag))
         if code == 0:
             # The tag itself is in the list, so offset by 1.
             distance = -1
@@ -364,12 +385,11 @@ class Version:
 
         base, pre = _match_version_pattern(pattern, tag)
 
+        post = None
+        dev = None
         if distance > 0:
             post = distance
             dev = 0
-        else:
-            post = None
-            dev = None
 
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
@@ -385,11 +405,7 @@ class Version:
         if not vcs:
             raise RuntimeError("Unable to detect version control system.")
 
-        callbacks = {
-            ".git": cls.from_git,
-            ".hg": cls.from_mercurial,
-            "_darcs": cls.from_darcs,
-        }
+        callbacks = {".git": cls.from_git, ".hg": cls.from_mercurial, "_darcs": cls.from_darcs}
 
         arguments = []
         if pattern:

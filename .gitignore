@@ -3,10 +3,10 @@ __pycache__/
 .coverage
 .env/
 .idea/
+.mypy_cache/
 .pytest_cache/
 .tox/
 .venv/
-.vscode/
 *.egg-info/
 /setup.py
 build/

@@ -1,9 +1,20 @@
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  sha: cb2bc2edc3923e4e3d1b399c705ccd6aa449ddaa
+  rev: v2.1.0
   hooks:
     - id: trailing-whitespace
     - id: end-of-file-fixer
+    - id: flake8
 - repo: https://github.com/Lucas-C/pre-commit-hooks
-  sha: v1.1.6
+  rev: v1.1.6
   hooks:
     - id: forbid-tabs
+- repo: https://github.com/ambv/black
+  rev: stable
+  hooks:
+    - id: black
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: "v0.700"
+  hooks:
+    - id: mypy
+      args:
+        - --ignore-missing-imports

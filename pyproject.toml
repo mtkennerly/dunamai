@@ -24,9 +24,16 @@ pytest = "^3.0"
 pre-commit = "^1.14"
 pytest-cov = "^2.6"
 tox = "^3.7"
+black = { version = "^18.3-alpha.0", allows-prereleases = true, python = "^3.6" }
+flake8 = "^3.7"
+mypy = "^0.700.0"
+tox-venv = "^0.4.0"
 
 [tool.poetry.scripts]
 dunamai = 'dunamai.__main__:main'
+
+[tool.black]
+line-length = 100
 
 [build-system]
 requires = ["poetry>=0.12"]

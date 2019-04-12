@@ -1,4 +1,3 @@
-
 from argparse import Namespace
 
 from dunamai.__main__ import parse_args
@@ -6,7 +5,7 @@ from dunamai.__main__ import parse_args
 
 def test__parse_args__from():
     assert parse_args(["from", "any"]) == Namespace(
-        command="from", vcs="any", pattern=None, dirty=False, metadata=None, format=None, style=None,
+        command="from", vcs="any", pattern=None, dirty=False, metadata=None, format=None, style=None
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "mercurial"]).vcs == "mercurial"
