@@ -3,7 +3,7 @@ import sys
 from enum import Enum
 from typing import Optional
 
-from dunamai import Version
+from dunamai import Version, Style
 
 
 class Vcs(Enum):
@@ -11,11 +11,6 @@ class Vcs(Enum):
     Git = "git"
     Mercurial = "mercurial"
     Darcs = "darcs"
-
-
-class Style(Enum):
-    Pep440 = "pep440"
-    SemVer = "semver"
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -95,12 +90,16 @@ def from_vcs(
         Vcs.Darcs: Version.from_darcs,
     }
 
+    style_type = None
+    if style is not None:
+        style_type = Style(style)
+
     arguments = []
     if pattern:
         arguments.append(pattern)
 
     version = callbacks[vcs](*arguments)
-    print(version.serialize(with_metadata, with_dirty, format, style))
+    print(version.serialize(with_metadata, with_dirty, format, style_type))
 
 
 def main() -> None:

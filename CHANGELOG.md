@@ -1,4 +1,10 @@
 
+## Unreleased
+
+* Added support for the PVP style.
+* Changed the type of the `style` argument in `Version.serialize`
+  from `str` to `Style`.
+
 ## v0.5.0 (2019-03-31)
 
 * Added built-in Semantic Versioning output style in addition to PEP 440.

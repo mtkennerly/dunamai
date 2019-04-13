@@ -1,9 +1,10 @@
-__all__ = ["get_version", "Version"]
+__all__ = ["get_version", "Style", "Version"]
 
 import os
 import pkg_resources
 import re
 import subprocess
+from enum import Enum
 from functools import total_ordering
 from pathlib import Path
 from typing import Callable, Optional, Tuple
@@ -14,6 +15,7 @@ _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?
 _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
 )
+_VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
 
 
 def _run_cmd(command: str, where: Path = None) -> Tuple[int, str]:
@@ -57,6 +59,12 @@ def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tup
         pass
 
     return (base, pre)
+
+
+class Style(Enum):
+    Pep440 = "pep440"
+    SemVer = "semver"
+    Pvp = "pvp"
 
 
 @total_ordering
@@ -141,7 +149,7 @@ class Version:
         with_metadata: bool = None,
         with_dirty: bool = False,
         format: str = None,
-        style: str = None,
+        style: Style = None,
     ) -> str:
         """
         Create a string from the version info.
@@ -163,10 +171,10 @@ class Version:
             * {dev}
             * {commit}
             * {dirty} which expands to either "dirty" or "clean"
-        :param style: Built-in output formats. Options: "pep440", "semver".
-            Will default to PEP 440 if not set and no custom format given.
-            If you specify both a style and a custom format, then the format
-            will be validated against the style's rules.
+        :param style: Built-in output formats. Will default to PEP 440 if not
+            set and no custom format given. If you specify both a style and a
+            custom format, then the format will be validated against the
+            style's rules.
         """
         if format is not None:
 
@@ -188,10 +196,10 @@ class Version:
             return out
 
         if style is None:
-            style = "pep440"
+            style = Style.Pep440
         out = ""
 
-        if style == "pep440":
+        if style == Style.Pep440:
             if self.epoch is not None:
                 out += "{}!".format(self.epoch)
 
@@ -213,7 +221,7 @@ class Version:
                 metadata = ".".join(x for x in metadata_parts if x is not None)
                 if metadata:
                     out += "+{}".format(metadata)
-        elif style == "semver":
+        elif style == Style.SemVer:
             out += self.base
 
             pre_parts = []
@@ -237,16 +245,41 @@ class Version:
                 metadata = ".".join(x for x in metadata_parts if x is not None)
                 if metadata:
                     out += "+{}".format(metadata)
-        else:
-            raise ValueError("Unknown style '{}'".format(style))
+        elif style == Style.Pvp:
+            out += self.base
+
+            pre_parts = []
+            if self.epoch is not None:
+                pre_parts.append(("epoch", self.epoch))
+            if self.pre_type is not None and self.pre_number is not None:
+                pre_parts.append((self.pre_type, self.pre_number))
+            if self.post is not None:
+                pre_parts.append(("post", self.post))
+            if self.dev is not None:
+                pre_parts.append(("dev", self.dev))
+            if pre_parts:
+                out += "-{}".format("-".join("{}-{}".format(k, v) for k, v in pre_parts))
+
+            if with_metadata is not False:
+                metadata_parts = []
+                if with_metadata or self.post is not None or self.dev is not None:
+                    metadata_parts.append(self.commit)
+                if with_dirty and self.dirty:
+                    metadata_parts.append("dirty")
+                metadata = "-".join(x for x in metadata_parts if x is not None)
+                if metadata:
+                    out += "-{}".format(metadata)
 
         self._validate(out, style)
         return out
 
-    def _validate(self, serialized: str, style: str) -> None:
+    def _validate(self, serialized: str, style: Style) -> None:
+        if style is None:
+            return
         groups = {
-            "pep440": ("PEP 440", _VALID_PEP440),
-            "semver": ("Semantic Versioning", _VALID_SEMVER),
+            Style.Pep440: ("PEP 440", _VALID_PEP440),
+            Style.SemVer: ("Semantic Versioning", _VALID_SEMVER),
+            Style.Pvp: ("PVP", _VALID_PVP),
         }
         name, pattern = groups[style]
         if not re.search(pattern, serialized):

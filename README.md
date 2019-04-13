@@ -16,6 +16,7 @@ simply by creating a tag.
 * Version styles:
   * [PEP 440](https://www.python.org/dev/peps/pep-0440)
   * [Semantic Versioning](https://semver.org)
+  * [Haskell Package Versioning Policy](https://pvp.haskell.org)
   * Custom output formats
 * Can be used for projects written in any programming language.
   For Python, this means you do not need a setup.py.
@@ -48,7 +49,7 @@ $ dunamai --help
 Or as a library:
 
 ```python
-from dunamai import Version
+from dunamai import Version, Style
 
 # If `git describe` says `v0.1.0` or `v0.1.0-0-g644252b`
 version = Version.from_git()
@@ -59,7 +60,7 @@ version = Version.from_any_vcs()
 assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b"
 assert version.serialize(with_metadata=False) == "0.1.0rc5.post44.dev0"
 assert version.serialize(with_dirty=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
-assert version.serialize(style="semver") == "0.1.0-rc.5.post.44.dev.0+g644252b"
+assert version.serialize(style=Style.SemVer) == "0.1.0-rc.5.post.44.dev.0+g644252b"
 ```
 
 The `serialize()` method gives you an opinionated, PEP 440-compliant default
