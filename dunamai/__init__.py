@@ -414,6 +414,7 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param tag_dir: Location of tags relative to the root.
         """
         tag_dir = tag_dir.strip("/")
 

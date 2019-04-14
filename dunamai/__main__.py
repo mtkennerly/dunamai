@@ -3,7 +3,7 @@ import sys
 from enum import Enum
 from typing import Mapping, Optional
 
-from dunamai import Version, Style
+from dunamai import Version, Style, _VERSION_PATTERN
 
 
 class Vcs(Enum):
@@ -37,9 +37,13 @@ common_sub_args = [
     },
     {
         "triggers": ["--pattern"],
+        "default": _VERSION_PATTERN,
         "help": (
-            "Regular expression matched against the version source;"
-            " see Version.from_*() docs for more info"
+            "Regular expression matched against the version source."
+            " This should contain one capture group named `base` corresponding to"
+            " the release segment of the source, and optionally another two groups"
+            " named `pre_type` and `pre_number` corresponding to the type (a, b, rc)"
+            " and number of prerelease."
         ),
     },
     {
