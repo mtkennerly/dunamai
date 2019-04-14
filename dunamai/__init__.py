@@ -284,10 +284,13 @@ class Version:
             Style.Pvp: ("PVP", _VALID_PVP),
         }
         name, pattern = groups[style]
+        failure_message = "Version '{}' does not conform to the {} style".format(serialized, name)
         if not re.search(pattern, serialized):
-            raise ValueError(
-                "Version '{}' does not conform to the {} style".format(serialized, name)
-            )
+            raise ValueError(failure_message)
+        if style == Style.SemVer:
+            parts = re.split(r"[.-]", serialized.split("+", 1)[0])
+            if any(re.search(r"^0[0-9]+$", x) for x in parts):
+                raise ValueError(failure_message)
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN) -> "Version":

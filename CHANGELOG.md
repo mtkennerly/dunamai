@@ -1,4 +1,9 @@
 
+## Unreleased
+
+* Added enforcement of Semantic Versioning rule against numeric segments
+  with a leading zero.
+
 ## v0.6.0 (2019-04-14)
 
 * Added Subversion support.

@@ -362,6 +362,10 @@ def test__version__serialize__format():
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format="v{base}", style=Style.SemVer)
 
+    # "-" is a valid identifier.
+    Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0--")
+    Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0--.-")
+
 
 def test__version__serialize__error_conditions():
     with pytest.raises(ValueError):
@@ -370,6 +374,24 @@ def test__version__serialize__error_conditions():
         v = Version("1", pre=("a", 3))
         v.pre_type = "x"
         v.serialize()
+
+    # No leading zeroes in numeric segments:
+    with pytest.raises(ValueError):
+        Version("00.0.0").serialize(style=Style.SemVer)
+    with pytest.raises(ValueError):
+        Version("0.1.0").serialize(style=Style.SemVer, format="0.01.0")
+    with pytest.raises(ValueError):
+        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-alpha.02")
+    # But leading zeroes are fine for non-numeric parts:
+    Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-alpha.02a")
+
+    # Identifiers can't be empty:
+    with pytest.raises(ValueError):
+        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-.")
+    with pytest.raises(ValueError):
+        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-a.")
+    with pytest.raises(ValueError):
+        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-.a")
 
 
 @mock.patch("dunamai._run_cmd")
