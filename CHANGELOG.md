@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.6.0 (2019-04-14)
 
 * Added Subversion support.
 * Added support for the PVP style.
