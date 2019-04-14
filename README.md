@@ -59,8 +59,8 @@ assert version.serialize() == "0.1.0"
 # Or if `git describe` says `v0.1.0rc5-44-g644252b-dirty`
 version = Version.from_any_vcs()
 assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b"
-assert version.serialize(with_metadata=False) == "0.1.0rc5.post44.dev0"
-assert version.serialize(with_dirty=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
+assert version.serialize(metadata=False) == "0.1.0rc5.post44.dev0"
+assert version.serialize(dirty=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
 assert version.serialize(style=Style.SemVer) == "0.1.0-rc.5.post.44.dev.0+g644252b"
 ```
 

@@ -3,6 +3,8 @@
 
 * Added enforcement of Semantic Versioning rule against numeric segments
   with a leading zero.
+* Renamed the `with_metadata` and `with_dirty` arguments of `Version.serialize`
+  to `metadata` and `dirty` respectively.
 
 ## v0.6.0 (2019-04-14)
 

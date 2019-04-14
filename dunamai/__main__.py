@@ -136,16 +136,12 @@ def parse_args(argv=None) -> argparse.Namespace:
 def from_vcs(
     vcs: Vcs,
     pattern: Optional[str],
-    with_metadata: Optional[bool],
-    with_dirty: bool,
+    metadata: Optional[bool],
+    dirty: bool,
     format: Optional[str],
-    style: Optional[str],
+    style: Optional[Style],
     tag_dir: Optional[str],
 ) -> None:
-    style_type = None
-    if style is not None:
-        style_type = Style(style)
-
     kwargs = {}
     if pattern:
         kwargs["pattern"] = pattern
@@ -163,7 +159,7 @@ def from_vcs(
     elif vcs == Vcs.Subversion:
         version = Version.from_subversion(**kwargs)
 
-    print(version.serialize(with_metadata, with_dirty, format, style_type))
+    print(version.serialize(metadata, dirty, format, style))
 
 
 def main() -> None:
@@ -177,7 +173,7 @@ def main() -> None:
                 args.metadata,
                 args.dirty,
                 args.format,
-                args.style,
+                Style(args.style) if args.style else None,
                 tag_dir,
             )
     except Exception as e:

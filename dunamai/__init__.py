@@ -147,20 +147,16 @@ class Version:
         )
 
     def serialize(
-        self,
-        with_metadata: bool = None,
-        with_dirty: bool = False,
-        format: str = None,
-        style: Style = None,
+        self, metadata: bool = None, dirty: bool = False, format: str = None, style: Style = None
     ) -> str:
         """
         Create a string from the version info.
 
-        :param with_metadata: Metadata (commit, dirty) is normally included in
+        :param metadata: Metadata (commit, dirty) is normally included in
             the local version part if post or dev are set. Set this to True to
             always include metadata, or set it to False to always exclude it.
-        :param with_dirty: Set this to True to include a dirty flag in the
-            metadata if applicable. Inert when with_metadata=False.
+        :param dirty: Set this to True to include a dirty flag in the
+            metadata if applicable. Inert when metadata=False.
         :param format: Custom output format. You can use substitutions, such as
             "v{base}" to get "v0.1.0". However, note that PEP 440 compliance
             is not validated with custom formats. Available substitutions:
@@ -214,15 +210,15 @@ class Version:
             if self.dev is not None:
                 out += ".dev{}".format(self.dev)
 
-            if with_metadata is not False:
+            if metadata is not False:
                 metadata_parts = []
-                if with_metadata or self.post is not None or self.dev is not None:
+                if metadata or self.post is not None or self.dev is not None:
                     metadata_parts.append(self.commit)
-                if with_dirty and self.dirty:
+                if dirty and self.dirty:
                     metadata_parts.append("dirty")
-                metadata = ".".join(x for x in metadata_parts if x is not None)
-                if metadata:
-                    out += "+{}".format(metadata)
+                metadata_segment = ".".join(x for x in metadata_parts if x is not None)
+                if metadata_segment:
+                    out += "+{}".format(metadata_segment)
         elif style == Style.SemVer:
             out += self.base
 
@@ -238,15 +234,15 @@ class Version:
             if pre_parts:
                 out += "-{}".format(".".join("{}.{}".format(k, v) for k, v in pre_parts))
 
-            if with_metadata is not False:
+            if metadata is not False:
                 metadata_parts = []
-                if with_metadata or self.post is not None or self.dev is not None:
+                if metadata or self.post is not None or self.dev is not None:
                     metadata_parts.append(self.commit)
-                if with_dirty and self.dirty:
+                if dirty and self.dirty:
                     metadata_parts.append("dirty")
-                metadata = ".".join(x for x in metadata_parts if x is not None)
-                if metadata:
-                    out += "+{}".format(metadata)
+                metadata_segment = ".".join(x for x in metadata_parts if x is not None)
+                if metadata_segment:
+                    out += "+{}".format(metadata_segment)
         elif style == Style.Pvp:
             out += self.base
 
@@ -262,15 +258,15 @@ class Version:
             if pre_parts:
                 out += "-{}".format("-".join("{}-{}".format(k, v) for k, v in pre_parts))
 
-            if with_metadata is not False:
+            if metadata is not False:
                 metadata_parts = []
-                if with_metadata or self.post is not None or self.dev is not None:
+                if metadata or self.post is not None or self.dev is not None:
                     metadata_parts.append(self.commit)
-                if with_dirty and self.dirty:
+                if dirty and self.dirty:
                     metadata_parts.append("dirty")
-                metadata = "-".join(x for x in metadata_parts if x is not None)
-                if metadata:
-                    out += "-{}".format(metadata)
+                metadata_segment = "-".join(x for x in metadata_parts if x is not None)
+                if metadata_segment:
+                    out += "-{}".format(metadata_segment)
 
         self._validate(out, style)
         return out
