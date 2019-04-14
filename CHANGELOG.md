@@ -1,6 +1,7 @@
 
 ## Unreleased
 
+* Added Subversion support.
 * Added support for the PVP style.
 * Changed the type of the `style` argument in `Version.serialize`
   from `str` to `Style`.

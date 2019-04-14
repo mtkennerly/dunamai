@@ -7,7 +7,7 @@ import subprocess
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 _VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>[a-zA-Z]+)(?P<pre_number>\d+))?"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
@@ -18,13 +18,15 @@ _VALID_SEMVER = (
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
 
 
-def _run_cmd(command: str, where: Path = None) -> Tuple[int, str]:
+def _run_cmd(command: str, codes: Sequence[int] = (0,), where: Path = None) -> Tuple[int, str]:
     result = subprocess.run(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=str(where) if where is not None else None,
     )
+    if codes and result.returncode not in codes:
+        raise RuntimeError("The command '{}' returned code {}".format(command, result.returncode))
     return (result.returncode, result.stdout.decode().strip())
 
 
@@ -299,21 +301,17 @@ class Version:
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
         """
-        code, description = _run_cmd("git describe --tags --long --dirty")
+        code, msg = _run_cmd("git describe --tags --long --dirty", codes=[0, 128])
         if code == 128:
-            code, description = _run_cmd("git describe --always --dirty")
+            code, msg = _run_cmd("git describe --always --dirty", codes=[0, 128])
             if code == 128:
                 return cls("0.0.0", post=0, dev=0, dirty=True)
-            elif code == 0:
-                commit, *dirty = description.split("-")
-                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=bool(dirty))
             else:
-                raise RuntimeError("Git returned code {}".format(code))
-        elif code == 0:
-            tag, raw_distance, commit, *dirty = description.split("-")
-            distance = int(raw_distance)
+                commit, *dirty = msg.split("-")
+                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=bool(dirty))
         else:
-            raise RuntimeError("Git returned code {}".format(code))
+            tag, raw_distance, commit, *dirty = msg.split("-")
+            distance = int(raw_distance)
 
         base, pre = _match_version_pattern(pattern, tag)
 
@@ -338,28 +336,19 @@ class Version:
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
         """
         code, msg = _run_cmd("hg summary")
-        if code == 0:
-            dirty = "commit: (clean)" not in msg.splitlines()
-        else:
-            raise RuntimeError("Mercurial returned code {}".format(code))
+        dirty = "commit: (clean)" not in msg.splitlines()
 
-        code, description = _run_cmd("hg id")
-        if code == 0:
-            commit = description.split()[0].strip("+")  # type: Optional[str]
-            if commit and set(commit) == {"0"}:
-                commit = None
-        else:
-            raise RuntimeError("Mercurial returned code {}".format(code))
+        code, msg = _run_cmd("hg id")
+        commit = msg.split()[0].strip("+")  # type: Optional[str]
+        if commit and set(commit) == {"0"}:
+            commit = None
 
-        code, description = _run_cmd('hg parent --template "{latesttag} {latesttagdistance}"')
-        if code == 0:
-            if not description or description.split()[0] == "null":
-                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-            tag, raw_distance = description.split()
-            # Distance is 1 immediately after creating tag.
-            distance = int(raw_distance) - 1
-        else:
-            raise RuntimeError("Mercurial returned code {}".format(code))
+        code, msg = _run_cmd('hg parent --template "{latesttag} {latesttagdistance}"')
+        if not msg or msg.split()[0] == "null":
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+        tag, raw_distance = msg.split()
+        # Distance is 1 immediately after creating tag.
+        distance = int(raw_distance) - 1
 
         base, pre = _match_version_pattern(pattern, tag)
 
@@ -383,38 +372,82 @@ class Version:
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
         """
-        code, msg = _run_cmd("darcs status")
-        if code in [0, 1]:
-            dirty = msg != "No changes!"
-        else:
-            raise RuntimeError("Darcs returned code {}".format(code))
+        code, msg = _run_cmd("darcs status", codes=[0, 1])
+        dirty = msg != "No changes!"
 
-        code, description = _run_cmd("darcs log --last 1")
-        if code == 0:
-            if not description:
-                commit = None
-            else:
-                commit = description.split()[1].strip()
+        code, msg = _run_cmd("darcs log --last 1")
+        if not msg:
+            commit = None
         else:
-            raise RuntimeError("Darcs returned code {}".format(code))
+            commit = msg.split()[1].strip()
 
-        code, description = _run_cmd("darcs show tags")
-        if code == 0:
-            if not description:
-                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-            tag = description.split()[0]
-        else:
-            raise RuntimeError("Darcs returned code {}".format(code))
+        code, msg = _run_cmd("darcs show tags")
+        if not msg:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+        tag = msg.split()[0]
 
-        code, description = _run_cmd("darcs log --from-tag {}".format(tag))
-        if code == 0:
-            # The tag itself is in the list, so offset by 1.
-            distance = -1
-            for line in description.splitlines():
-                if line.startswith("patch "):
-                    distance += 1
+        code, msg = _run_cmd("darcs log --from-tag {}".format(tag))
+        # The tag itself is in the list, so offset by 1.
+        distance = -1
+        for line in msg.splitlines():
+            if line.startswith("patch "):
+                distance += 1
+
+        base, pre = _match_version_pattern(pattern, tag)
+
+        post = None
+        dev = None
+        if distance > 0:
+            post = distance
+            dev = 0
+
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+
+    @classmethod
+    def from_subversion(cls, pattern: str = _VERSION_PATTERN, tag_dir: str = "tags") -> "Version":
+        r"""
+        Determine a version based on Subversion tags.
+
+        :param pattern: Regular expression matched against the version source.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
+            and number of prerelease. For example, with a tag like v0.1.0, the
+            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        """
+        tag_dir = tag_dir.strip("/")
+
+        code, msg = _run_cmd("svn status")
+        dirty = bool(msg)
+
+        code, msg = _run_cmd("svn info --show-item url")
+        url = msg.strip("/")
+
+        code, msg = _run_cmd("svn info --show-item last-changed-revision")
+        if not msg or msg == "0":
+            commit = None
         else:
-            raise RuntimeError("Darcs returned code {}".format(code))
+            commit = msg
+
+        if not commit:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+        code, msg = _run_cmd('svn ls -v "{}/{}"'.format(url, tag_dir))
+        lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
+        tags_revs = [(line[-1].strip("/"), int(line[0])) for line in lines]
+        if not tags_revs:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+        tags_revs_sources = []
+        for tag, rev in tags_revs:
+            code, msg = _run_cmd('svn log "{}/{}/{}" -v --stop-on-copy'.format(url, tag_dir, tag))
+            for line in msg.splitlines():
+                match = re.search(r"A /{}/{} \(from .+?:(\d+)\)".format(tag_dir, tag), line)
+                if match:
+                    source = int(match.group(1))
+                    tags_revs_sources.append((tag, rev, source))
+        tag, rev, source = sorted(tags_revs_sources, key=lambda info: (info[2], info[1]))[-1]
+
+        # The tag itself is in the list, so offset by 1.
+        distance = int(commit) - 1 - source
 
         base, pre = _match_version_pattern(pattern, tag)
 
@@ -434,17 +467,22 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             The default value defers to the VCS-specific `from_` functions.
         """
-        vcs = _find_higher_dir(".git", ".hg", "_darcs")
-        if not vcs:
-            raise RuntimeError("Unable to detect version control system.")
-
-        callbacks = {".git": cls.from_git, ".hg": cls.from_mercurial, "_darcs": cls.from_darcs}
+        vcs = _find_higher_dir(".git", ".hg", "_darcs", ".svn")
 
         arguments = []
         if pattern:
             arguments.append(pattern)
 
-        return callbacks[vcs](*arguments)
+        if vcs == ".git":
+            return cls.from_git(*arguments)
+        elif vcs == ".hg":
+            return cls.from_mercurial(*arguments)
+        elif vcs == "_darcs":
+            return cls.from_darcs(*arguments)
+        elif vcs == ".svn":
+            return cls.from_subversion(*arguments)
+        else:
+            raise RuntimeError("Unable to detect version control system.")
 
 
 def get_version(

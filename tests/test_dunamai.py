@@ -3,7 +3,7 @@ import pkg_resources
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Optional
 from unittest import mock
 
 import pytest
@@ -23,27 +23,24 @@ def chdir(where: Path) -> Iterator[None]:
 
 def make_run_callback(where: Path) -> Callable:
     def inner(command, expected_code=0):
-        code, out = _run_cmd(command, where=where)
-        if code != expected_code:
-            raise RuntimeError(
-                "Got exit code {} from command '{}'. Output: {}".format(code, command, out)
-            )
+        _, out = _run_cmd(command, where=where, codes=[expected_code])
         return out
 
     return inner
 
 
-def make_from_callback(function: Callable) -> Callable:
+def make_from_callback(function: Callable, mock_commit: Optional[str] = "abc") -> Callable:
     def inner():
         version = function()
-        if version.commit:
-            version.commit = "abc"
+        if version.commit and mock_commit:
+            version.commit = mock_commit
         return version
 
     return inner
 
 
 from_any_vcs = make_from_callback(Version.from_any_vcs)
+from_any_vcs_unmocked = make_from_callback(Version.from_any_vcs, mock_commit=None)
 
 
 def test__version__init():
@@ -449,20 +446,6 @@ def test__version__from_git__fallback(run):
 
 
 @mock.patch("dunamai._run_cmd")
-def test__version__from_git__first_git_error(run):
-    with pytest.raises(RuntimeError):
-        run.return_value = (1, "")
-        Version.from_git()
-
-
-@mock.patch("dunamai._run_cmd")
-def test__version__from_git__second_git_error(run):
-    with pytest.raises(RuntimeError):
-        run.side_effect = [(128, ""), (1, "")]
-        Version.from_git()
-
-
-@mock.patch("dunamai._run_cmd")
 def test__version__from_git__no_pattern_match(run):
     with pytest.raises(ValueError):
         run.return_value = (0, "v___0.1.0rc5-44-g644252b")
@@ -605,6 +588,58 @@ def test__version__from_darcs(tmp_path):
         run('darcs record -am "Second"')
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
         assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc")
+
+
+@pytest.mark.skipif(
+    None in [shutil.which("svn"), shutil.which("svnadmin")], reason="Requires Subversion"
+)
+def test__version__from_subversion(tmp_path):
+    vcs = tmp_path / "dunamai-svn"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_subversion, mock_commit=None)
+
+    vcs_srv = tmp_path / "dunamai-svn-srv"
+    vcs_srv.mkdir()
+    run_srv = make_run_callback(vcs_srv)
+    vcs_srv_uri = vcs_srv.as_uri()
+
+    with chdir(vcs_srv):
+        run_srv("svnadmin create .")
+
+    with chdir(vcs):
+        run('svn checkout "{}" .'.format(vcs_srv_uri))
+        run("svn mkdir trunk tags")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=False)
+
+        (vcs / "trunk" / "foo.txt").write_text("hi")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
+
+        run("svn add --force .")
+        run('svn commit -m "Initial commit"')
+        run("svn update")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="1", dirty=False)
+
+        run('svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri))
+        run("svn update")
+        assert from_vcs() == Version("0.1.0", commit="2", dirty=False)
+        assert run("dunamai from subversion") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
+
+        (vcs / "trunk" / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", commit="2", dirty=True)
+
+        run('svn commit -m "Second"')
+        run("svn update")
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="3")
+        assert from_any_vcs_unmocked() == Version("0.1.0", post=1, dev=0, commit="3")
+
+        # Ensure we get the tag based on the highest commit, not necessarily
+        # just the newest tag.
+        run('svn copy {0}/trunk {0}/tags/v0.2.0 -m "Tag 2"'.format(vcs_srv_uri))  # commit 4
+        run('svn copy {0}/trunk {0}/tags/v0.1.1 -r 1 -m "Tag 3"'.format(vcs_srv_uri))  # commit 5
+        run("svn update")
+        assert from_vcs() == Version("0.2.0", post=1, dev=0, commit="5")
 
 
 def test__version__from_any_vcs(tmp_path):

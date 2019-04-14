@@ -1,7 +1,7 @@
 import argparse
 import sys
 from enum import Enum
-from typing import Optional
+from typing import Mapping, Optional
 
 from dunamai import Version, Style
 
@@ -11,68 +11,122 @@ class Vcs(Enum):
     Git = "git"
     Mercurial = "mercurial"
     Darcs = "darcs"
+    Subversion = "subversion"
 
 
-def parse_args(argv=None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Generate dynamic versions",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    subparsers = parser.add_subparsers(dest="command")
-
-    from_sp = subparsers.add_parser(
-        "from",
-        help="Generate version from VCS",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    from_sp.add_argument(
-        "vcs",
-        choices=[x.value for x in Vcs],
-        help="Version control system to interrogate for version info",
-    )
-    from_sp.add_argument(
-        "--metadata",
-        action="store_true",
-        dest="metadata",
-        default=None,
-        help="Always include metadata",
-    )
-    from_sp.add_argument(
-        "--no-metadata",
-        action="store_false",
-        dest="metadata",
-        default=None,
-        help="Never include metadata",
-    )
-    from_sp.add_argument(
-        "--dirty", action="store_true", dest="dirty", help="Include dirty flag if applicable"
-    )
-    from_sp.add_argument(
-        "--pattern",
-        help=(
+common_sub_args = [
+    {
+        "triggers": ["--metadata"],
+        "action": "store_true",
+        "dest": "metadata",
+        "default": None,
+        "help": "Always include metadata",
+    },
+    {
+        "triggers": ["--no-metadata"],
+        "action": "store_false",
+        "dest": "metadata",
+        "default": None,
+        "help": "Never include metadata",
+    },
+    {
+        "triggers": ["--dirty"],
+        "action": "store_true",
+        "dest": "dirty",
+        "help": "Include dirty flag if applicable",
+    },
+    {
+        "triggers": ["--pattern"],
+        "help": (
             "Regular expression matched against the version source;"
             " see Version.from_*() docs for more info"
         ),
-    )
-    from_sp.add_argument(
-        "--format",
-        help=(
+    },
+    {
+        "triggers": ["--format"],
+        "help": (
             "Custom output format. Available substitutions:"
-            " {base}, {epoch}, {pre_type}, {pre_number}, {post}, {dev}, {commit}, {dirty}"
+            " {base}, {epoch}, {pre_type}, {pre_number},"
+            " {post}, {dev}, {commit}, {dirty}"
         ),
-    )
-    from_sp.add_argument(
-        "--style",
-        choices=[x.value for x in Style],
-        help=(
+    },
+    {
+        "triggers": ["--style"],
+        "choices": [x.value for x in Style],
+        "help": (
             "Preconfigured output format."
             " Will default to PEP 440 if not set and no custom format given."
             " If you specify both a style and a custom format, then the format"
             " will be validated against the style's rules"
         ),
-    )
+    },
+]
+cli_spec = {
+    "description": "Generate dynamic versions",
+    "sub_dest": "command",
+    "sub": {
+        "from": {
+            "description": "Generate version from a particular VCS",
+            "sub_dest": "vcs",
+            "sub": {
+                Vcs.Any.value: {
+                    "description": "Generate version from any detected VCS",
+                    "args": common_sub_args,
+                },
+                Vcs.Git.value: {
+                    "description": "Generate version from Git",
+                    "args": common_sub_args,
+                },
+                Vcs.Mercurial.value: {
+                    "description": "Generate version from Mercurial",
+                    "args": common_sub_args,
+                },
+                Vcs.Darcs.value: {
+                    "description": "Generate version from Darcs",
+                    "args": common_sub_args,
+                },
+                Vcs.Subversion.value: {
+                    "description": "Generate version from Subversion",
+                    "args": [
+                        *common_sub_args,
+                        {
+                            "triggers": ["--tag-dir"],
+                            "default": "tags",
+                            "help": "Location of tags relative to the root",
+                        },
+                    ],
+                },
+            },
+        }
+    },
+}
 
-    return parser.parse_args(argv)
+
+def build_parser(spec: Mapping, parser: argparse.ArgumentParser = None) -> argparse.ArgumentParser:
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            description=spec["description"], formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+    if "args" in spec:
+        for arg in spec["args"]:
+            triggers = arg["triggers"]
+            parser.add_argument(*triggers, **{k: v for k, v in arg.items() if k != "triggers"})
+    if "sub" in spec:
+        subparsers = parser.add_subparsers(dest=spec["sub_dest"])
+        subparsers.required = True
+        for name, sub_spec in spec["sub"].items():
+            subparser = subparsers.add_parser(
+                name,
+                description=sub_spec.get("description"),
+                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            )
+            build_parser(sub_spec, subparser)
+
+    return parser
+
+
+def parse_args(argv=None) -> argparse.Namespace:
+    return build_parser(cli_spec).parse_args(argv)
 
 
 def from_vcs(
@@ -82,23 +136,29 @@ def from_vcs(
     with_dirty: bool,
     format: Optional[str],
     style: Optional[str],
+    tag_dir: Optional[str],
 ) -> None:
-    callbacks = {
-        Vcs.Any: Version.from_any_vcs,
-        Vcs.Git: Version.from_git,
-        Vcs.Mercurial: Version.from_mercurial,
-        Vcs.Darcs: Version.from_darcs,
-    }
-
     style_type = None
     if style is not None:
         style_type = Style(style)
 
-    arguments = []
+    kwargs = {}
     if pattern:
-        arguments.append(pattern)
+        kwargs["pattern"] = pattern
+    if tag_dir is not None:
+        kwargs["tag_dir"] = tag_dir
 
-    version = callbacks[vcs](*arguments)
+    if vcs == Vcs.Any:
+        version = Version.from_any_vcs(**kwargs)
+    elif vcs == Vcs.Git:
+        version = Version.from_git(**kwargs)
+    elif vcs == Vcs.Mercurial:
+        version = Version.from_mercurial(**kwargs)
+    elif vcs == Vcs.Darcs:
+        version = Version.from_darcs(**kwargs)
+    elif vcs == Vcs.Subversion:
+        version = Version.from_subversion(**kwargs)
+
     print(version.serialize(with_metadata, with_dirty, format, style_type))
 
 
@@ -106,8 +166,15 @@ def main() -> None:
     args = parse_args()
     try:
         if args.command == "from":
+            tag_dir = getattr(args, "tag_dir", None)
             from_vcs(
-                Vcs(args.vcs), args.pattern, args.metadata, args.dirty, args.format, args.style
+                Vcs(args.vcs),
+                args.pattern,
+                args.metadata,
+                args.dirty,
+                args.format,
+                args.style,
+                tag_dir,
             )
     except Exception as e:
         print(e)

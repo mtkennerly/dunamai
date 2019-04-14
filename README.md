@@ -13,6 +13,7 @@ simply by creating a tag.
   * Git
   * Mercurial
   * Darcs
+  * Subversion
 * Version styles:
   * [PEP 440](https://www.python.org/dev/peps/pep-0440)
   * [Semantic Versioning](https://semver.org)
