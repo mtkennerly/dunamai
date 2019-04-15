@@ -1,10 +1,15 @@
 
 ## Unreleased
 
+* Added the option to check just the latest tag or to keep checking tags
+  until a match is found. The default behavior is now to keep checking.
 * Added enforcement of Semantic Versioning rule against numeric segments
   with a leading zero.
 * Renamed the `with_metadata` and `with_dirty` arguments of `Version.serialize`
   to `metadata` and `dirty` respectively.
+* Fixed the equality and ordering of `Version` to consider all attributes.
+  `dirty` and `commit` were ignored previously if neither `post` nor `dev`
+  were set, and `dirty=None` and `dirty=False` were not distinguished.
 
 ## v0.6.0 (2019-04-14)
 

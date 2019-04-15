@@ -43,7 +43,7 @@ common_sub_args = [
             " This should contain one capture group named `base` corresponding to"
             " the release segment of the source, and optionally another two groups"
             " named `pre_type` and `pre_number` corresponding to the type (a, b, rc)"
-            " and number of prerelease."
+            " and number of prerelease"
         ),
     },
     {
@@ -63,6 +63,13 @@ common_sub_args = [
             " If you specify both a style and a custom format, then the format"
             " will be validated against the style's rules"
         ),
+    },
+    {
+        "triggers": ["--latest-tag"],
+        "action": "store_true",
+        "dest": "latest_tag",
+        "default": False,
+        "help": "Only inspect the latest tag for a pattern match",
     },
 ]
 cli_spec = {
@@ -135,29 +142,24 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def from_vcs(
     vcs: Vcs,
-    pattern: Optional[str],
+    pattern: str,
     metadata: Optional[bool],
     dirty: bool,
     format: Optional[str],
     style: Optional[Style],
-    tag_dir: Optional[str],
+    latest_tag: bool,
+    tag_dir: str,
 ) -> None:
-    kwargs = {}
-    if pattern:
-        kwargs["pattern"] = pattern
-    if tag_dir is not None:
-        kwargs["tag_dir"] = tag_dir
-
     if vcs == Vcs.Any:
-        version = Version.from_any_vcs(**kwargs)
+        version = Version.from_any_vcs(pattern=pattern, latest_tag=latest_tag)
     elif vcs == Vcs.Git:
-        version = Version.from_git(**kwargs)
+        version = Version.from_git(pattern=pattern, latest_tag=latest_tag)
     elif vcs == Vcs.Mercurial:
-        version = Version.from_mercurial(**kwargs)
+        version = Version.from_mercurial(pattern=pattern, latest_tag=latest_tag)
     elif vcs == Vcs.Darcs:
-        version = Version.from_darcs(**kwargs)
+        version = Version.from_darcs(pattern=pattern, latest_tag=latest_tag)
     elif vcs == Vcs.Subversion:
-        version = Version.from_subversion(**kwargs)
+        version = Version.from_subversion(pattern=pattern, latest_tag=latest_tag, tag_dir=tag_dir)
 
     print(version.serialize(metadata, dirty, format, style))
 
@@ -166,7 +168,7 @@ def main() -> None:
     args = parse_args()
     try:
         if args.command == "from":
-            tag_dir = getattr(args, "tag_dir", None)
+            tag_dir = getattr(args, "tag_dir", "tags")
             from_vcs(
                 Vcs(args.vcs),
                 args.pattern,
@@ -174,6 +176,7 @@ def main() -> None:
                 args.dirty,
                 args.format,
                 Style(args.style) if args.style else None,
+                args.latest_tag,
                 tag_dir,
             )
     except Exception as e:

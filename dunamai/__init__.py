@@ -7,7 +7,7 @@ import subprocess
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Any, Callable, Optional, Sequence, Tuple, TypeVar
 
 _VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>[a-zA-Z]+)(?P<pre_number>\d+))?"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
@@ -16,6 +16,8 @@ _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
 )
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
+
+_T = TypeVar("_T")
 
 
 def _run_cmd(command: str, codes: Sequence[int] = (0,), where: Path = None) -> Tuple[int, str]:
@@ -39,18 +41,33 @@ def _find_higher_dir(*names: str) -> Optional[str]:
     return None
 
 
-def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tuple[str, int]]]:
-    pattern_match = re.search(pattern, source)
+def _match_version_pattern(
+    pattern: str, sources: Sequence[str], latest_source: bool
+) -> Tuple[str, str, Optional[Tuple[str, int]]]:
+    pattern_match = None
+    base = None
     pre = None
 
-    if pattern_match is None:
-        raise ValueError("Pattern '{}' did not match the source '{}'".format(pattern, source))
-    try:
-        base = pattern_match.group("base")
-    except IndexError:
-        raise ValueError(
-            "Pattern '{}' did not include required capture group 'base'".format(pattern)
-        )
+    if latest_source:
+        sources = sources[:1]
+
+    for source in sources:
+        pattern_match = re.search(pattern, source)
+        if pattern_match is None:
+            continue
+        try:
+            base = pattern_match.group("base")
+            if base is not None:
+                break
+        except IndexError:
+            raise ValueError(
+                "Pattern '{}' did not include required capture group 'base'".format(pattern)
+            )
+    if pattern_match is None or base is None:
+        if latest_source:
+            raise ValueError("Pattern '{}' did not match the latest tag".format(pattern))
+        else:
+            raise ValueError("Pattern '{}' did not match any tags".format(pattern))
 
     try:
         pre_type = pattern_match.group("pre_type")
@@ -60,7 +77,11 @@ def _match_version_pattern(pattern: str, source: str) -> Tuple[str, Optional[Tup
     except IndexError:
         pass
 
-    return (base, pre)
+    return (source, base, pre)
+
+
+def _blank(value: Optional[_T], default: _T) -> _T:
+    return value if value is not None else default
 
 
 class Style(Enum):
@@ -128,22 +149,36 @@ class Version:
             self.dirty,
         )
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Version):
             raise TypeError(
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
-        return pkg_resources.parse_version(self.serialize()) == pkg_resources.parse_version(
-            other.serialize()
+        return (
+            self.epoch == other.epoch
+            and self.base == other.base
+            and self.pre_type == other.pre_type
+            and self.pre_number == other.pre_number
+            and self.post == other.post
+            and self.dev == other.dev
+            and self.commit == other.commit
+            and self.dirty == other.dirty
         )
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, Version):
             raise TypeError(
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
-        return pkg_resources.parse_version(self.serialize()) < pkg_resources.parse_version(
-            other.serialize()
+        return (
+            _blank(self.epoch, 0) < _blank(other.epoch, 0)
+            and pkg_resources.parse_version(self.base) < pkg_resources.parse_version(other.base)
+            and _blank(self.pre_type, "") < _blank(other.pre_type, "")
+            and _blank(self.pre_number, 0) < _blank(other.pre_number, 0)
+            and _blank(self.post, 0) < _blank(other.post, 0)
+            and _blank(self.dev, 0) < _blank(other.dev, 0)
+            and _blank(self.commit, "") < _blank(other.commit, "")
+            and bool(self.dirty) < bool(other.dirty)
         )
 
     def serialize(
@@ -175,18 +210,14 @@ class Version:
             style's rules.
         """
         if format is not None:
-
-            def blank(value):
-                return value if value is not None else ""
-
             out = format.format(
                 base=self.base,
-                epoch=blank(self.epoch),
-                pre_type=blank(self.pre_type),
-                pre_number=blank(self.pre_number),
-                post=blank(self.post),
-                dev=blank(self.dev),
-                commit=blank(self.commit),
+                epoch=_blank(self.epoch, ""),
+                pre_type=_blank(self.pre_type, ""),
+                pre_number=_blank(self.pre_number, ""),
+                post=_blank(self.post, ""),
+                dev=_blank(self.dev, ""),
+                commit=_blank(self.commit, ""),
                 dirty="dirty" if self.dirty else "clean",
             )
             if style is not None:
@@ -289,7 +320,7 @@ class Version:
                 raise ValueError(failure_message)
 
     @classmethod
-    def from_git(cls, pattern: str = _VERSION_PATTERN) -> "Version":
+    def from_git(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
         r"""
         Determine a version based on Git tags.
 
@@ -299,20 +330,25 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
         """
-        code, msg = _run_cmd("git describe --tags --long --dirty", codes=[0, 128])
+        code, msg = _run_cmd('git log -n 1 --format="format:%h"', codes=[0, 128])
         if code == 128:
-            code, msg = _run_cmd("git describe --always --dirty", codes=[0, 128])
-            if code == 128:
-                return cls("0.0.0", post=0, dev=0, dirty=True)
-            else:
-                commit, *dirty = msg.split("-")
-                return cls("0.0.0", post=0, dev=0, commit=commit, dirty=bool(dirty))
-        else:
-            tag, raw_distance, commit, *dirty = msg.split("-")
-            distance = int(raw_distance)
+            return cls("0.0.0", post=0, dev=0, dirty=True)
+        commit = msg
 
-        base, pre = _match_version_pattern(pattern, tag)
+        code, msg = _run_cmd("git describe --always --dirty")
+        dirty = msg.endswith("-dirty")
+
+        code, msg = _run_cmd("git tag --sort -taggerdate --sort -committerdate")
+        if not msg:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+        tags = msg.splitlines()
+        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+
+        code, msg = _run_cmd("git rev-list --count {}..HEAD".format(tag))
+        distance = int(msg)
 
         post = None
         dev = None
@@ -323,7 +359,7 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty))
 
     @classmethod
-    def from_mercurial(cls, pattern: str = _VERSION_PATTERN) -> "Version":
+    def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
 
@@ -333,23 +369,24 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
         """
         code, msg = _run_cmd("hg summary")
         dirty = "commit: (clean)" not in msg.splitlines()
 
-        code, msg = _run_cmd("hg id")
-        commit = msg.split()[0].strip("+")  # type: Optional[str]
-        if commit and set(commit) == {"0"}:
-            commit = None
+        code, msg = _run_cmd('hg log --limit 1 --template "{node|short}"')
+        commit = msg if msg else None
 
-        code, msg = _run_cmd('hg parent --template "{latesttag} {latesttagdistance}"')
-        if not msg or msg.split()[0] == "null":
+        code, msg = _run_cmd('hg log -r "sort(tag(), -date)" --template "{tags}\\n"')
+        if not msg:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-        tag, raw_distance = msg.split()
-        # Distance is 1 immediately after creating tag.
-        distance = int(raw_distance) - 1
+        tags = msg.splitlines()
+        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
-        base, pre = _match_version_pattern(pattern, tag)
+        code, msg = _run_cmd('hg log -r "{0}::tip - {0}" --template "."'.format(tag))
+        # The tag itself is in the list, so offset by 1.
+        distance = len(msg) - 1
 
         post = None
         dev = None
@@ -360,7 +397,7 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
-    def from_darcs(cls, pattern: str = _VERSION_PATTERN) -> "Version":
+    def from_darcs(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
         r"""
         Determine a version based on Darcs tags.
 
@@ -370,29 +407,24 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
         """
         code, msg = _run_cmd("darcs status", codes=[0, 1])
         dirty = msg != "No changes!"
 
         code, msg = _run_cmd("darcs log --last 1")
-        if not msg:
-            commit = None
-        else:
-            commit = msg.split()[1].strip()
+        commit = msg.split()[1].strip() if msg else None
 
         code, msg = _run_cmd("darcs show tags")
         if not msg:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-        tag = msg.split()[0]
+        tags = msg.splitlines()
+        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
-        code, msg = _run_cmd("darcs log --from-tag {}".format(tag))
+        code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag))
         # The tag itself is in the list, so offset by 1.
-        distance = -1
-        for line in msg.splitlines():
-            if line.startswith("patch "):
-                distance += 1
-
-        base, pre = _match_version_pattern(pattern, tag)
+        distance = int(msg) - 1
 
         post = None
         dev = None
@@ -403,7 +435,9 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
-    def from_subversion(cls, pattern: str = _VERSION_PATTERN, tag_dir: str = "tags") -> "Version":
+    def from_subversion(
+        cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
+    ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
 
@@ -413,6 +447,8 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
         :param tag_dir: Location of tags relative to the root.
         """
         tag_dir = tag_dir.strip("/")
@@ -433,23 +469,23 @@ class Version:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
         code, msg = _run_cmd('svn ls -v "{}/{}"'.format(url, tag_dir))
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
-        tags_revs = [(line[-1].strip("/"), int(line[0])) for line in lines]
-        if not tags_revs:
+        tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
+        if not tags_to_revs:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-        tags_revs_sources = []
-        for tag, rev in tags_revs:
+        tags_to_sources_revs = {}
+        for tag, rev in tags_to_revs.items():
             code, msg = _run_cmd('svn log "{}/{}/{}" -v --stop-on-copy'.format(url, tag_dir, tag))
             for line in msg.splitlines():
                 match = re.search(r"A /{}/{} \(from .+?:(\d+)\)".format(tag_dir, tag), line)
                 if match:
                     source = int(match.group(1))
-                    tags_revs_sources.append((tag, rev, source))
-        tag, rev, source = sorted(tags_revs_sources, key=lambda info: (info[2], info[1]))[-1]
+                    tags_to_sources_revs[tag] = (source, rev)
+        tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
+        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
+        source, rev = tags_to_sources_revs[tag]
         # The tag itself is in the list, so offset by 1.
         distance = int(commit) - 1 - source
-
-        base, pre = _match_version_pattern(pattern, tag)
 
         post = None
         dev = None
@@ -460,27 +496,28 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
-    def from_any_vcs(cls, pattern: str = None) -> "Version":
+    def from_any_vcs(cls, pattern: str = None, latest_tag: bool = False) -> "Version":
         """
         Determine a version based on a detected version control system.
 
         :param pattern: Regular expression matched against the version source.
             The default value defers to the VCS-specific `from_` functions.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
         """
         vcs = _find_higher_dir(".git", ".hg", "_darcs", ".svn")
 
-        arguments = []
-        if pattern:
-            arguments.append(pattern)
+        if pattern is None:
+            pattern = _VERSION_PATTERN
 
         if vcs == ".git":
-            return cls.from_git(*arguments)
+            return cls.from_git(pattern=pattern, latest_tag=latest_tag)
         elif vcs == ".hg":
-            return cls.from_mercurial(*arguments)
+            return cls.from_mercurial(pattern=pattern, latest_tag=latest_tag)
         elif vcs == "_darcs":
-            return cls.from_darcs(*arguments)
+            return cls.from_darcs(pattern=pattern, latest_tag=latest_tag)
         elif vcs == ".svn":
-            return cls.from_subversion(*arguments)
+            return cls.from_subversion(pattern=pattern, latest_tag=latest_tag)
         else:
             raise RuntimeError("Unable to detect version control system.")
 
