@@ -27,7 +27,9 @@ simply by creating a tag.
 Install with `pip install dunamai`, and then use as either a CLI:
 
 ```console
-# Display dynamic version from a detected version control system:
+# Suppose you are on commit g29045e8, 7 commits after the v0.2.0 tag.
+
+# Auto-detect the version control system and generate a version:
 $ dunamai from any
 0.2.0.post7.dev0+g29045e8
 
@@ -52,11 +54,12 @@ Or as a library:
 ```python
 from dunamai import Version, Style
 
-# If `git describe` says `v0.1.0` or `v0.1.0-0-g644252b`
+# Let's say you're on commit g644252b, which is tagged as v0.1.0.
 version = Version.from_git()
 assert version.serialize() == "0.1.0"
 
-# Or if `git describe` says `v0.1.0rc5-44-g644252b-dirty`
+# Let's say there was a v0.1.0rc5 tag 44 commits ago
+# and you have some uncommitted changes.
 version = Version.from_any_vcs()
 assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b"
 assert version.serialize(metadata=False) == "0.1.0rc5.post44.dev0"
@@ -77,7 +80,7 @@ assert version.pre_number == 5
 assert version.post == 44
 assert version.dev == 0
 assert version.commit == "g644252b"
-assert version.dirty
+assert version.dirty is True
 ```
 
 ## Comparison to Versioneer
