@@ -129,6 +129,7 @@ def build_parser(spec: Mapping, parser: argparse.ArgumentParser = None) -> argpa
             subparser = subparsers.add_parser(
                 name,
                 description=sub_spec.get("description"),
+                help=sub_spec.get("description"),
                 formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             )
             build_parser(sub_spec, subparser)
@@ -180,5 +181,5 @@ def main() -> None:
                 tag_dir,
             )
     except Exception as e:
-        print(e)
+        print(e, file=sys.stderr)
         sys.exit(1)
