@@ -1,6 +1,8 @@
 
 ## Unreleased
 
+* Added the `dunamai check` command and the corresponding `check_version`
+  function.
 * Added the option to check just the latest tag or to keep checking tags
   until a match is found. The default behavior is now to keep checking.
 * Added enforcement of Semantic Versioning rule against numeric segments

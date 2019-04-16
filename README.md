@@ -45,6 +45,10 @@ v0.2.0+7.g29045e8
 $ dunamai from any --format "v{base}" --style pep440
 Version 'v0.2.0' does not conform to the PEP 440 style
 
+# Validate your own freeform versions:
+$ dunamai check 0.01.0 --style semver
+Version '0.01.0' does not conform to the Semantic Versioning style
+
 # More info
 $ dunamai --help
 ```

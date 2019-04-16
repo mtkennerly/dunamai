@@ -3,7 +3,7 @@ import sys
 from enum import Enum
 from typing import Mapping, Optional
 
-from dunamai import Version, Style, _VERSION_PATTERN
+from dunamai import check_version, Version, Style, _VERSION_PATTERN
 
 
 class Vcs(Enum):
@@ -108,7 +108,24 @@ cli_spec = {
                     ],
                 },
             },
-        }
+        },
+        "check": {
+            "description": "Check if a version is valid for a style",
+            "args": [
+                {
+                    "triggers": [],
+                    "dest": "version",
+                    "help": "Version to check; may be piped in",
+                    "nargs": "?",
+                },
+                {
+                    "triggers": ["--style"],
+                    "choices": [x.value for x in Style],
+                    "default": Style.Pep440.value,
+                    "help": "Style against which to check",
+                },
+            ],
+        },
     },
 }
 
@@ -139,6 +156,16 @@ def build_parser(spec: Mapping, parser: argparse.ArgumentParser = None) -> argpa
 
 def parse_args(argv=None) -> argparse.Namespace:
     return build_parser(cli_spec).parse_args(argv)
+
+
+def from_stdin(value: Optional[str]) -> Optional[str]:
+    if value is not None:
+        return value
+
+    if not sys.stdin.isatty():
+        return sys.stdin.readline().strip()
+
+    return None
 
 
 def from_vcs(
@@ -180,6 +207,11 @@ def main() -> None:
                 args.latest_tag,
                 tag_dir,
             )
+        elif args.command == "check":
+            version = from_stdin(args.version)
+            if version is None:
+                raise ValueError("A version must be specified")
+            check_version(version, Style(args.style))
     except Exception as e:
         print(e, file=sys.stderr)
         sys.exit(1)

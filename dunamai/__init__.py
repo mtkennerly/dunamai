@@ -1,4 +1,4 @@
-__all__ = ["get_version", "Style", "Version"]
+__all__ = ["check_version", "get_version", "Style", "Version"]
 
 import os
 import pkg_resources
@@ -221,7 +221,7 @@ class Version:
                 dirty="dirty" if self.dirty else "clean",
             )
             if style is not None:
-                self._validate(out, style)
+                check_version(out, style)
             return out
 
         if style is None:
@@ -299,25 +299,8 @@ class Version:
                 if metadata_segment:
                     out += "-{}".format(metadata_segment)
 
-        self._validate(out, style)
+        check_version(out, style)
         return out
-
-    def _validate(self, serialized: str, style: Style) -> None:
-        if style is None:
-            return
-        groups = {
-            Style.Pep440: ("PEP 440", _VALID_PEP440),
-            Style.SemVer: ("Semantic Versioning", _VALID_SEMVER),
-            Style.Pvp: ("PVP", _VALID_PVP),
-        }
-        name, pattern = groups[style]
-        failure_message = "Version '{}' does not conform to the {} style".format(serialized, name)
-        if not re.search(pattern, serialized):
-            raise ValueError(failure_message)
-        if style == Style.SemVer:
-            parts = re.split(r"[.-]", serialized.split("+", 1)[0])
-            if any(re.search(r"^0[0-9]+$", x) for x in parts):
-                raise ValueError(failure_message)
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -520,6 +503,27 @@ class Version:
             return cls.from_subversion(pattern=pattern, latest_tag=latest_tag)
         else:
             raise RuntimeError("Unable to detect version control system.")
+
+
+def check_version(version: str, style: Style = Style.Pep440) -> None:
+    """
+    Check if a version is valid for a style.
+
+    :param version: Version to check.
+    :param style: Style against which to check.
+    """
+    name, pattern = {
+        Style.Pep440: ("PEP 440", _VALID_PEP440),
+        Style.SemVer: ("Semantic Versioning", _VALID_SEMVER),
+        Style.Pvp: ("PVP", _VALID_PVP),
+    }[style]
+    failure_message = "Version '{}' does not conform to the {} style".format(version, name)
+    if not re.search(pattern, version):
+        raise ValueError(failure_message)
+    if style == Style.SemVer:
+        parts = re.split(r"[.-]", version.split("+", 1)[0])
+        if any(re.search(r"^0[0-9]+$", x) for x in parts):
+            raise ValueError(failure_message)
 
 
 def get_version(

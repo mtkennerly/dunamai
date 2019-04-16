@@ -7,7 +7,7 @@ from typing import Callable, Iterator, Optional
 
 import pytest
 
-from dunamai import get_version, Version, Style, _run_cmd
+from dunamai import check_version, get_version, Version, Style, _run_cmd
 
 
 @contextmanager
@@ -351,45 +351,8 @@ def test__version__serialize__format():
         )
         == "2,1,a,3,4,5,abc,dirty"
     )
-
-    assert Version("0.1.0").serialize(format="{base}", style=Style.Pep440) == "0.1.0"
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format="v{base}", style=Style.Pep440)
-
-    assert Version("0.1.0").serialize(format="{base}", style=Style.SemVer) == "0.1.0"
-    with pytest.raises(ValueError):
-        Version("0.1.0").serialize(format="v{base}", style=Style.SemVer)
-
-    # "-" is a valid identifier.
-    Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0--")
-    Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0--.-")
-
-
-def test__version__serialize__error_conditions():
-    with pytest.raises(ValueError):
-        Version("x").serialize()
-    with pytest.raises(ValueError):
-        v = Version("1", pre=("a", 3))
-        v.pre_type = "x"
-        v.serialize()
-
-    # No leading zeroes in numeric segments:
-    with pytest.raises(ValueError):
-        Version("00.0.0").serialize(style=Style.SemVer)
-    with pytest.raises(ValueError):
-        Version("0.1.0").serialize(style=Style.SemVer, format="0.01.0")
-    with pytest.raises(ValueError):
-        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-alpha.02")
-    # But leading zeroes are fine for non-numeric parts:
-    Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-alpha.02a")
-
-    # Identifiers can't be empty:
-    with pytest.raises(ValueError):
-        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-.")
-    with pytest.raises(ValueError):
-        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-a.")
-    with pytest.raises(ValueError):
-        Version("0.1.0").serialize(style=Style.SemVer, format="0.1.0-.a")
 
 
 def test__get_version__from_name():
@@ -596,3 +559,76 @@ def test__version__from_any_vcs(tmp_path):
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):
             Version.from_any_vcs()
+
+
+def test__check_version__pep440():
+    check_version("0.1.0")
+    check_version("0.01.0")
+
+    check_version("2!0.1.0")
+    check_version("0.1.0a1")
+    check_version("0.1.0b1")
+    check_version("0.1.0rc1")
+    with pytest.raises(ValueError):
+        check_version("0.1.0x1")
+
+    check_version("0.1.0.post0")
+    check_version("0.1.0.dev0")
+    check_version("0.1.0.post0.dev0")
+    with pytest.raises(ValueError):
+        check_version("0.1.0.other0")
+
+    check_version("0.1.0+abc.dirty")
+
+    check_version("2!0.1.0a1.post0.dev0+abc.dirty")
+
+
+def test__check_version__semver():
+    style = Style.SemVer
+
+    check_version("0.1.0", style=style)
+    check_version("0.1.0-alpha.1", style=style)
+    check_version("0.1.0+abc", style=style)
+    check_version("0.1.0-alpha.1.beta.2+abc.dirty", style=style)
+
+    with pytest.raises(ValueError):
+        check_version("1", style=style)
+    with pytest.raises(ValueError):
+        check_version("0.1", style=style)
+    with pytest.raises(ValueError):
+        check_version("0.0.0.1", style=style)
+
+    # "-" is a valid identifier.
+    Version("0.1.0--").serialize(style=style)
+    Version("0.1.0--.-").serialize(style=style)
+
+    # No leading zeroes in numeric segments:
+    with pytest.raises(ValueError):
+        Version("00.0.0").serialize(style=style)
+    with pytest.raises(ValueError):
+        Version("0.01.0").serialize(style=style)
+    with pytest.raises(ValueError):
+        Version("0.1.0-alpha.02").serialize(style=style)
+    # But leading zeroes are fine for non-numeric parts:
+    Version("0.1.0-alpha.02a").serialize(style=style)
+
+    # Identifiers can't be empty:
+    with pytest.raises(ValueError):
+        Version("0.1.0-.").serialize(style=style)
+    with pytest.raises(ValueError):
+        Version("0.1.0-a.").serialize(style=style)
+    with pytest.raises(ValueError):
+        Version("0.1.0-.a").serialize(style=style)
+
+
+def test__check_version__pvp():
+    style = Style.Pvp
+
+    check_version("1", style=style)
+    check_version("0.1", style=style)
+    check_version("0.0.1", style=style)
+    check_version("0.0.0.1", style=style)
+    check_version("0.1.0-alpha-1", style=style)
+
+    with pytest.raises(ValueError):
+        check_version("0.1.0-a.1", style=style)
