@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.7.0 (2019-04-16)
 
 * Added Bazaar support.
 * Added the `dunamai check` command and the corresponding `check_version`
