@@ -479,6 +479,43 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
+    def from_bazaar(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+        r"""
+        Determine a version based on Bazaar tags.
+
+        :param pattern: Regular expression matched against the version source.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
+            and number of prerelease. For example, with a tag like v0.1.0, the
+            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
+        """
+        code, msg = _run_cmd("bzr status")
+        dirty = msg != ""
+
+        code, msg = _run_cmd("bzr log --limit 1 --line")
+        commit = msg.split(":", 1)[0] if msg else None
+
+        code, msg = _run_cmd("bzr tags")
+        if not msg or not commit:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+        tags_to_revs = {line.split()[0]: int(line.split()[1]) for line in msg.splitlines()}
+        tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
+        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+
+        distance = int(commit) - tags_to_revs[tag]
+
+        post = None
+        dev = None
+        if distance > 0:
+            post = distance
+            dev = 0
+
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+
+    @classmethod
     def from_any_vcs(cls, pattern: str = None, latest_tag: bool = False) -> "Version":
         """
         Determine a version based on a detected version control system.
@@ -488,7 +525,7 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
         """
-        vcs = _find_higher_dir(".git", ".hg", "_darcs", ".svn")
+        vcs = _find_higher_dir(".git", ".hg", "_darcs", ".svn", ".bzr")
 
         if pattern is None:
             pattern = _VERSION_PATTERN
@@ -501,6 +538,8 @@ class Version:
             return cls.from_darcs(pattern=pattern, latest_tag=latest_tag)
         elif vcs == ".svn":
             return cls.from_subversion(pattern=pattern, latest_tag=latest_tag)
+        elif vcs == ".bzr":
+            return cls.from_bazaar(pattern=pattern, latest_tag=latest_tag)
         else:
             raise RuntimeError("Unable to detect version control system.")
 

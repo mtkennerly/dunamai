@@ -1,6 +1,7 @@
 
 ## Unreleased
 
+* Added Bazaar support.
 * Added the `dunamai check` command and the corresponding `check_version`
   function.
 * Added the option to check just the latest tag or to keep checking tags

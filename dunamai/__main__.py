@@ -12,6 +12,7 @@ class Vcs(Enum):
     Mercurial = "mercurial"
     Darcs = "darcs"
     Subversion = "subversion"
+    Bazaar = "bazaar"
 
 
 common_sub_args = [
@@ -107,6 +108,10 @@ cli_spec = {
                         },
                     ],
                 },
+                Vcs.Bazaar.value: {
+                    "description": "Generate version from Bazaar",
+                    "args": common_sub_args,
+                },
             },
         },
         "check": {
@@ -188,6 +193,8 @@ def from_vcs(
         version = Version.from_darcs(pattern=pattern, latest_tag=latest_tag)
     elif vcs == Vcs.Subversion:
         version = Version.from_subversion(pattern=pattern, latest_tag=latest_tag, tag_dir=tag_dir)
+    elif vcs == Vcs.Bazaar:
+        version = Version.from_bazaar(pattern=pattern, latest_tag=latest_tag)
 
     print(version.serialize(metadata, dirty, format, style))
 

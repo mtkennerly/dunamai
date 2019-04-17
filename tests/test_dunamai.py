@@ -555,6 +555,44 @@ def test__version__from_subversion(tmp_path):
             from_vcs(latest_tag=True)
 
 
+@pytest.mark.skipif(shutil.which("bzr") is None, reason="Requires Bazaar")
+def test__version__from_bazaar(tmp_path):
+    vcs = tmp_path / "dunamai-bzr"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_bazaar, mock_commit=None)
+
+    with chdir(vcs):
+        run("bzr init")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=False)
+
+        (vcs / "foo.txt").write_text("hi")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
+
+        run("bzr add .")
+        run('bzr commit -m "Initial commit"')
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="1", dirty=False)
+
+        run("bzr tag v0.1.0")
+        assert from_vcs() == Version("0.1.0", commit="1", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.0", commit="1", dirty=False)
+        assert run("dunamai from bazaar") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
+
+        (vcs / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", commit="1", dirty=True)
+
+        run("bzr add .")
+        run('bzr commit -m "Second"')
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="2", dirty=False)
+        assert from_any_vcs_unmocked() == Version("0.1.0", post=1, dev=0, commit="2", dirty=False)
+
+        run("bzr tag unmatched")
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="2", dirty=False)
+        with pytest.raises(ValueError):
+            from_vcs(latest_tag=True)
+
+
 def test__version__from_any_vcs(tmp_path):
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):

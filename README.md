@@ -14,6 +14,7 @@ simply by creating a tag.
   * Mercurial
   * Darcs
   * Subversion
+  * Bazaar
 * Version styles:
   * [PEP 440](https://www.python.org/dev/peps/pep-0440)
   * [Semantic Versioning](https://semver.org)
