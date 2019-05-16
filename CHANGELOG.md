@@ -1,4 +1,8 @@
 
+## Unreleased
+
+* Fixed issue on Linux where shell commands were not interpreted correctly.
+
 ## v0.7.0 (2019-04-16)
 
 * Added Bazaar support.

@@ -3,6 +3,7 @@ __all__ = ["check_version", "get_version", "Style", "Version"]
 import os
 import pkg_resources
 import re
+import shlex
 import subprocess
 from enum import Enum
 from functools import total_ordering
@@ -22,7 +23,7 @@ _T = TypeVar("_T")
 
 def _run_cmd(command: str, codes: Sequence[int] = (0,), where: Path = None) -> Tuple[int, str]:
     result = subprocess.run(
-        command,
+        shlex.split(command),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=str(where) if where is not None else None,
