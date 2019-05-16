@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.7.1 (2019-05-16)
 
 * Fixed issue on Linux where shell commands were not interpreted correctly.
 
