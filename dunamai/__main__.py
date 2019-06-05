@@ -1,18 +1,8 @@
 import argparse
 import sys
-from enum import Enum
 from typing import Mapping, Optional
 
-from dunamai import check_version, Version, Style, _VERSION_PATTERN
-
-
-class Vcs(Enum):
-    Any = "any"
-    Git = "git"
-    Mercurial = "mercurial"
-    Darcs = "darcs"
-    Subversion = "subversion"
-    Bazaar = "bazaar"
+from dunamai import check_version, Version, Style, Vcs, _VERSION_PATTERN
 
 
 common_sub_args = [
@@ -83,7 +73,14 @@ cli_spec = {
             "sub": {
                 Vcs.Any.value: {
                     "description": "Generate version from any detected VCS",
-                    "args": common_sub_args,
+                    "args": [
+                        *common_sub_args,
+                        {
+                            "triggers": ["--tag-dir"],
+                            "default": "tags",
+                            "help": "Location of tags relative to the root (Subversion)",
+                        },
+                    ],
                 },
                 Vcs.Git.value: {
                     "description": "Generate version from Git",
@@ -183,19 +180,7 @@ def from_vcs(
     latest_tag: bool,
     tag_dir: str,
 ) -> None:
-    if vcs == Vcs.Any:
-        version = Version.from_any_vcs(pattern=pattern, latest_tag=latest_tag)
-    elif vcs == Vcs.Git:
-        version = Version.from_git(pattern=pattern, latest_tag=latest_tag)
-    elif vcs == Vcs.Mercurial:
-        version = Version.from_mercurial(pattern=pattern, latest_tag=latest_tag)
-    elif vcs == Vcs.Darcs:
-        version = Version.from_darcs(pattern=pattern, latest_tag=latest_tag)
-    elif vcs == Vcs.Subversion:
-        version = Version.from_subversion(pattern=pattern, latest_tag=latest_tag, tag_dir=tag_dir)
-    elif vcs == Vcs.Bazaar:
-        version = Version.from_bazaar(pattern=pattern, latest_tag=latest_tag)
-
+    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir)
     print(version.serialize(metadata, dirty, format, style))
 
 

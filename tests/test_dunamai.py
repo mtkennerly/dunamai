@@ -7,7 +7,7 @@ from typing import Callable, Iterator, Optional
 
 import pytest
 
-from dunamai import check_version, get_version, Version, Style, _run_cmd
+from dunamai import check_version, get_version, Version, Style, Vcs, _run_cmd
 
 
 @contextmanager
@@ -40,6 +40,7 @@ def make_from_callback(function: Callable, mock_commit: Optional[str] = "abc") -
 
 from_any_vcs = make_from_callback(Version.from_any_vcs)
 from_any_vcs_unmocked = make_from_callback(Version.from_any_vcs, mock_commit=None)
+from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 
 def test__version__init():
@@ -407,6 +408,8 @@ def test__version__from_git(tmp_path):
             == "Version 'v0.1.0' does not conform to the Semantic Versioning style"
         )
         assert run("dunamai from any --latest-tag") == "0.1.0"
+        assert from_explicit_vcs(Vcs.Any) == Version("0.1.0", commit="abc", dirty=False)
+        assert from_explicit_vcs(Vcs.Git) == Version("0.1.0", commit="abc", dirty=False)
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
@@ -597,6 +600,8 @@ def test__version__from_any_vcs(tmp_path):
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):
             Version.from_any_vcs()
+        with pytest.raises(RuntimeError):
+            Version.from_vcs(Vcs.Any)
 
 
 def test__check_version__pep440():

@@ -1,4 +1,12 @@
 
+## Unreleased
+
+* Changed `Version.from_any_vcs` to accept the `tag_dir` argument,
+  which will only be used if Subversion is the detected VCS.
+  Likewise, `dunamai from any` now accepts `--tag-dir`.
+* Added `Version.from_vcs` to make it easier for other tools to map from a
+  user's VCS configuration to the appropriate function.
+
 ## v0.7.1 (2019-05-16)
 
 * Fixed issue on Linux where shell commands were not interpreted correctly.

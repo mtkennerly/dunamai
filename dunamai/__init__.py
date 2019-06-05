@@ -1,4 +1,4 @@
-__all__ = ["check_version", "get_version", "Style", "Version"]
+__all__ = ["check_version", "get_version", "Style", "Vcs", "Version"]
 
 import os
 import pkg_resources
@@ -8,7 +8,7 @@ import subprocess
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence, Tuple, TypeVar
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar
 
 _VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>[a-zA-Z]+)(?P<pre_number>\d+))?"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
@@ -89,6 +89,15 @@ class Style(Enum):
     Pep440 = "pep440"
     SemVer = "semver"
     Pvp = "pvp"
+
+
+class Vcs(Enum):
+    Any = "any"
+    Git = "git"
+    Mercurial = "mercurial"
+    Darcs = "darcs"
+    Subversion = "subversion"
+    Bazaar = "bazaar"
 
 
 @total_ordering
@@ -517,7 +526,9 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
-    def from_any_vcs(cls, pattern: str = None, latest_tag: bool = False) -> "Version":
+    def from_any_vcs(
+        cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
+    ) -> "Version":
         """
         Determine a version based on a detected version control system.
 
@@ -525,24 +536,59 @@ class Version:
             The default value defers to the VCS-specific `from_` functions.
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
+        :param tag_dir: Location of tags relative to the root.
+            This is only used for Subversion.
         """
-        vcs = _find_higher_dir(".git", ".hg", "_darcs", ".svn", ".bzr")
-
-        if pattern is None:
-            pattern = _VERSION_PATTERN
-
-        if vcs == ".git":
-            return cls.from_git(pattern=pattern, latest_tag=latest_tag)
-        elif vcs == ".hg":
-            return cls.from_mercurial(pattern=pattern, latest_tag=latest_tag)
-        elif vcs == "_darcs":
-            return cls.from_darcs(pattern=pattern, latest_tag=latest_tag)
-        elif vcs == ".svn":
-            return cls.from_subversion(pattern=pattern, latest_tag=latest_tag)
-        elif vcs == ".bzr":
-            return cls.from_bazaar(pattern=pattern, latest_tag=latest_tag)
-        else:
+        vcs_dir = _find_higher_dir(".git", ".hg", "_darcs", ".svn", ".bzr")
+        if not vcs_dir:
             raise RuntimeError("Unable to detect version control system.")
+        vcs = {
+            ".git": Vcs.Git,
+            ".hg": Vcs.Mercurial,
+            "_darcs": Vcs.Darcs,
+            ".svn": Vcs.Subversion,
+            ".bzr": Vcs.Bazaar,
+        }[vcs_dir]
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
+
+    @classmethod
+    def from_vcs(
+        cls,
+        vcs: Vcs,
+        pattern: str = _VERSION_PATTERN,
+        latest_tag: bool = False,
+        tag_dir: str = "tags",
+    ) -> "Version":
+        """
+        Determine a version based on a specific VCS setting.
+
+        This is primarily intended for other tools that want to generically
+        use some VCS setting based on user configuration, without having to
+        maintain a mapping from the VCS name to the appropriate function.
+
+        :param pattern: Regular expression matched against the version source.
+            The default value defers to the VCS-specific `from_` functions.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
+        :param tag_dir: Location of tags relative to the root.
+            This is only used for Subversion.
+        """
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
+
+    @classmethod
+    def _do_vcs_callback(cls, vcs: Vcs, pattern: str, latest_tag: bool, tag_dir: str) -> "Version":
+        mapping = {
+            Vcs.Any: cls.from_any_vcs,
+            Vcs.Git: cls.from_git,
+            Vcs.Mercurial: cls.from_mercurial,
+            Vcs.Darcs: cls.from_darcs,
+            Vcs.Subversion: cls.from_subversion,
+            Vcs.Bazaar: cls.from_bazaar,
+        }  # type: Mapping[Vcs, Callable[..., "Version"]]
+        kwargs = {"pattern": pattern, "latest_tag": latest_tag}
+        if vcs == Vcs.Subversion:
+            kwargs["tag_dir"] = tag_dir
+        return mapping[vcs](**kwargs)
 
 
 def check_version(version: str, style: Style = Style.Pep440) -> None:
