@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.8.0 (2019-06-05)
 
 * Changed `Version.from_any_vcs` to accept the `tag_dir` argument,
   which will only be used if Subversion is the detected VCS.
