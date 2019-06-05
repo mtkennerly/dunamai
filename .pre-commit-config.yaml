@@ -3,7 +3,6 @@
   hooks:
     - id: trailing-whitespace
     - id: end-of-file-fixer
-    - id: flake8
 - repo: https://github.com/Lucas-C/pre-commit-hooks
   rev: v1.1.6
   hooks:
@@ -18,3 +17,10 @@
     - id: mypy
       args:
         - --ignore-missing-imports
+- repo: local
+  hooks:
+    - id: flake8
+      name: flake8
+      language: system
+      entry: poetry run flake8
+      types: [python]

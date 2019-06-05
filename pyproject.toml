@@ -28,6 +28,7 @@ black = { version = "^18.3-alpha.0", allows-prereleases = true, python = "^3.6" 
 flake8 = "^3.7"
 mypy = "^0.700.0"
 tox-venv = "^0.4.0"
+pep8-naming = "^0.8.2"
 
 [tool.poetry.scripts]
 dunamai = 'dunamai.__main__:main'
