@@ -334,7 +334,7 @@ class Version:
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
 
-        code, msg = _run_cmd("git tag --sort -taggerdate --sort -committerdate")
+        code, msg = _run_cmd("git tag --sort -creatordate")
         if not msg:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()

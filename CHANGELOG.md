@@ -1,4 +1,8 @@
 
+## Unreleased
+
+* Fixed handling of annotated Git tags, which were previously ignored.
+
 ## v0.8.0 (2019-06-05)
 
 * Changed `Version.from_any_vcs` to accept the `tag_dir` argument,

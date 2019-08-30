@@ -424,6 +424,9 @@ def test__version__from_git(tmp_path):
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
+        run("git tag v0.2.0 -m 'Annotated'")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
 def test__version__from_mercurial(tmp_path):
