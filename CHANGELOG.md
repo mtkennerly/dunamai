@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.8.1 (2019-08-30)
 
 * Fixed handling of annotated Git tags, which were previously ignored.
 
