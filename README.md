@@ -1,5 +1,8 @@
 
 # Dunamai
+[![Build status](https://travis-ci.org/mtkennerly/dunamai.svg?branch=master)](https://travis-ci.org/mtkennerly/dunamai)
+[![Version](https://img.shields.io/pypi/v/dunamai)](https://pypi.org/project/dunamai)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Dunamai is a Python 3.5+ library and command line tool for producing dynamic,
 standards-compliant version strings, derived from tags in your version
@@ -8,7 +11,6 @@ builds in continuous integration and releasing new versions of your software
 simply by creating a tag.
 
 ## Features
-
 * Version control system support:
   * Git
   * Mercurial
@@ -24,7 +26,6 @@ simply by creating a tag.
   For Python, this means you do not need a setup.py.
 
 ## Usage
-
 Install with `pip install dunamai`, and then use as either a CLI:
 
 ```console
@@ -89,7 +90,6 @@ assert version.dirty is True
 ```
 
 ## Comparison to Versioneer
-
 [Versioneer](https://github.com/warner/python-versioneer) is another great
 library for dynamic versions, but there are some design decisions that
 prompted the creation of Dunamai as an alternative:
@@ -109,7 +109,6 @@ prompted the creation of Dunamai as an alternative:
   scripting support and use in other libraries.
 
 ## Integration
-
 * Setting a `__version__` statically:
 
   ```console
@@ -149,7 +148,6 @@ prompted the creation of Dunamai as an alternative:
   ```
 
 ## Development
-
 This project is managed using [Poetry](https://poetry.eustace.io).
 Development requires Python 3.6+ because of [Black](https://github.com/ambv/black).
 

@@ -28,9 +28,14 @@ def _run_cmd(command: str, codes: Sequence[int] = (0,), where: Path = None) -> T
         stderr=subprocess.STDOUT,
         cwd=str(where) if where is not None else None,
     )
+    output = result.stdout.decode().strip()
     if codes and result.returncode not in codes:
-        raise RuntimeError("The command '{}' returned code {}".format(command, result.returncode))
-    return (result.returncode, result.stdout.decode().strip())
+        raise RuntimeError(
+            "The command '{}' returned code {}. Output:\n{}".format(
+                command, result.returncode, output
+            )
+        )
+    return (result.returncode, output)
 
 
 def _find_higher_dir(*names: str) -> Optional[str]:

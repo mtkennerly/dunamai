@@ -1,0 +1,28 @@
+language: python
+
+env:
+  global:
+    - DUNAMAI_DEV=1
+    - DARCS_EMAIL='foo <foo@example.com>'
+
+matrix:
+  fast_finish: true
+  include:
+    - python: '3.5'
+      script:
+        - poetry run pytest --verbose --cov
+    - python: '3.6'
+      script:
+        - poetry run pytest --verbose --cov
+    - python: '3.7'
+      script:
+        - poetry run pytest --verbose --cov
+        - poetry run pre-commit run --all-files --show-diff-on-failure
+
+install:
+  - pip install poetry
+  - poetry install
+  - sudo apt-get install -y darcs
+
+before_script:
+  - bzr whoami 'foo <foo@example.com>'
