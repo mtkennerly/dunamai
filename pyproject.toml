@@ -26,7 +26,7 @@ pytest-cov = "^2.6"
 tox = "^3.7"
 black = { version = "^18.3-alpha.0", allows-prereleases = true, python = "^3.6" }
 flake8 = "^3.7"
-mypy = "^0.700.0"
+mypy = "^0.740"
 tox-venv = "^0.4.0"
 pep8-naming = "^0.8.2"
 
