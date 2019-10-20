@@ -425,7 +425,13 @@ def test__version__from_git(tmp_path):
             from_vcs(latest_tag=True)
 
         run("git tag v0.2.0 -m 'Annotated'")
+        run("git tag v0.1.1 HEAD~1")
         assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
+        run("git checkout v0.1.0")
+        assert from_vcs() == Version("0.1.1", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.1", commit="abc", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
@@ -465,6 +471,20 @@ def test__version__from_mercurial(tmp_path):
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
+        run("hg tag v0.2.0")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
+        run('hg tag v0.1.1 -r "tag(v0.1.0)"')
+        assert from_vcs() == Version("0.2.0", post=1, dev=0, commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version(
+            "0.2.0", post=1, dev=0, commit="abc", dirty=False
+        )
+
+        run("hg checkout v0.1.0")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.0", commit="abc", dirty=False)
+
 
 @pytest.mark.skipif(shutil.which("darcs") is None, reason="Requires Darcs")
 def test__version__from_darcs(tmp_path):
@@ -502,6 +522,12 @@ def test__version__from_darcs(tmp_path):
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
+        run("darcs tag v0.2.0")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+
+        run("darcs obliterate --all --last 3")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+
 
 @pytest.mark.skipif(
     None in [shutil.which("svn"), shutil.which("svnadmin")], reason="Requires Subversion"
@@ -529,11 +555,11 @@ def test__version__from_subversion(tmp_path):
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
 
         run("svn add --force .")
-        run('svn commit -m "Initial commit"')
+        run('svn commit -m "Initial commit"')  # commit 1
         run("svn update")
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="1", dirty=False)
 
-        run('svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri))
+        run('svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri))  # commit 2
         run("svn update")
         assert from_vcs() == Version("0.1.0", commit="2", dirty=False)
         assert run("dunamai from subversion") == "0.1.0"
@@ -542,7 +568,7 @@ def test__version__from_subversion(tmp_path):
         (vcs / "trunk" / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="2", dirty=True)
 
-        run('svn commit -m "Second"')
+        run('svn commit -m "Second"')  # commit 3
         run("svn update")
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="3", dirty=False)
         assert from_any_vcs_unmocked() == Version("0.1.0", post=1, dev=0, commit="3", dirty=False)
@@ -553,12 +579,17 @@ def test__version__from_subversion(tmp_path):
         run('svn copy {0}/trunk {0}/tags/v0.1.1 -r 1 -m "Tag 3"'.format(vcs_srv_uri))  # commit 5
         run("svn update")
         assert from_vcs() == Version("0.2.0", post=1, dev=0, commit="5", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", post=1, dev=0, commit="5", dirty=False)
 
-        run('svn copy {0}/trunk {0}/tags/unmatched -m "Tag 3"'.format(vcs_srv_uri))  # commit 6
+        run('svn copy {0}/trunk {0}/tags/unmatched -m "Tag 4"'.format(vcs_srv_uri))  # commit 6
         run("svn update")
         assert from_vcs() == Version("0.2.0", post=2, dev=0, commit="6", dirty=False)
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
+
+        run("svn update -r 2")
+        assert from_vcs() == Version("0.1.0", commit="2", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.0", commit="2", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("bzr") is None, reason="Requires Bazaar")
@@ -597,6 +628,17 @@ def test__version__from_bazaar(tmp_path):
         assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="2", dirty=False)
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
+
+        run("bzr tag v0.2.0")
+        run("bzr tag v0.1.1 -r v0.1.0")
+        assert from_vcs() == Version("0.2.0", commit="2", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="2", dirty=False)
+
+        run("bzr checkout . old -r v0.1.0")
+
+    with chdir(vcs / "old"):
+        assert from_vcs() == Version("0.1.1", commit="1", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.1", commit="1", dirty=False)
 
 
 def test__version__from_any_vcs(tmp_path):

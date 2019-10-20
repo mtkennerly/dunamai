@@ -1,4 +1,12 @@
 
+## Unreleased
+
+* Fixed case with Git/Mercurial/Subversion/Bazaar where, if you checked out an
+  older commit, then Dunamai would consider tags for commits both before and
+  after the commit that was checked out. It now only considers tags for the
+  checked out commit or one of its ancestors, making the results more
+  deterministic.
+
 ## v0.8.1 (2019-08-30)
 
 * Fixed handling of annotated Git tags, which were previously ignored.

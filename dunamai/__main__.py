@@ -60,7 +60,7 @@ common_sub_args = [
         "action": "store_true",
         "dest": "latest_tag",
         "default": False,
-        "help": "Only inspect the latest tag for a pattern match",
+        "help": "Only inspect the latest tag on the latest tagged commit for a pattern match",
     },
 ]
 cli_spec = {

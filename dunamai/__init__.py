@@ -328,8 +328,9 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         """
         code, msg = _run_cmd('git log -n 1 --format="format:%h"', codes=[0, 128])
         if code == 128:
@@ -339,7 +340,7 @@ class Version:
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
 
-        code, msg = _run_cmd("git tag --sort -creatordate")
+        code, msg = _run_cmd("git tag --merged HEAD --sort -creatordate")
         if not msg:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
@@ -367,22 +368,27 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         """
         code, msg = _run_cmd("hg summary")
         dirty = "commit: (clean)" not in msg.splitlines()
 
-        code, msg = _run_cmd('hg log --limit 1 --template "{node|short}"')
-        commit = msg if msg else None
+        code, msg = _run_cmd('hg id --template "{id|short}"')
+        commit = msg if set(msg) != {"0"} else None
 
-        code, msg = _run_cmd('hg log -r "sort(tag(), -date)" --template "{tags}\\n"')
+        code, msg = _run_cmd(
+            'hg log -r "sort(tag(){}, -rev)" --template "{{join(tags, \':\')}}\\n"'.format(
+                " and ancestors({})".format(commit) if commit is not None else ""
+            )
+        )
         if not msg:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-        tags = msg.splitlines()
+        tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
         tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
-        code, msg = _run_cmd('hg log -r "{0}::tip - {0}" --template "."'.format(tag))
+        code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit))
         # The tag itself is in the list, so offset by 1.
         distance = len(msg) - 1
 
@@ -405,8 +411,9 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         """
         code, msg = _run_cmd("darcs status", codes=[0, 1])
         dirty = msg != "No changes!"
@@ -445,8 +452,9 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         :param tag_dir: Location of tags relative to the root.
         """
         tag_dir = tag_dir.strip("/")
@@ -465,14 +473,14 @@ class Version:
 
         if not commit:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-        code, msg = _run_cmd('svn ls -v "{}/{}"'.format(url, tag_dir))
+        code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
         if not tags_to_revs:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
-            code, msg = _run_cmd('svn log "{}/{}/{}" -v --stop-on-copy'.format(url, tag_dir, tag))
+            code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
             for line in msg.splitlines():
                 match = re.search(r"A /{}/{} \(from .+?:(\d+)\)".format(tag_dir, tag), line)
                 if match:
@@ -504,8 +512,9 @@ class Version:
             named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
             and number of prerelease. For example, with a tag like v0.1.0, the
             pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         """
         code, msg = _run_cmd("bzr status")
         dirty = msg != ""
@@ -516,7 +525,11 @@ class Version:
         code, msg = _run_cmd("bzr tags")
         if not msg or not commit:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
-        tags_to_revs = {line.split()[0]: int(line.split()[1]) for line in msg.splitlines()}
+        tags_to_revs = {
+            line.split()[0]: int(line.split()[1])
+            for line in msg.splitlines()
+            if line.split()[1] != "?"
+        }
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
         tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
@@ -539,8 +552,9 @@ class Version:
 
         :param pattern: Regular expression matched against the version source.
             The default value defers to the VCS-specific `from_` functions.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         :param tag_dir: Location of tags relative to the root.
             This is only used for Subversion.
         """
@@ -573,8 +587,9 @@ class Version:
 
         :param pattern: Regular expression matched against the version source.
             The default value defers to the VCS-specific `from_` functions.
-        :param latest_tag: If true, only inspect the latest tag for a pattern
-            match. If false, keep looking at tags until there is a match.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
         :param tag_dir: Location of tags relative to the root.
             This is only used for Subversion.
         """
