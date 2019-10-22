@@ -1,5 +1,5 @@
 
-## Unreleased
+## v0.9.0 (2019-10-22)
 
 * Added Fossil support.
 * Fixed case with Git/Mercurial/Subversion/Bazaar where, if you checked out an
