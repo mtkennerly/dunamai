@@ -4,6 +4,7 @@ import os
 import pkg_resources
 import re
 import shlex
+import shutil
 import subprocess
 from enum import Enum
 from functools import total_ordering
@@ -36,15 +37,6 @@ def _run_cmd(command: str, codes: Sequence[int] = (0,), where: Path = None) -> T
             )
         )
     return (result.returncode, output)
-
-
-def _find_higher_dir(*names: str) -> Optional[str]:
-    start = Path().resolve()
-    for level in [start, *start.parents]:
-        for name in names:
-            if (level / name).is_dir():
-                return name
-    return None
 
 
 def _match_version_pattern(
@@ -103,6 +95,7 @@ class Vcs(Enum):
     Darcs = "darcs"
     Subversion = "subversion"
     Bazaar = "bazaar"
+    Fossil = "fossil"
 
 
 @total_ordering
@@ -544,6 +537,78 @@ class Version:
         return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
 
     @classmethod
+    def from_fossil(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+        r"""
+        Determine a version based on Fossil tags.
+
+        :param pattern: Regular expression matched against the version source.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
+            and number of prerelease. For example, with a tag like v0.1.0, the
+            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+        :param latest_tag: If true, only inspect the latest tag for a pattern
+            match. If false, keep looking at tags until there is a match.
+        """
+        code, msg = _run_cmd("fossil changes --differ", codes=[0, 1])
+        if code == 1:
+            return cls("0.0.0", post=0, dev=0, dirty=True)
+        dirty = bool(msg)
+
+        code, msg = _run_cmd(
+            "fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\""
+        )
+        commit = msg.strip("'")
+
+        code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"")
+        if int(msg) <= 1:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+
+        # Based on `compute_direct_ancestors` from descendants.c in the
+        # Fossil source code:
+        query = """
+            CREATE TEMP TABLE IF NOT EXISTS
+                dunamai_ancestor(
+                    rid INTEGER UNIQUE NOT NULL,
+                    generation INTEGER PRIMARY KEY
+                );
+            DELETE FROM dunamai_ancestor;
+            WITH RECURSIVE g(x, i)
+                AS (
+                    VALUES((SELECT value FROM vvar WHERE name = 'checkout' LIMIT 1), 1)
+                    UNION ALL
+                    SELECT plink.pid, g.i + 1 FROM plink, g
+                    WHERE plink.cid = g.x AND plink.isprim
+                )
+                INSERT INTO dunamai_ancestor(rid, generation) SELECT x, i FROM g;
+            SELECT tag.tagname, dunamai_ancestor.generation
+                FROM tag
+                JOIN tagxref ON tag.tagid = tagxref.tagid
+                JOIN event ON tagxref.origid = event.objid
+                JOIN dunamai_ancestor ON tagxref.origid = dunamai_ancestor.rid
+                WHERE tagxref.tagtype = 1
+                ORDER BY event.mtime DESC, tagxref.mtime DESC;
+        """
+        code, msg = _run_cmd('fossil sql "{}"'.format(" ".join(query.splitlines())))
+        if not msg:
+            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+
+        tags_to_distance = {
+            line.rsplit(",", 1)[0][5:-1]: int(line.rsplit(",", 1)[1]) - 1
+            for line in msg.splitlines()
+        }
+        tag, base, pre = _match_version_pattern(pattern, list(tags_to_distance.keys()), latest_tag)
+        distance = tags_to_distance[tag]
+
+        post = None
+        dev = None
+        if distance > 0:
+            post = distance
+            dev = 0
+
+        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty))
+
+    @classmethod
     def from_any_vcs(
         cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
     ) -> "Version":
@@ -558,17 +623,20 @@ class Version:
         :param tag_dir: Location of tags relative to the root.
             This is only used for Subversion.
         """
-        vcs_dir = _find_higher_dir(".git", ".hg", "_darcs", ".svn", ".bzr")
-        if not vcs_dir:
-            raise RuntimeError("Unable to detect version control system.")
-        vcs = {
-            ".git": Vcs.Git,
-            ".hg": Vcs.Mercurial,
-            "_darcs": Vcs.Darcs,
-            ".svn": Vcs.Subversion,
-            ".bzr": Vcs.Bazaar,
-        }[vcs_dir]
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
+        checks = [
+            (Vcs.Git, "git status"),
+            (Vcs.Mercurial, "hg status"),
+            (Vcs.Darcs, "darcs log"),
+            (Vcs.Subversion, "svn log"),
+            (Vcs.Bazaar, "bzr status"),
+            (Vcs.Fossil, "fossil status"),
+        ]
+        for vcs, command in checks:
+            if shutil.which(command.split()[0]):
+                code, _ = _run_cmd(command, codes=[])
+                if code == 0:
+                    return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
+        raise RuntimeError("Unable to detect version control system.")
 
     @classmethod
     def from_vcs(
@@ -604,6 +672,7 @@ class Version:
             Vcs.Darcs: cls.from_darcs,
             Vcs.Subversion: cls.from_subversion,
             Vcs.Bazaar: cls.from_bazaar,
+            Vcs.Fossil: cls.from_fossil,
         }  # type: Mapping[Vcs, Callable[..., "Version"]]
         kwargs = {"pattern": pattern, "latest_tag": latest_tag}
         if vcs == Vcs.Subversion:

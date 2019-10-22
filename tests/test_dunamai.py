@@ -641,6 +641,61 @@ def test__version__from_bazaar(tmp_path):
         assert from_vcs(latest_tag=True) == Version("0.1.1", commit="1", dirty=False)
 
 
+@pytest.mark.skipif(shutil.which("fossil") is None, reason="Requires Fossil")
+def test__version__from_fossil(tmp_path):
+    vcs = tmp_path / "dunamai-fossil"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_fossil)
+
+    with chdir(vcs):
+        run("fossil init repo")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
+
+        run("fossil open repo")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+
+        (vcs / "foo.txt").write_text("hi")
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=True)
+
+        run("fossil add .")
+        run('fossil commit -m "Initial commit"')
+        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
+
+        run("fossil tag add v0.1.0 trunk")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.0", commit="abc", dirty=False)
+        assert run("dunamai from fossil") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
+
+        (vcs / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)
+
+        run("fossil add .")
+        run('fossil commit -m "Second"')
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc", dirty=False)
+        assert from_any_vcs() == Version("0.1.0", post=1, dev=0, commit="abc", dirty=False)
+
+        run("fossil tag add unmatched trunk")
+        assert from_vcs() == Version("0.1.0", post=1, dev=0, commit="abc", dirty=False)
+        with pytest.raises(ValueError):
+            from_vcs(latest_tag=True)
+
+        (vcs / "foo.txt").write_text("third")
+        run("fossil add .")
+        run("fossil commit --tag v0.2.0 -m 'Third'")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
+        run("fossil tag add v0.1.1 v0.1.0")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
+        run("fossil checkout v0.1.0")
+        assert from_vcs() == Version("0.1.1", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.1", commit="abc", dirty=False)
+
+
 def test__version__from_any_vcs(tmp_path):
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):

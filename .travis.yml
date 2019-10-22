@@ -4,11 +4,16 @@ env:
   global:
     - DUNAMAI_DEV=1
     - DARCS_EMAIL='foo <foo@example.com>'
+    - PATH="$PATH:/opt"
+
+before_install:
+  - sudo apt-get install -y darcs
+  - curl https://www.fossil-scm.org/home/uv/fossil-linux-x64-2.10.tar.gz -o ~/fossil.tgz
+  - tar -xvf ~/fossil.tgz -C /opt
 
 install:
   - pip install poetry
   - poetry install
-  - sudo apt-get install -y darcs
 
 before_script:
   - bzr whoami 'foo <foo@example.com>'

@@ -109,6 +109,10 @@ cli_spec = {
                     "description": "Generate version from Bazaar",
                     "args": common_sub_args,
                 },
+                Vcs.Fossil.value: {
+                    "description": "Generate version from Fossil",
+                    "args": common_sub_args,
+                },
             },
         },
         "check": {

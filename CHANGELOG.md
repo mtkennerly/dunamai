@@ -1,6 +1,7 @@
 
 ## Unreleased
 
+* Added Fossil support.
 * Fixed case with Git/Mercurial/Subversion/Bazaar where, if you checked out an
   older commit, then Dunamai would consider tags for commits both before and
   after the commit that was checked out. It now only considers tags for the

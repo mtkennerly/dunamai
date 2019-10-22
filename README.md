@@ -12,11 +12,12 @@ simply by creating a tag.
 
 ## Features
 * Version control system support:
-  * Git
-  * Mercurial
-  * Darcs
-  * Subversion
-  * Bazaar
+  * [Git](https://git-scm.com)
+  * [Mercurial](https://www.mercurial-scm.org)
+  * [Darcs](http://darcs.net)
+  * [Subversion](https://subversion.apache.org)
+  * [Bazaar](https://bazaar.canonical.com/en)
+  * [Fossil](https://www.fossil-scm.org/home/doc/trunk/www/index.wiki)
 * Version styles:
   * [PEP 440](https://www.python.org/dev/peps/pep-0440)
   * [Semantic Versioning](https://semver.org)
