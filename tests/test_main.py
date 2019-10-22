@@ -55,3 +55,5 @@ def test__cli_check():
     _run_cmd("dunamai check 0.01.0")
     _run_cmd("dunamai check v0.1.0", codes=[1])
     _run_cmd("dunamai check 0.01.0 --style semver", codes=[1])
+    _run_cmd("dunamai check", codes=[1])
+    _run_cmd("echo 0.01.0 | dunamai check", shell=True)

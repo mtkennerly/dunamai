@@ -22,12 +22,15 @@ _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
 _T = TypeVar("_T")
 
 
-def _run_cmd(command: str, codes: Sequence[int] = (0,), where: Path = None) -> Tuple[int, str]:
+def _run_cmd(
+    command: str, codes: Sequence[int] = (0,), where: Path = None, shell: bool = False
+) -> Tuple[int, str]:
     result = subprocess.run(
         shlex.split(command),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=str(where) if where is not None else None,
+        shell=shell,
     )
     output = result.stdout.decode().strip()
     if codes and result.returncode not in codes:
@@ -46,10 +49,7 @@ def _match_version_pattern(
     base = None
     pre = None
 
-    if latest_source:
-        sources = sources[:1]
-
-    for source in sources:
+    for source in sources[:1] if latest_source else sources:
         pattern_match = re.search(pattern, source)
         if pattern_match is None:
             continue
@@ -63,9 +63,13 @@ def _match_version_pattern(
             )
     if pattern_match is None or base is None:
         if latest_source:
-            raise ValueError("Pattern '{}' did not match the latest tag".format(pattern))
+            raise ValueError(
+                "Pattern '{}' did not match the latest tag '{}' from {}".format(
+                    pattern, sources[0], sources
+                )
+            )
         else:
-            raise ValueError("Pattern '{}' did not match any tags".format(pattern))
+            raise ValueError("Pattern '{}' did not match any tags from {}".format(pattern, sources))
 
     try:
         pre_type = pattern_match.group("pre_type")
@@ -593,12 +597,14 @@ class Version:
         if not msg:
             return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
 
-        tags_to_distance = {
-            line.rsplit(",", 1)[0][5:-1]: int(line.rsplit(",", 1)[1]) - 1
+        tags_to_distance = [
+            (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
             for line in msg.splitlines()
-        }
-        tag, base, pre = _match_version_pattern(pattern, list(tags_to_distance.keys()), latest_tag)
-        distance = tags_to_distance[tag]
+        ]
+        tag, base, pre = _match_version_pattern(
+            pattern, [t for t, d in tags_to_distance], latest_tag
+        )
+        distance = dict(tags_to_distance)[tag]
 
         post = None
         dev = None

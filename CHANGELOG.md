@@ -7,6 +7,10 @@
   after the commit that was checked out. It now only considers tags for the
   checked out commit or one of its ancestors, making the results more
   deterministic.
+* Changed VCS detection to be based on the result of VCS commands rather than
+  looking for VCS-specific directories/files. This avoids the risk of false
+  positives and simplifies cases with inconsistent VCS files (e.g.,
+  Fossil uses `.fslckout` on Linux and `_FOSSIL_` on Windows)
 
 ## v0.8.1 (2019-08-30)
 

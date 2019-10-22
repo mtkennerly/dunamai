@@ -21,7 +21,7 @@ def chdir(where: Path) -> Iterator[None]:
 
 
 def make_run_callback(where: Path) -> Callable:
-    def inner(command, expected_code=0):
+    def inner(command, expected_code: int = 0):
         _, out = _run_cmd(command, where=where, codes=[expected_code])
         return out
 
@@ -392,6 +392,18 @@ def test__version__from_git(tmp_path):
         run('git commit -m "Initial commit"')
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
 
+        # Additional one-off check not in other VCS integration tests:
+        # command returns error.
+        assert run("dunamai from mercurial", 1).replace("\r", "")[:78] == (
+            "The command 'hg summary' returned code 255. Output:\nabort: no repository found"
+        )
+
+        # Additional one-off check not in other VCS integration tests:
+        # when the only tag in the repository does not match the pattern.
+        run("git tag other")
+        with pytest.raises(ValueError):
+            from_vcs()
+
         run("git tag v0.1.0")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.1.0", commit="abc", dirty=False)
@@ -432,6 +444,15 @@ def test__version__from_git(tmp_path):
         run("git checkout v0.1.0")
         assert from_vcs() == Version("0.1.1", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.1.1", commit="abc", dirty=False)
+
+        # Additional one-off check not in other VCS integration tests:
+        # tag with pre-release segment.
+        run("git checkout master")
+        (vcs / "foo.txt").write_text("third")
+        run("git add .")
+        run('git commit -m "Third"')
+        run("git tag v0.2.1b3")
+        assert from_vcs() == Version("0.2.1", pre=("b", 3), commit="abc", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")

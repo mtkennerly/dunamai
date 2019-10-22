@@ -23,14 +23,14 @@ matrix:
   include:
     - python: '3.5'
       script:
-        - poetry run pytest --verbose --cov
+        - poetry run pytest --verbose --cov --cov-report term-missing
     - python: '3.6'
       script:
-        - poetry run pytest --verbose --cov
+        - poetry run pytest --verbose --cov --cov-report term-missing
     - python: '3.7'
       script:
-        - poetry run pytest --verbose --cov
+        - poetry run pytest --verbose --cov --cov-report term-missing
         - poetry run pre-commit run --all-files --show-diff-on-failure
     - python: '3.8'
       script:
-        - poetry run pytest --verbose --cov
+        - poetry run pytest --verbose --cov --cov-report term-missing
