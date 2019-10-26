@@ -140,36 +140,28 @@ class Version:
         self,
         base: str,
         *,
-        epoch: int = None,
         pre: Tuple[str, int] = None,
-        post: int = None,
-        dev: int = None,
+        distance: int = 0,
         commit: str = None,
         dirty: bool = None
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
-        :param epoch: Epoch number.
         :param pre: Pair of prerelease type (e.g., "a", "alpha", "b", "rc") and number.
-        :param post: Postrelease number.
-        :param dev: Development release number.
+        :param distance: Number of commits since the last tag.
         :param commit: Commit hash/identifier.
         :param dirty: True if the working directory does not match the commit.
         """
         #: Release segment.
         self.base = base
-        #: Epoch number.
-        self.epoch = epoch
         #: Alphabetical part of prerelease segment.
         self.pre_type = None
         #: Numerical part of prerelease segment.
         self.pre_number = None
         if pre is not None:
             self.pre_type, self.pre_number = pre
-        #: Postrelease number.
-        self.post = post
-        #: Development release number.
-        self.dev = dev
+        #: Number of commits since the last tag.
+        self.distance = distance
         #: Commit ID.
         self.commit = commit
         #: Whether there are uncommitted changes.
@@ -180,18 +172,9 @@ class Version:
 
     def __repr__(self) -> str:
         return (
-            "Version(base={!r}, epoch={!r}, pre_type={!r}, pre_number={!r},"
-            " post={!r}, dev={!r}, commit={!r}, dirty={!r})"
-        ).format(
-            self.base,
-            self.epoch,
-            self.pre_type,
-            self.pre_number,
-            self.post,
-            self.dev,
-            self.commit,
-            self.dirty,
-        )
+            "Version(base={!r}, pre_type={!r}, pre_number={!r},"
+            " distance={!r}, commit={!r}, dirty={!r})"
+        ).format(self.base, self.pre_type, self.pre_number, self.distance, self.commit, self.dirty)
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Version):
@@ -199,12 +182,10 @@ class Version:
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
         return (
-            self.epoch == other.epoch
-            and self.base == other.base
+            self.base == other.base
             and self.pre_type == other.pre_type
             and self.pre_number == other.pre_number
-            and self.post == other.post
-            and self.dev == other.dev
+            and self.distance == other.distance
             and self.commit == other.commit
             and self.dirty == other.dirty
         )
@@ -215,12 +196,10 @@ class Version:
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
         return (
-            _blank(self.epoch, 0) < _blank(other.epoch, 0)
-            and pkg_resources.parse_version(self.base) < pkg_resources.parse_version(other.base)
+            pkg_resources.parse_version(self.base) < pkg_resources.parse_version(other.base)
             and _blank(self.pre_type, "") < _blank(other.pre_type, "")
             and _blank(self.pre_number, 0) < _blank(other.pre_number, 0)
-            and _blank(self.post, 0) < _blank(other.post, 0)
-            and _blank(self.dev, 0) < _blank(other.dev, 0)
+            and _blank(self.distance, 0) < _blank(other.distance, 0)
             and _blank(self.commit, "") < _blank(other.commit, "")
             and bool(self.dirty) < bool(other.dirty)
         )
@@ -241,11 +220,9 @@ class Version:
             is not validated with custom formats. Available substitutions:
 
             * {base}
-            * {epoch}
             * {pre_type}
             * {pre_number}
-            * {post}
-            * {dev}
+            * {distance}
             * {commit}
             * {dirty} which expands to either "dirty" or "clean"
         :param style: Built-in output formats. Will default to PEP 440 if not
@@ -256,11 +233,9 @@ class Version:
         if format is not None:
             out = format.format(
                 base=self.base,
-                epoch=_blank(self.epoch, ""),
                 pre_type=_blank(self.pre_type, ""),
                 pre_number=_blank(self.pre_number, ""),
-                post=_blank(self.post, ""),
-                dev=_blank(self.dev, ""),
+                distance=_blank(self.distance, ""),
                 commit=_blank(self.commit, ""),
                 dirty="dirty" if self.dirty else "clean",
             )
@@ -273,21 +248,16 @@ class Version:
         out = ""
 
         if style == Style.Pep440:
-            if self.epoch is not None:
-                out += "{}!".format(self.epoch)
-
             out += self.base
 
             if self.pre_type is not None and self.pre_number is not None:
                 out += "{}{}".format(self.pre_type, self.pre_number)
-            if self.post is not None:
-                out += ".post{}".format(self.post)
-            if self.dev is not None:
-                out += ".dev{}".format(self.dev)
+            if self.distance > 0:
+                out += ".post{}.dev0".format(self.distance)
 
             if metadata is not False:
                 metadata_parts = []
-                if metadata or self.post is not None or self.dev is not None:
+                if metadata or self.distance > 0:
                     metadata_parts.append(self.commit)
                 if dirty and self.dirty:
                     metadata_parts.append("dirty")
@@ -298,20 +268,16 @@ class Version:
             out += self.base
 
             pre_parts = []
-            if self.epoch is not None:
-                pre_parts.append(("epoch", self.epoch))
             if self.pre_type is not None and self.pre_number is not None:
                 pre_parts.append((self.pre_type, self.pre_number))
-            if self.post is not None:
-                pre_parts.append(("post", self.post))
-            if self.dev is not None:
-                pre_parts.append(("dev", self.dev))
+            if self.distance > 0:
+                pre_parts.append(("post", self.distance))
             if pre_parts:
                 out += "-{}".format(".".join("{}.{}".format(k, v) for k, v in pre_parts))
 
             if metadata is not False:
                 metadata_parts = []
-                if metadata or self.post is not None or self.dev is not None:
+                if metadata or self.distance > 0:
                     metadata_parts.append(self.commit)
                 if dirty and self.dirty:
                     metadata_parts.append("dirty")
@@ -322,20 +288,16 @@ class Version:
             out += self.base
 
             pre_parts = []
-            if self.epoch is not None:
-                pre_parts.append(("epoch", self.epoch))
             if self.pre_type is not None and self.pre_number is not None:
                 pre_parts.append((self.pre_type, self.pre_number))
-            if self.post is not None:
-                pre_parts.append(("post", self.post))
-            if self.dev is not None:
-                pre_parts.append(("dev", self.dev))
+            if self.distance > 0:
+                pre_parts.append(("post", self.distance))
             if pre_parts:
                 out += "-{}".format("-".join("{}-{}".format(k, v) for k, v in pre_parts))
 
             if metadata is not False:
                 metadata_parts = []
-                if metadata or self.post is not None or self.dev is not None:
+                if metadata or self.distance > 0:
                     metadata_parts.append(self.commit)
                 if dirty and self.dirty:
                     metadata_parts.append("dirty")
@@ -365,7 +327,7 @@ class Version:
 
         code, msg = _run_cmd('git log -n 1 --format="format:%h"', codes=[0, 128])
         if code == 128:
-            return cls("0.0.0", post=0, dev=0, dirty=True)
+            return cls("0.0.0", distance=0, dirty=True)
         commit = msg
 
         code, msg = _run_cmd("git describe --always --dirty")
@@ -373,20 +335,14 @@ class Version:
 
         code, msg = _run_cmd("git tag --merged HEAD --sort -creatordate")
         if not msg:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
         tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd("git rev-list --count {}..HEAD".format(tag))
         distance = int(msg)
 
-        post = None
-        dev = None
-        if distance > 0:
-            post = distance
-            dev = 0
-
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty))
+        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -417,21 +373,15 @@ class Version:
             )
         )
         if not msg:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
         tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit))
         # The tag itself is in the list, so offset by 1.
-        distance = len(msg) - 1
+        distance = max(len(msg) - 1, 0)
 
-        post = None
-        dev = None
-        if distance > 0:
-            post = distance
-            dev = 0
-
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_darcs(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -458,7 +408,7 @@ class Version:
 
         code, msg = _run_cmd("darcs show tags")
         if not msg:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
         tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
 
@@ -466,13 +416,7 @@ class Version:
         # The tag itself is in the list, so offset by 1.
         distance = int(msg) - 1
 
-        post = None
-        dev = None
-        if distance > 0:
-            post = distance
-            dev = 0
-
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_subversion(
@@ -509,12 +453,12 @@ class Version:
             commit = msg
 
         if not commit:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
         if not tags_to_revs:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
             code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
@@ -530,13 +474,7 @@ class Version:
         # The tag itself is in the list, so offset by 1.
         distance = int(commit) - 1 - source
 
-        post = None
-        dev = None
-        if distance > 0:
-            post = distance
-            dev = 0
-
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_bazaar(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -563,7 +501,7 @@ class Version:
 
         code, msg = _run_cmd("bzr tags")
         if not msg or not commit:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags_to_revs = {
             line.split()[0]: int(line.split()[1])
             for line in msg.splitlines()
@@ -574,13 +512,7 @@ class Version:
 
         distance = int(commit) - tags_to_revs[tag]
 
-        post = None
-        dev = None
-        if distance > 0:
-            post = distance
-            dev = 0
-
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=dirty)
+        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_fossil(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -608,7 +540,7 @@ class Version:
 
         code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"")
         if int(msg) <= 1:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
 
         # Based on `compute_direct_ancestors` from descendants.c in the
         # Fossil source code:
@@ -637,7 +569,7 @@ class Version:
         """
         code, msg = _run_cmd('fossil sql "{}"'.format(" ".join(query.splitlines())))
         if not msg:
-            return cls("0.0.0", post=0, dev=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
 
         tags_to_distance = [
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
@@ -648,13 +580,7 @@ class Version:
         )
         distance = dict(tags_to_distance)[tag]
 
-        post = None
-        dev = None
-        if distance > 0:
-            post = distance
-            dev = 0
-
-        return cls(base, pre=pre, post=post, dev=dev, commit=commit, dirty=bool(dirty))
+        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_any_vcs(

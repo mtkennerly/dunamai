@@ -1,6 +1,28 @@
 
 ## Unreleased
 
+* Changed the `Version` class to align with Dunamai's own semantics instead of
+  PEP 440's semantics.
+
+  Previously, `Version` implemented all of PEP 440's features, like epochs and
+  dev releases, even though Dunamai itself did not use epochs (unless you
+  created your own `Version` instance with one and serialized it) and always
+  set dev to 0 in the `from_git`/etc methods. The `serialize` method then
+  tried to generalize those PEP 440 concepts to other versioning schemes,
+  as in `0.1.0-epoch.1` for Semantic Versioning, even though that doesn't
+  have an equivalent meaning in that scheme.
+
+  Now, the `Version` class implements the semantics used by Dunamai, giving
+  it more power in the serialization to map those concepts in an appropriate
+  way for each scheme. For example, `dev0` is now only added for PEP 440 (in
+  order to be compatible with Pip's `--pre` flag), but `dev.0` is no longer
+  added for Semantic Versioning because it served no purpose there.
+
+  API changes:
+
+  * `post` has been renamed to `distance`, and its type is simply `int`
+    rather than `Optional[int]`
+  * `epoch` and `dev` have been removed
 * Improved error reporting when the version control system cannot be detected
   and when a specific VCS is unavailable.
 

@@ -38,10 +38,10 @@ $ dunamai from any
 
 # Or use an explicit VCS and style:
 $ dunamai from git --no-metadata --style semver
-0.2.0-post.7.dev.0
+0.2.0-post.7
 
 # Custom formats:
-$ dunamai from any --format "v{base}+{post}.{commit}"
+$ dunamai from any --format "v{base}+{distance}.{commit}"
 v0.2.0+7.g29045e8
 
 # Validation of custom formats:
@@ -71,21 +71,19 @@ version = Version.from_any_vcs()
 assert version.serialize() == "0.1.0rc5.post44.dev0+g644252b"
 assert version.serialize(metadata=False) == "0.1.0rc5.post44.dev0"
 assert version.serialize(dirty=True) == "0.1.0rc5.post44.dev0+g644252b.dirty"
-assert version.serialize(style=Style.SemVer) == "0.1.0-rc.5.post.44.dev.0+g644252b"
+assert version.serialize(style=Style.SemVer) == "0.1.0-rc.5.post.44+g644252b"
 ```
 
 The `serialize()` method gives you an opinionated, PEP 440-compliant default
-that ensures that pre/post/development releases are compatible with Pip's
+that ensures that versions for untagged commits are compatible with Pip's
 `--pre` flag. The individual parts of the version are also available for you
 to use and inspect as you please:
 
 ```python
 assert version.base == "0.1.0"
-assert version.epoch is None
 assert version.pre_type == "rc"
 assert version.pre_number == 5
-assert version.post == 44
-assert version.dev == 0
+assert version.distance == 44
 assert version.commit == "g644252b"
 assert version.dirty is True
 ```
