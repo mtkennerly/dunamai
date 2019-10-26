@@ -393,9 +393,9 @@ def test__version__from_git(tmp_path):
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
 
         # Additional one-off check not in other VCS integration tests:
-        # command returns error.
-        assert run("dunamai from mercurial", 1).replace("\r", "")[:78] == (
-            "The command 'hg summary' returned code 255. Output:\nabort: no repository found"
+        # wrong VCS detected.
+        assert run("dunamai from mercurial", 1) == (
+            "This does not appear to be a Mercurial project"
         )
 
         # Additional one-off check not in other VCS integration tests:
@@ -671,8 +671,6 @@ def test__version__from_fossil(tmp_path):
 
     with chdir(vcs):
         run("fossil init repo")
-        assert from_vcs() == Version("0.0.0", post=0, dev=0, commit=None, dirty=True)
-
         run("fossil open repo")
         assert from_vcs() == Version("0.0.0", post=0, dev=0, commit="abc", dirty=False)
 

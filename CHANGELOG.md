@@ -1,4 +1,9 @@
 
+## Unreleased
+
+* Improved error reporting when the version control system cannot be detected
+  and when a specific VCS is unavailable.
+
 ## v0.9.0 (2019-10-22)
 
 * Added Fossil support.

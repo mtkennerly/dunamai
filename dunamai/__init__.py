@@ -1,11 +1,11 @@
 __all__ = ["check_version", "get_version", "Style", "Vcs", "Version"]
 
-import os
 import pkg_resources
 import re
 import shlex
 import shutil
 import subprocess
+from collections import OrderedDict
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
@@ -20,6 +20,22 @@ _VALID_SEMVER = (
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
 
 _T = TypeVar("_T")
+
+
+class Style(Enum):
+    Pep440 = "pep440"
+    SemVer = "semver"
+    Pvp = "pvp"
+
+
+class Vcs(Enum):
+    Any = "any"
+    Git = "git"
+    Mercurial = "mercurial"
+    Darcs = "darcs"
+    Subversion = "subversion"
+    Bazaar = "bazaar"
+    Fossil = "fossil"
 
 
 def _run_cmd(
@@ -86,20 +102,36 @@ def _blank(value: Optional[_T], default: _T) -> _T:
     return value if value is not None else default
 
 
-class Style(Enum):
-    Pep440 = "pep440"
-    SemVer = "semver"
-    Pvp = "pvp"
+def _detect_vcs(expected_vcs: Vcs = None) -> Vcs:
+    checks = OrderedDict(
+        [
+            (Vcs.Git, "git status"),
+            (Vcs.Mercurial, "hg status"),
+            (Vcs.Darcs, "darcs log"),
+            (Vcs.Subversion, "svn log"),
+            (Vcs.Bazaar, "bzr status"),
+            (Vcs.Fossil, "fossil status"),
+        ]
+    )
 
-
-class Vcs(Enum):
-    Any = "any"
-    Git = "git"
-    Mercurial = "mercurial"
-    Darcs = "darcs"
-    Subversion = "subversion"
-    Bazaar = "bazaar"
-    Fossil = "fossil"
+    if expected_vcs:
+        command = checks[expected_vcs]
+        program = command.split()[0]
+        if not shutil.which(program):
+            raise RuntimeError("Unable to find '{}' program".format(program))
+        code, _ = _run_cmd(command, codes=[])
+        if code != 0:
+            raise RuntimeError(
+                "This does not appear to be a {} project".format(expected_vcs.value.title())
+            )
+        return expected_vcs
+    else:
+        for vcs, command in checks.items():
+            if shutil.which(command.split()[0]):
+                code, _ = _run_cmd(command, codes=[])
+                if code == 0:
+                    return vcs
+        raise RuntimeError("Unable to detect version control system.")
 
 
 @total_ordering
@@ -329,6 +361,8 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         """
+        _detect_vcs(Vcs.Git)
+
         code, msg = _run_cmd('git log -n 1 --format="format:%h"', codes=[0, 128])
         if code == 128:
             return cls("0.0.0", post=0, dev=0, dirty=True)
@@ -369,6 +403,8 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         """
+        _detect_vcs(Vcs.Mercurial)
+
         code, msg = _run_cmd("hg summary")
         dirty = "commit: (clean)" not in msg.splitlines()
 
@@ -412,6 +448,8 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         """
+        _detect_vcs(Vcs.Darcs)
+
         code, msg = _run_cmd("darcs status", codes=[0, 1])
         dirty = msg != "No changes!"
 
@@ -454,6 +492,8 @@ class Version:
             until there is a match.
         :param tag_dir: Location of tags relative to the root.
         """
+        _detect_vcs(Vcs.Subversion)
+
         tag_dir = tag_dir.strip("/")
 
         code, msg = _run_cmd("svn status")
@@ -513,6 +553,8 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         """
+        _detect_vcs(Vcs.Bazaar)
+
         code, msg = _run_cmd("bzr status")
         dirty = msg != ""
 
@@ -554,9 +596,9 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
         """
-        code, msg = _run_cmd("fossil changes --differ", codes=[0, 1])
-        if code == 1:
-            return cls("0.0.0", post=0, dev=0, dirty=True)
+        _detect_vcs(Vcs.Fossil)
+
+        code, msg = _run_cmd("fossil changes --differ")
         dirty = bool(msg)
 
         code, msg = _run_cmd(
@@ -629,20 +671,8 @@ class Version:
         :param tag_dir: Location of tags relative to the root.
             This is only used for Subversion.
         """
-        checks = [
-            (Vcs.Git, "git status"),
-            (Vcs.Mercurial, "hg status"),
-            (Vcs.Darcs, "darcs log"),
-            (Vcs.Subversion, "svn log"),
-            (Vcs.Bazaar, "bzr status"),
-            (Vcs.Fossil, "fossil status"),
-        ]
-        for vcs, command in checks:
-            if shutil.which(command.split()[0]):
-                code, _ = _run_cmd(command, codes=[])
-                if code == 0:
-                    return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
-        raise RuntimeError("Unable to detect version control system.")
+        vcs = _detect_vcs()
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
 
     @classmethod
     def from_vcs(
@@ -743,8 +773,4 @@ def get_version(
     return fallback
 
 
-__version__ = get_version(
-    "dunamai",
-    first_choice=lambda: Version.from_git() if "DUNAMAI_DEV" in os.environ else None,
-    third_choice=Version.from_git,
-).serialize()
+__version__ = get_version("dunamai", fallback=Version("0.0.0")).serialize()
