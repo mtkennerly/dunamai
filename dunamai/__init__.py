@@ -11,7 +11,7 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar
 
-_VERSION_PATTERN = r"v(?P<base>\d+\.\d+\.\d+)((?P<pre_type>[a-zA-Z]+)(?P<pre_number>\d+))?"
+_VERSION_PATTERN = r"^v(?P<base>\d+\.\d+\.\d+)(-?(?P<pre_type>[a-zA-Z]+)\.?(?P<pre_number>\d+))?$"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
 _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
 _VALID_SEMVER = (
@@ -316,9 +316,9 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
-            and number of prerelease. For example, with a tag like v0.1.0, the
-            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -352,9 +352,9 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
-            and number of prerelease. For example, with a tag like v0.1.0, the
-            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -391,9 +391,9 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
-            and number of prerelease. For example, with a tag like v0.1.0, the
-            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -428,9 +428,9 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
-            and number of prerelease. For example, with a tag like v0.1.0, the
-            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -484,9 +484,9 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
-            and number of prerelease. For example, with a tag like v0.1.0, the
-            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -522,9 +522,9 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type (a, b, rc)
-            and number of prerelease. For example, with a tag like v0.1.0, the
-            pattern would be `v(?P<base>\d+\.\d+\.\d+)`.
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
         """
@@ -586,11 +586,15 @@ class Version:
     def from_any_vcs(
         cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
     ) -> "Version":
-        """
+        r"""
         Determine a version based on a detected version control system.
 
         :param pattern: Regular expression matched against the version source.
-            The default value defers to the VCS-specific `from_` functions.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -608,7 +612,7 @@ class Version:
         latest_tag: bool = False,
         tag_dir: str = "tags",
     ) -> "Version":
-        """
+        r"""
         Determine a version based on a specific VCS setting.
 
         This is primarily intended for other tools that want to generically
@@ -616,7 +620,11 @@ class Version:
         maintain a mapping from the VCS name to the appropriate function.
 
         :param pattern: Regular expression matched against the version source.
-            The default value defers to the VCS-specific `from_` functions.
+            This should contain one capture group named `base` corresponding to
+            the release segment of the source, and optionally another two groups
+            named `pre_type` and `pre_number` corresponding to the type
+            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
+            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.

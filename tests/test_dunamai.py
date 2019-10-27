@@ -1,13 +1,14 @@
 import os
 import pkg_resources
+import re
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, Optional, Sequence
 
 import pytest
 
-from dunamai import check_version, get_version, Version, Style, Vcs, _run_cmd
+from dunamai import check_version, get_version, Version, Style, Vcs, _run_cmd, _VERSION_PATTERN
 
 
 @contextmanager
@@ -794,3 +795,27 @@ def test__check_version__pvp() -> None:
 
     with pytest.raises(ValueError):
         check_version("0.1.0-a.1", style=style)
+
+
+def test__default_version_pattern() -> None:
+    def check_re(tag: str, expected: Optional[Sequence[Optional[str]]]) -> None:
+        result = re.search(_VERSION_PATTERN, tag)
+        if result is None or expected is None:
+            assert result is expected
+        else:
+            assert result.groups() == tuple(expected)
+
+    check_re("v0.1.0", ["0.1.0", None, None, None])
+    check_re("av0.1.0", None)
+    check_re("v0.1.0z", None)
+
+    check_re("v0.1.0a1", ["0.1.0", "a1", "a", "1"])
+    check_re("v0.1.0a1b", None)
+    check_re("v0.1.0-1.a", None)
+
+    check_re("v0.1.0-alpha.123", ["0.1.0", "-alpha.123", "alpha", "123"])
+    check_re("v0.1.0-1.alpha", None)
+    check_re("v0.1.0-alpha.1.post.4", None)
+
+    check_re("v0.1.0rc.4", ["0.1.0", "rc.4", "rc", "4"])
+    check_re("v0.1.0-beta", None)

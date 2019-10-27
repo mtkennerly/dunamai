@@ -24,7 +24,11 @@
     rather than `Optional[int]`
   * `epoch` and `dev` have been removed
 * Improved error reporting when the version control system cannot be detected
-  and when a specific VCS is unavailable.
+  and when a specified VCS is unavailable.
+* Improved the default regular expression for tags:
+  * It now requires a full match of the tag.
+  * It now recognizes when the `base` and `pre_type` are separated by a hyphen.
+  * It now recognizes when the `pre_type` and `pre_number` are separated by a dot.
 
 ## v0.9.0 (2019-10-22)
 
