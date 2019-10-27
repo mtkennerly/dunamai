@@ -11,7 +11,7 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar
 
-_VERSION_PATTERN = r"^v(?P<base>\d+\.\d+\.\d+)(-?(?P<pre_type>[a-zA-Z]+)\.?(?P<pre_number>\d+))?$"
+_VERSION_PATTERN = r"^v(?P<base>\d+\.\d+\.\d+)(-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?$"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
 _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
 _VALID_SEMVER = (
@@ -60,10 +60,10 @@ def _run_cmd(
 
 def _match_version_pattern(
     pattern: str, sources: Sequence[str], latest_source: bool
-) -> Tuple[str, str, Optional[Tuple[str, int]]]:
+) -> Tuple[str, str, Optional[Tuple[str, Optional[int]]]]:
     pattern_match = None
     base = None
-    pre = None
+    stage_revision = None
 
     for source in sources[:1] if latest_source else sources:
         pattern_match = re.search(pattern, source)
@@ -88,14 +88,14 @@ def _match_version_pattern(
             raise ValueError("Pattern '{}' did not match any tags from {}".format(pattern, sources))
 
     try:
-        pre_type = pattern_match.group("pre_type")
-        pre_number = pattern_match.group("pre_number")
-        if pre_type is not None and pre_number is not None:
-            pre = (pre_type, int(pre_number))
+        stage = pattern_match.group("stage")
+        revision = pattern_match.group("revision")
+        if stage is not None:
+            stage_revision = (stage, None) if revision is None else (stage, int(revision))
     except IndexError:
         pass
 
-    return (source, base, pre)
+    return (source, base, stage_revision)
 
 
 def _blank(value: Optional[_T], default: _T) -> _T:
@@ -140,14 +140,15 @@ class Version:
         self,
         base: str,
         *,
-        pre: Tuple[str, int] = None,
+        stage: Tuple[str, Optional[int]] = None,
         distance: int = 0,
         commit: str = None,
         dirty: bool = None
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
-        :param pre: Pair of prerelease type (e.g., "a", "alpha", "b", "rc") and number.
+        :param stage: Pair of release stage (e.g., "a", "alpha", "b", "rc")
+            and an optional revision number.
         :param distance: Number of commits since the last tag.
         :param commit: Commit hash/identifier.
         :param dirty: True if the working directory does not match the commit.
@@ -155,11 +156,11 @@ class Version:
         #: Release segment.
         self.base = base
         #: Alphabetical part of prerelease segment.
-        self.pre_type = None
+        self.stage = None
         #: Numerical part of prerelease segment.
-        self.pre_number = None
-        if pre is not None:
-            self.pre_type, self.pre_number = pre
+        self.revision = None
+        if stage is not None:
+            self.stage, self.revision = stage
         #: Number of commits since the last tag.
         self.distance = distance
         #: Commit ID.
@@ -172,9 +173,9 @@ class Version:
 
     def __repr__(self) -> str:
         return (
-            "Version(base={!r}, pre_type={!r}, pre_number={!r},"
+            "Version(base={!r}, stage={!r}, revision={!r},"
             " distance={!r}, commit={!r}, dirty={!r})"
-        ).format(self.base, self.pre_type, self.pre_number, self.distance, self.commit, self.dirty)
+        ).format(self.base, self.stage, self.revision, self.distance, self.commit, self.dirty)
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Version):
@@ -183,8 +184,8 @@ class Version:
             )
         return (
             self.base == other.base
-            and self.pre_type == other.pre_type
-            and self.pre_number == other.pre_number
+            and self.stage == other.stage
+            and self.revision == other.revision
             and self.distance == other.distance
             and self.commit == other.commit
             and self.dirty == other.dirty
@@ -197,8 +198,8 @@ class Version:
             )
         return (
             pkg_resources.parse_version(self.base) < pkg_resources.parse_version(other.base)
-            and _blank(self.pre_type, "") < _blank(other.pre_type, "")
-            and _blank(self.pre_number, 0) < _blank(other.pre_number, 0)
+            and _blank(self.stage, "") < _blank(other.stage, "")
+            and _blank(self.revision, 0) < _blank(other.revision, 0)
             and _blank(self.distance, 0) < _blank(other.distance, 0)
             and _blank(self.commit, "") < _blank(other.commit, "")
             and bool(self.dirty) < bool(other.dirty)
@@ -216,12 +217,11 @@ class Version:
         :param dirty: Set this to True to include a dirty flag in the
             metadata if applicable. Inert when metadata=False.
         :param format: Custom output format. You can use substitutions, such as
-            "v{base}" to get "v0.1.0". However, note that PEP 440 compliance
-            is not validated with custom formats. Available substitutions:
+            "v{base}" to get "v0.1.0". Available substitutions:
 
             * {base}
-            * {pre_type}
-            * {pre_number}
+            * {stage}
+            * {revision}
             * {distance}
             * {commit}
             * {dirty} which expands to either "dirty" or "clean"
@@ -233,8 +233,8 @@ class Version:
         if format is not None:
             out = format.format(
                 base=self.base,
-                pre_type=_blank(self.pre_type, ""),
-                pre_number=_blank(self.pre_number, ""),
+                stage=_blank(self.stage, ""),
+                revision=_blank(self.revision, ""),
                 distance=_blank(self.distance, ""),
                 commit=_blank(self.commit, ""),
                 dirty="dirty" if self.dirty else "clean",
@@ -250,8 +250,13 @@ class Version:
         if style == Style.Pep440:
             out += self.base
 
-            if self.pre_type is not None and self.pre_number is not None:
-                out += "{}{}".format(self.pre_type, self.pre_number)
+            if self.stage is not None:
+                if self.revision is None:
+                    # PEP 440 does not allow omitting the revision,
+                    # so assume 0.
+                    out += "{}0".format(self.stage)
+                else:
+                    out += "{}{}".format(self.stage, self.revision)
             if self.distance > 0:
                 out += ".post{}.dev0".format(self.distance)
 
@@ -268,12 +273,15 @@ class Version:
             out += self.base
 
             pre_parts = []
-            if self.pre_type is not None and self.pre_number is not None:
-                pre_parts.append((self.pre_type, self.pre_number))
+            if self.stage is not None:
+                pre_parts.append(self.stage)
+                if self.revision is not None:
+                    pre_parts.append(str(self.revision))
             if self.distance > 0:
-                pre_parts.append(("post", self.distance))
+                pre_parts.append("post")
+                pre_parts.append(str(self.distance))
             if pre_parts:
-                out += "-{}".format(".".join("{}.{}".format(k, v) for k, v in pre_parts))
+                out += "-{}".format(".".join(pre_parts))
 
             if metadata is not False:
                 metadata_parts = []
@@ -288,12 +296,15 @@ class Version:
             out += self.base
 
             pre_parts = []
-            if self.pre_type is not None and self.pre_number is not None:
-                pre_parts.append((self.pre_type, self.pre_number))
+            if self.stage is not None:
+                pre_parts.append(self.stage)
+                if self.revision is not None:
+                    pre_parts.append(str(self.revision))
             if self.distance > 0:
-                pre_parts.append(("post", self.distance))
+                pre_parts.append("post")
+                pre_parts.append(str(self.distance))
             if pre_parts:
-                out += "-{}".format("-".join("{}-{}".format(k, v) for k, v in pre_parts))
+                out += "-{}".format("-".join(pre_parts))
 
             if metadata is not False:
                 metadata_parts = []
@@ -316,7 +327,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
@@ -337,12 +348,12 @@ class Version:
         if not msg:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
-        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd("git rev-list --count {}..HEAD".format(tag))
         distance = int(msg)
 
-        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
+        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -352,7 +363,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
@@ -375,13 +386,13 @@ class Version:
         if not msg:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
-        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit))
         # The tag itself is in the list, so offset by 1.
         distance = max(len(msg) - 1, 0)
 
-        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
+        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_darcs(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -391,7 +402,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
@@ -410,13 +421,13 @@ class Version:
         if not msg:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
-        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag))
         # The tag itself is in the list, so offset by 1.
         distance = int(msg) - 1
 
-        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
+        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_subversion(
@@ -428,7 +439,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
@@ -468,13 +479,13 @@ class Version:
                     source = int(match.group(1))
                     tags_to_sources_revs[tag] = (source, rev)
         tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
-        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
 
         source, rev = tags_to_sources_revs[tag]
         # The tag itself is in the list, so offset by 1.
         distance = int(commit) - 1 - source
 
-        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
+        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_bazaar(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -484,7 +495,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
@@ -508,11 +519,11 @@ class Version:
             if line.split()[1] != "?"
         }
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
-        tag, base, pre = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
 
         distance = int(commit) - tags_to_revs[tag]
 
-        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
+        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_fossil(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -522,7 +533,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag for a pattern
@@ -575,12 +586,12 @@ class Version:
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
             for line in msg.splitlines()
         ]
-        tag, base, pre = _match_version_pattern(
+        tag, base, stage = _match_version_pattern(
             pattern, [t for t, d in tags_to_distance], latest_tag
         )
         distance = dict(tags_to_distance)[tag]
 
-        return cls(base, pre=pre, distance=distance, commit=commit, dirty=dirty)
+        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
 
     @classmethod
     def from_any_vcs(
@@ -592,7 +603,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest
@@ -622,7 +633,7 @@ class Version:
         :param pattern: Regular expression matched against the version source.
             This should contain one capture group named `base` corresponding to
             the release segment of the source, and optionally another two groups
-            named `pre_type` and `pre_number` corresponding to the type
+            named `stage` and `revision` corresponding to the type
             (`alpha`, `rc`, etc) and number of prerelease. For example, with a
             tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
         :param latest_tag: If true, only inspect the latest tag on the latest

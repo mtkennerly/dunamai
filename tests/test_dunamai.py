@@ -4,7 +4,7 @@ import re
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Sequence
+from typing import Callable, Iterator, Optional
 
 import pytest
 
@@ -45,24 +45,24 @@ from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 
 def test__version__init() -> None:
-    v = Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True)
+    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True)
     assert v.base == "1"
-    assert v.pre_type == "a"
-    assert v.pre_number == 2
+    assert v.stage == "a"
+    assert v.revision == 2
     assert v.distance == 3
     assert v.commit == "abc"
     assert v.dirty
 
 
 def test__version__str() -> None:
-    v = Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True)
+    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True)
     assert str(v) == v.serialize()
 
 
 def test__version__repr() -> None:
-    v = Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True)
+    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True)
     assert repr(v) == (
-        "Version(base='1', pre_type='a', pre_number=2, distance=3, commit='abc', dirty=True)"
+        "Version(base='1', stage='a', revision=2, distance=3, commit='abc', dirty=True)"
     )
 
 
@@ -85,36 +85,37 @@ def test__version__serialize__pep440() -> None:
     assert Version("0.1.0").serialize() == "0.1.0"
 
     assert (
-        Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True).serialize()
+        Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True).serialize()
         == "1a2.post3.dev0+abc"
     )
     assert (
-        Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True).serialize(dirty=True)
+        Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True).serialize(dirty=True)
         == "1a2.post3.dev0+abc.dirty"
     )
     assert (
-        Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True).serialize(metadata=False)
+        Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True).serialize(metadata=False)
         == "1a2.post3.dev0"
     )
     assert (
-        Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True).serialize(
             metadata=False, dirty=True
         )
         == "1a2.post3.dev0"
     )
 
     assert (
-        Version("1", pre=("a", 0), distance=3, commit="abc", dirty=False).serialize()
+        Version("1", stage=("a", 0), distance=3, commit="abc", dirty=False).serialize()
         == "1a0.post3.dev0+abc"
     )
-    assert Version("1", pre=("a", 2), distance=0, commit="abc", dirty=False).serialize() == "1a2"
+    assert Version("1", stage=("a", 2), distance=0, commit="abc", dirty=False).serialize() == "1a2"
     assert (
-        Version("1", pre=("a", 2), distance=3, commit="000", dirty=False).serialize()
+        Version("1", stage=("a", 2), distance=3, commit="000", dirty=False).serialize()
         == "1a2.post3.dev0+000"
     )
 
-    assert Version("1", pre=("b", 2)).serialize() == "1b2"
-    assert Version("1", pre=("rc", 2)).serialize() == "1rc2"
+    assert Version("1", stage=("a", None)).serialize() == "1a0"
+    assert Version("1", stage=("b", 2)).serialize() == "1b2"
+    assert Version("1", stage=("rc", 2)).serialize() == "1rc2"
 
 
 def test__version__serialize__semver() -> None:
@@ -122,51 +123,52 @@ def test__version__serialize__semver() -> None:
     assert Version("0.1.0").serialize(style=style) == "0.1.0"
 
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             style=style
         )
         == "0.1.0-alpha.2.post.3+abc"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             dirty=True, style=style
         )
         == "0.1.0-alpha.2.post.3+abc.dirty"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             metadata=False, style=style
         )
         == "0.1.0-alpha.2.post.3"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             metadata=False, dirty=True, style=style
         )
         == "0.1.0-alpha.2.post.3"
     )
 
     assert (
-        Version("0.1.0", pre=("alpha", 0), distance=3, commit="abc", dirty=False).serialize(
+        Version("0.1.0", stage=("alpha", 0), distance=3, commit="abc", dirty=False).serialize(
             style=style
         )
         == "0.1.0-alpha.0.post.3+abc"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=0, commit="abc", dirty=False).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=0, commit="abc", dirty=False).serialize(
             style=style
         )
         == "0.1.0-alpha.2"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="000", dirty=False).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="000", dirty=False).serialize(
             style=style
         )
         == "0.1.0-alpha.2.post.3+000"
     )
 
-    assert Version("0.1.0", pre=("beta", 2)).serialize(style=style) == "0.1.0-beta.2"
-    assert Version("0.1.0", pre=("rc", 2)).serialize(style=style) == "0.1.0-rc.2"
+    assert Version("0.1.0", stage=("alpha", None)).serialize(style=style) == "0.1.0-alpha"
+    assert Version("0.1.0", stage=("beta", 2)).serialize(style=style) == "0.1.0-beta.2"
+    assert Version("0.1.0", stage=("rc", 2)).serialize(style=style) == "0.1.0-rc.2"
 
 
 def test__version__serialize__pvp() -> None:
@@ -174,51 +176,52 @@ def test__version__serialize__pvp() -> None:
     assert Version("0.1.0").serialize(style=style) == "0.1.0"
 
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             style=style
         )
         == "0.1.0-alpha-2-post-3-abc"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             dirty=True, style=style
         )
         == "0.1.0-alpha-2-post-3-abc-dirty"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             metadata=False, style=style
         )
         == "0.1.0-alpha-2-post-3"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="abc", dirty=True).serialize(
             metadata=False, dirty=True, style=style
         )
         == "0.1.0-alpha-2-post-3"
     )
 
     assert (
-        Version("0.1.0", pre=("alpha", 0), distance=3, commit="abc", dirty=False).serialize(
+        Version("0.1.0", stage=("alpha", 0), distance=3, commit="abc", dirty=False).serialize(
             style=style
         )
         == "0.1.0-alpha-0-post-3-abc"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=0, commit="abc", dirty=False).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=0, commit="abc", dirty=False).serialize(
             style=style
         )
         == "0.1.0-alpha-2"
     )
     assert (
-        Version("0.1.0", pre=("alpha", 2), distance=3, commit="000", dirty=False).serialize(
+        Version("0.1.0", stage=("alpha", 2), distance=3, commit="000", dirty=False).serialize(
             style=style
         )
         == "0.1.0-alpha-2-post-3-000"
     )
 
-    assert Version("0.1.0", pre=("beta", 2)).serialize(style=style) == "0.1.0-beta-2"
-    assert Version("0.1.0", pre=("rc", 2)).serialize(style=style) == "0.1.0-rc-2"
+    assert Version("0.1.0", stage=("alpha", None)).serialize(style=style) == "0.1.0-alpha"
+    assert Version("0.1.0", stage=("beta", 2)).serialize(style=style) == "0.1.0-beta-2"
+    assert Version("0.1.0", stage=("rc", 2)).serialize(style=style) == "0.1.0-rc-2"
 
 
 def test__version__serialize__pep440_metadata() -> None:
@@ -226,9 +229,9 @@ def test__version__serialize__pep440_metadata() -> None:
     assert Version("0.1.0").serialize(metadata=True) == "0.1.0"
     assert Version("0.1.0").serialize(metadata=False) == "0.1.0"
 
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize() == "0.1.0a1"
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(metadata=True) == "0.1.0a1+abc"
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(metadata=False) == "0.1.0a1"
+    assert Version("0.1.0", stage=("a", 1), commit="abc").serialize() == "0.1.0a1"
+    assert Version("0.1.0", stage=("a", 1), commit="abc").serialize(metadata=True) == "0.1.0a1+abc"
+    assert Version("0.1.0", stage=("a", 1), commit="abc").serialize(metadata=False) == "0.1.0a1"
 
     assert Version("0.1.0", distance=1, commit="abc").serialize() == "0.1.0.post1.dev0+abc"
     assert (
@@ -246,13 +249,13 @@ def test__version__serialize__semver_with_metadata() -> None:
     assert Version("0.1.0").serialize(metadata=True, style=style) == "0.1.0"
     assert Version("0.1.0").serialize(metadata=False, style=style) == "0.1.0"
 
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(style=style) == "0.1.0-a.1"
+    assert Version("0.1.0", stage=("a", 1), commit="abc").serialize(style=style) == "0.1.0-a.1"
     assert (
-        Version("0.1.0", pre=("a", 1), commit="abc").serialize(metadata=True, style=style)
+        Version("0.1.0", stage=("a", 1), commit="abc").serialize(metadata=True, style=style)
         == "0.1.0-a.1+abc"
     )
     assert (
-        Version("0.1.0", pre=("a", 1), commit="abc").serialize(metadata=False, style=style)
+        Version("0.1.0", stage=("a", 1), commit="abc").serialize(metadata=False, style=style)
         == "0.1.0-a.1"
     )
 
@@ -273,13 +276,13 @@ def test__version__serialize__pvp_with_metadata() -> None:
     assert Version("0.1.0").serialize(metadata=True, style=style) == "0.1.0"
     assert Version("0.1.0").serialize(metadata=False, style=style) == "0.1.0"
 
-    assert Version("0.1.0", pre=("a", 1), commit="abc").serialize(style=style) == "0.1.0-a-1"
+    assert Version("0.1.0", stage=("a", 1), commit="abc").serialize(style=style) == "0.1.0-a-1"
     assert (
-        Version("0.1.0", pre=("a", 1), commit="abc").serialize(metadata=True, style=style)
+        Version("0.1.0", stage=("a", 1), commit="abc").serialize(metadata=True, style=style)
         == "0.1.0-a-1-abc"
     )
     assert (
-        Version("0.1.0", pre=("a", 1), commit="abc").serialize(metadata=False, style=style)
+        Version("0.1.0", stage=("a", 1), commit="abc").serialize(metadata=False, style=style)
         == "0.1.0-a-1"
     )
 
@@ -349,10 +352,10 @@ def test__version__serialize__pvp_with_dirty() -> None:
 
 
 def test__version__serialize__format() -> None:
-    format = "{base},{pre_type},{pre_number},{distance},{commit},{dirty}"
+    format = "{base},{stage},{revision},{distance},{commit},{dirty}"
     assert Version("0.1.0").serialize(format=format) == "0.1.0,,,0,,clean"
     assert (
-        Version("1", pre=("a", 2), distance=3, commit="abc", dirty=True).serialize(format=format)
+        Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True).serialize(format=format)
         == "1,a,2,3,abc,dirty"
     )
     with pytest.raises(ValueError):
@@ -455,7 +458,7 @@ def test__version__from_git(tmp_path) -> None:
         run("git add .")
         run('git commit -m "Third"')
         run("git tag v0.2.1b3")
-        assert from_vcs() == Version("0.2.1", pre=("b", 3), commit="abc", dirty=False)
+        assert from_vcs() == Version("0.2.1", stage=("b", 3), commit="abc", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
@@ -798,24 +801,27 @@ def test__check_version__pvp() -> None:
 
 
 def test__default_version_pattern() -> None:
-    def check_re(tag: str, expected: Optional[Sequence[Optional[str]]]) -> None:
+    def check_re(tag: str, base: str = None, stage: str = None, revision: str = None) -> None:
         result = re.search(_VERSION_PATTERN, tag)
-        if result is None or expected is None:
-            assert result is expected
+        if result is None:
+            if any(x is not None for x in [base, stage, revision]):
+                raise ValueError("Pattern did not match")
         else:
-            assert result.groups() == tuple(expected)
+            assert result.group("base") == base
+            assert result.group("stage") == stage
+            assert result.group("revision") == revision
 
-    check_re("v0.1.0", ["0.1.0", None, None, None])
-    check_re("av0.1.0", None)
-    check_re("v0.1.0z", None)
+    check_re("v0.1.0", "0.1.0")
+    check_re("av0.1.0")
 
-    check_re("v0.1.0a1", ["0.1.0", "a1", "a", "1"])
+    check_re("v0.1.0a", "0.1.0", "a")
+    check_re("v0.1.0a1", "0.1.0", "a", "1")
     check_re("v0.1.0a1b", None)
     check_re("v0.1.0-1.a", None)
 
-    check_re("v0.1.0-alpha.123", ["0.1.0", "-alpha.123", "alpha", "123"])
+    check_re("v0.1.0-alpha.123", "0.1.0", "alpha", "123")
     check_re("v0.1.0-1.alpha", None)
     check_re("v0.1.0-alpha.1.post.4", None)
 
-    check_re("v0.1.0rc.4", ["0.1.0", "rc.4", "rc", "4"])
-    check_re("v0.1.0-beta", None)
+    check_re("v0.1.0rc.4", "0.1.0", "rc", "4")
+    check_re("v0.1.0-beta", "0.1.0", "beta")

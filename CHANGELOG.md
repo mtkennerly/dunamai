@@ -23,12 +23,16 @@
   * `post` has been renamed to `distance`, and its type is simply `int`
     rather than `Optional[int]`
   * `epoch` and `dev` have been removed
+  * `pre_type` has been renamed to `stage`
+  * `pre_number` has been renamed to `revision`, and it is no longer required
+    when specifying a stage
 * Improved error reporting when the version control system cannot be detected
   and when a specified VCS is unavailable.
 * Improved the default regular expression for tags:
   * It now requires a full match of the tag.
-  * It now recognizes when the `base` and `pre_type` are separated by a hyphen.
-  * It now recognizes when the `pre_type` and `pre_number` are separated by a dot.
+  * It now recognizes when the `base` and `stage` are separated by a hyphen.
+  * It now recognizes when the `stage` and `revision` are separated by a dot.
+  * It now allows a `stage` without a `revision`.
 
 ## v0.9.0 (2019-10-22)
 

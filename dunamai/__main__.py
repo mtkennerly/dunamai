@@ -33,16 +33,15 @@ common_sub_args = [
             "Regular expression matched against the version source."
             " This should contain one capture group named `base` corresponding to"
             " the release segment of the source, and optionally another two groups"
-            " named `pre_type` and `pre_number` corresponding to the type (a, b, rc)"
-            " and number of prerelease"
+            " named `stage` and `revision` corresponding to a prerelease type"
+            " (such as 'alpha' or 'rc') and number (such as in 'alpha-2' or 'rc3')"
         ),
     },
     {
         "triggers": ["--format"],
         "help": (
             "Custom output format. Available substitutions:"
-            " {base}, {epoch}, {pre_type}, {pre_number},"
-            " {post}, {dev}, {commit}, {dirty}"
+            " {base}, {stage}, {revision}, {distance}, {commit}, {dirty}"
         ),
     },
     {

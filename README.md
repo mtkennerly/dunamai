@@ -81,8 +81,8 @@ to use and inspect as you please:
 
 ```python
 assert version.base == "0.1.0"
-assert version.pre_type == "rc"
-assert version.pre_number == 5
+assert version.stage == "rc"
+assert version.revision == 5
 assert version.distance == 44
 assert version.commit == "g644252b"
 assert version.dirty is True
