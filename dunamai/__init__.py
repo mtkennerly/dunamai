@@ -718,4 +718,4 @@ def get_version(
     return fallback
 
 
-__version__ = get_version("dunamai", fallback=Version("0.0.0")).serialize()
+__version__ = get_version("dunamai").serialize()

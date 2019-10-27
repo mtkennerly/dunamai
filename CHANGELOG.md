@@ -1,5 +1,5 @@
 
-## Unreleased
+## v1.0.0 (2019-10-26)
 
 * Changed the `Version` class to align with Dunamai's own semantics instead of
   PEP 440's semantics.
