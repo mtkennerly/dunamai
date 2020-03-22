@@ -1,5 +1,5 @@
 
-## Unreleased
+## v1.1.0 (2020-03-22)
 
 * Added these functions to the public API:
   * `serialize_pep440`
