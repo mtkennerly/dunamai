@@ -1,4 +1,12 @@
 
+## Unreleased
+
+* Added these functions to the public API:
+  * `serialize_pep440`
+  * `serialize_semver`
+  * `serialize_pvp`
+  * `bump_version`
+
 ## v1.0.0 (2019-10-26)
 
 * Changed the `Version` class to align with Dunamai's own semantics instead of

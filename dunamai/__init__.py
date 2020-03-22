@@ -9,7 +9,7 @@ from collections import OrderedDict
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar
+from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union
 
 _VERSION_PATTERN = r"^v(?P<base>\d+\.\d+\.\d+)(-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?$"
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
@@ -247,74 +247,40 @@ class Version:
             style = Style.Pep440
         out = ""
 
+        meta_parts = []
+        if metadata is not False:
+            if (metadata or self.distance > 0) and self.commit is not None:
+                meta_parts.append(self.commit)
+            if dirty and self.dirty:
+                meta_parts.append("dirty")
+
+        pre_parts = []
+        if self.stage is not None:
+            pre_parts.append(self.stage)
+            if self.revision is not None:
+                pre_parts.append(str(self.revision))
+        if self.distance > 0:
+            pre_parts.append("post")
+            pre_parts.append(str(self.distance))
+
         if style == Style.Pep440:
-            out += self.base
-
-            if self.stage is not None:
-                if self.revision is None:
-                    # PEP 440 does not allow omitting the revision,
-                    # so assume 0.
-                    out += "{}0".format(self.stage)
-                else:
-                    out += "{}{}".format(self.stage, self.revision)
-            if self.distance > 0:
-                out += ".post{}.dev0".format(self.distance)
-
-            if metadata is not False:
-                metadata_parts = []
-                if metadata or self.distance > 0:
-                    metadata_parts.append(self.commit)
-                if dirty and self.dirty:
-                    metadata_parts.append("dirty")
-                metadata_segment = ".".join(x for x in metadata_parts if x is not None)
-                if metadata_segment:
-                    out += "+{}".format(metadata_segment)
+            if self.distance <= 0:
+                out = serialize_pep440(
+                    self.base, stage=self.stage, revision=self.revision, metadata=meta_parts
+                )
+            else:
+                out = serialize_pep440(
+                    self.base,
+                    stage=self.stage,
+                    revision=self.revision,
+                    post=self.distance,
+                    dev=0,
+                    metadata=meta_parts,
+                )
         elif style == Style.SemVer:
-            out += self.base
-
-            pre_parts = []
-            if self.stage is not None:
-                pre_parts.append(self.stage)
-                if self.revision is not None:
-                    pre_parts.append(str(self.revision))
-            if self.distance > 0:
-                pre_parts.append("post")
-                pre_parts.append(str(self.distance))
-            if pre_parts:
-                out += "-{}".format(".".join(pre_parts))
-
-            if metadata is not False:
-                metadata_parts = []
-                if metadata or self.distance > 0:
-                    metadata_parts.append(self.commit)
-                if dirty and self.dirty:
-                    metadata_parts.append("dirty")
-                metadata_segment = ".".join(x for x in metadata_parts if x is not None)
-                if metadata_segment:
-                    out += "+{}".format(metadata_segment)
+            out = serialize_semver(self.base, pre=pre_parts, metadata=meta_parts)
         elif style == Style.Pvp:
-            out += self.base
-
-            pre_parts = []
-            if self.stage is not None:
-                pre_parts.append(self.stage)
-                if self.revision is not None:
-                    pre_parts.append(str(self.revision))
-            if self.distance > 0:
-                pre_parts.append("post")
-                pre_parts.append(str(self.distance))
-            if pre_parts:
-                out += "-{}".format("-".join(pre_parts))
-
-            if metadata is not False:
-                metadata_parts = []
-                if metadata or self.distance > 0:
-                    metadata_parts.append(self.commit)
-                if dirty and self.dirty:
-                    metadata_parts.append("dirty")
-                metadata_segment = "-".join(x for x in metadata_parts if x is not None)
-                if metadata_segment:
-                    out += "-{}".format(metadata_segment)
+            out = serialize_pvp(self.base, metadata=[*pre_parts, *meta_parts])
 
         check_version(out, style)
         return out
@@ -716,6 +682,129 @@ def get_version(
             return third_ver
 
     return fallback
+
+
+def serialize_pep440(
+    base: str,
+    stage: str = None,
+    revision: int = None,
+    post: int = None,
+    dev: int = None,
+    epoch: int = None,
+    metadata: Sequence[Union[str, int]] = None,
+) -> str:
+    """
+    Serialize a version based on PEP 440.
+    Use this instead of `Version.serialize()` if you want more control
+    over how the version is mapped.
+
+    :param base: Release segment, such as 0.1.0.
+    :param stage: Pre-release stage ("a", "b", or "rc").
+    :param revision: Pre-release revision (e.g., 1 as in "rc1").
+        This is ignored when `stage` is None.
+    :param post: Post-release number.
+    :param dev: Developmental release number.
+    :param epoch: Epoch number.
+    :param metadata: Any local version label segments.
+    :return: Serialized version.
+    """
+    out = []  # type: list
+
+    if epoch is not None:
+        out.extend([epoch, "!"])
+
+    out.append(base)
+
+    if stage is not None:
+        out.append(stage)
+        if revision is None:
+            # PEP 440 does not allow omitting the revision, so assume 0.
+            out.append(0)
+        else:
+            out.append(revision)
+
+    if post is not None:
+        out.extend([".post", post])
+
+    if dev is not None:
+        out.extend([".dev", dev])
+
+    if metadata is not None and len(metadata) > 0:
+        out.extend(["+", ".".join(map(str, metadata))])
+
+    serialized = "".join(map(str, out))
+    check_version(serialized, Style.Pep440)
+    return serialized
+
+
+def serialize_semver(
+    base: str, pre: Sequence[Union[str, int]] = None, metadata: Sequence[Union[str, int]] = None
+) -> str:
+    """
+    Serialize a version based on Semantic Versioning.
+    Use this instead of `Version.serialize()` if you want more control
+    over how the version is mapped.
+
+    :param base: Version core, such as 0.1.0.
+    :param pre: Pre-release identifiers.
+    :param metadata: Build metadata identifiers.
+    :return: Serialized version.
+    """
+    out = [base]
+
+    if pre is not None and len(pre) > 0:
+        out.extend(["-", ".".join(map(str, pre))])
+
+    if metadata is not None and len(metadata) > 0:
+        out.extend(["+", ".".join(map(str, metadata))])
+
+    serialized = "".join(str(x) for x in out)
+    check_version(serialized, Style.SemVer)
+    return serialized
+
+
+def serialize_pvp(base: str, metadata: Sequence[Union[str, int]] = None) -> str:
+    """
+    Serialize a version based on the Haskell Package Versioning Policy.
+    Use this instead of `Version.serialize()` if you want more control
+    over how the version is mapped.
+
+    :param base: Version core, such as 0.1.0.
+    :param metadata: Version tag metadata.
+    :return: Serialized version.
+    """
+    out = [base]
+
+    if metadata is not None and len(metadata) > 0:
+        out.extend(["-", "-".join(map(str, metadata))])
+
+    serialized = "".join(map(str, out))
+    check_version(serialized, Style.Pvp)
+    return serialized
+
+
+def bump_version(base: str, index: int = -1) -> str:
+    """
+    Increment one of the numerical positions of a version.
+
+    :param base: Version core, such as 0.1.0.
+        Do not include pre-release identifiers.
+    :param index: Numerical position to increment. Default: -1.
+        This follows Python indexing rules, so positive numbers start from
+        the left side and count up from 0, while negative numbers start from
+        the right side and count down from -1.
+    :return: Bumped version.
+    """
+    bases = [int(x) for x in base.split(".")]
+    bases[index] += 1
+
+    limit = 0 if index < 0 else len(bases)
+    i = index + 1
+    while i < limit:
+        bases[i] = 0
+        i += 1
+
+    return ".".join(str(x) for x in bases)
 
 
 __version__ = get_version("dunamai").serialize()
