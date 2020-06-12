@@ -7,7 +7,7 @@ env:
 
 before_install:
   - sudo apt-get install -y darcs
-  - curl https://www.fossil-scm.org/home/uv/fossil-linux-x64-2.10.tar.gz -o ~/fossil.tgz
+  - curl https://www.fossil-scm.org/home/uv/fossil-linux-x64-2.11.1.tar.gz -o ~/fossil.tgz
   - tar -xvf ~/fossil.tgz -C /opt
 
 install:
