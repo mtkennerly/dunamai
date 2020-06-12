@@ -2,7 +2,6 @@ language: python
 
 env:
   global:
-    - DUNAMAI_DEV=1
     - DARCS_EMAIL='foo <foo@example.com>'
     - PATH="$PATH:/opt"
 

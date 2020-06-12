@@ -17,6 +17,7 @@ def test__parse_args__from():
         style=None,
         latest_tag=False,
         tag_dir="tags",
+        debug=False,
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "mercurial"]).vcs == "mercurial"
@@ -34,6 +35,7 @@ def test__parse_args__from():
     assert parse_args(["from", "any", "--style", "semver"]).style == "semver"
     assert parse_args(["from", "any", "--latest-tag"]).latest_tag is True
     assert parse_args(["from", "any", "--tag-dir", "foo"]).tag_dir == "foo"
+    assert parse_args(["from", "any", "--debug"]).debug is True
     assert parse_args(["from", "subversion", "--tag-dir", "foo"]).tag_dir == "foo"
 
     with pytest.raises(SystemExit):

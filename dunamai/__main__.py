@@ -61,6 +61,13 @@ common_sub_args = [
         "default": False,
         "help": "Only inspect the latest tag on the latest tagged commit for a pattern match",
     },
+    {
+        "triggers": ["--debug"],
+        "action": "store_true",
+        "dest": "debug",
+        "default": False,
+        "help": "Display additional information on stderr for troubleshooting",
+    },
 ]
 cli_spec = {
     "description": "Generate dynamic versions",
@@ -182,9 +189,13 @@ def from_vcs(
     style: Optional[Style],
     latest_tag: bool,
     tag_dir: str,
+    debug: bool,
 ) -> None:
     version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir)
     print(version.serialize(metadata, dirty, format, style))
+    if debug:
+        print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
+        print("# Newer unmatched tags: {}".format(version._newer_unmatched_tags), file=sys.stderr)
 
 
 def main() -> None:
@@ -201,6 +212,7 @@ def main() -> None:
                 Style(args.style) if args.style else None,
                 args.latest_tag,
                 tag_dir,
+                args.debug,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

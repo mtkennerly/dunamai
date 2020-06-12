@@ -60,14 +60,25 @@ def _run_cmd(
 
 def _match_version_pattern(
     pattern: str, sources: Sequence[str], latest_source: bool
-) -> Tuple[str, str, Optional[Tuple[str, Optional[int]]]]:
+) -> Tuple[str, str, Optional[Tuple[str, Optional[int]]], Sequence[str]]:
+    """
+    :return: Tuple of:
+        * matched tag
+        * base segment
+        * tuple of:
+          * stage
+          * revision
+        * any newer unmatched tags
+    """
     pattern_match = None
     base = None
     stage_revision = None
+    newer_unmatched_tags = []
 
     for source in sources[:1] if latest_source else sources:
         pattern_match = re.search(pattern, source)
         if pattern_match is None:
+            newer_unmatched_tags.append(source)
             continue
         try:
             base = pattern_match.group("base")
@@ -95,7 +106,7 @@ def _match_version_pattern(
     except IndexError:
         pass
 
-    return (source, base, stage_revision)
+    return (source, base, stage_revision, newer_unmatched_tags)
 
 
 def _blank(value: Optional[_T], default: _T) -> _T:
@@ -167,6 +178,9 @@ class Version:
         self.commit = commit
         #: Whether there are uncommitted changes.
         self.dirty = dirty
+
+        self._matched_tag = None  # type: Optional[str]
+        self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
 
     def __str__(self) -> str:
         return self.serialize()
@@ -314,12 +328,15 @@ class Version:
         if not msg:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
-        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd("git rev-list --count {}..HEAD".format(tag))
         distance = int(msg)
 
-        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
 
     @classmethod
     def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -352,13 +369,16 @@ class Version:
         if not msg:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
-        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit))
         # The tag itself is in the list, so offset by 1.
         distance = max(len(msg) - 1, 0)
 
-        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
 
     @classmethod
     def from_darcs(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -387,13 +407,16 @@ class Version:
         if not msg:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
         tags = msg.splitlines()
-        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag))
         # The tag itself is in the list, so offset by 1.
         distance = int(msg) - 1
 
-        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
 
     @classmethod
     def from_subversion(
@@ -445,13 +468,16 @@ class Version:
                     source = int(match.group(1))
                     tags_to_sources_revs[tag] = (source, rev)
         tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
-        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
         source, rev = tags_to_sources_revs[tag]
         # The tag itself is in the list, so offset by 1.
         distance = int(commit) - 1 - source
 
-        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
 
     @classmethod
     def from_bazaar(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -485,11 +511,14 @@ class Version:
             if line.split()[1] != "?"
         }
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
-        tag, base, stage = _match_version_pattern(pattern, tags, latest_tag)
+        tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
         distance = int(commit) - tags_to_revs[tag]
 
-        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
 
     @classmethod
     def from_fossil(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -552,12 +581,15 @@ class Version:
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
             for line in msg.splitlines()
         ]
-        tag, base, stage = _match_version_pattern(
+        tag, base, stage, unmatched = _match_version_pattern(
             pattern, [t for t, d in tags_to_distance], latest_tag
         )
         distance = dict(tags_to_distance)[tag]
 
-        return cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
 
     @classmethod
     def from_any_vcs(

@@ -31,6 +31,8 @@ Install with `pip install dunamai`, and then use as either a CLI:
 
 ```console
 # Suppose you are on commit g29045e8, 7 commits after the v0.2.0 tag.
+# Note that the "v" prefix on the tag is required, unless you specify
+# a different tag style using "--pattern".
 
 # Auto-detect the version control system and generate a version:
 $ dunamai from any
@@ -52,8 +54,10 @@ Version 'v0.2.0' does not conform to the PEP 440 style
 $ dunamai check 0.01.0 --style semver
 Version '0.01.0' does not conform to the Semantic Versioning style
 
-# More info
+# More info:
 $ dunamai --help
+$ dunamai from --help
+$ dunamai from git --help
 ```
 
 Or as a library:
