@@ -58,13 +58,7 @@ def test__version__from_git(tmp_path) -> None:
 
         run("git add .")
         run('git commit -m "Initial commit"')
-        assert from_vcs() == Version("0.0.0", distance=0, commit="abc", dirty=False)
-
-        # Additional one-off check not in other VCS integration tests:
-        # wrong VCS detected.
-        assert run("dunamai from mercurial", 1) == (
-            "This does not appear to be a Mercurial project"
-        )
+        assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=False)
 
         # Additional one-off check not in other VCS integration tests:
         # when the only tag in the repository does not match the pattern.
@@ -123,6 +117,18 @@ def test__version__from_git(tmp_path) -> None:
         assert from_vcs() == Version("0.2.1", stage=("b", 3), commit="abc", dirty=False)
 
 
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__not_a_repository(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-not-a-repo"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+
+    with chdir(vcs):
+        assert run("dunamai from git", 1) == (
+            "This does not appear to be a Git project"
+        )
+
+
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
 def test__version__from_mercurial(tmp_path) -> None:
     vcs = tmp_path / "dunamai-hg"
@@ -139,7 +145,7 @@ def test__version__from_mercurial(tmp_path) -> None:
 
         run("hg add .")
         run('hg commit -m "Initial commit"')
-        assert from_vcs() == Version("0.0.0", distance=0, commit="abc", dirty=False)
+        assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=False)
 
         run("hg tag v0.1.0")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
@@ -189,7 +195,7 @@ def test__version__from_darcs(tmp_path) -> None:
 
         run("darcs add foo.txt")
         run('darcs record -am "Initial commit"')
-        assert from_vcs() == Version("0.0.0", distance=0, commit="abc", dirty=False)
+        assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=False)
 
         run("darcs tag v0.1.0")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
@@ -244,7 +250,7 @@ def test__version__from_subversion(tmp_path) -> None:
         run("svn add --force .")
         run('svn commit -m "Initial commit"')  # commit 1
         run("svn update")
-        assert from_vcs() == Version("0.0.0", distance=0, commit="1", dirty=False)
+        assert from_vcs() == Version("0.0.0", distance=1, commit="1", dirty=False)
 
         run('svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri))  # commit 2
         run("svn update")
@@ -295,7 +301,7 @@ def test__version__from_bazaar(tmp_path) -> None:
 
         run("bzr add .")
         run('bzr commit -m "Initial commit"')
-        assert from_vcs() == Version("0.0.0", distance=0, commit="1", dirty=False)
+        assert from_vcs() == Version("0.0.0", distance=1, commit="1", dirty=False)
 
         run("bzr tag v0.1.0")
         assert from_vcs() == Version("0.1.0", commit="1", dirty=False)
@@ -345,7 +351,7 @@ def test__version__from_fossil(tmp_path) -> None:
 
         run("fossil add .")
         run('fossil commit -m "Initial commit"')
-        assert from_vcs() == Version("0.0.0", distance=0, commit="abc", dirty=False)
+        assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=False)
 
         run("fossil tag add v0.1.0 trunk")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)

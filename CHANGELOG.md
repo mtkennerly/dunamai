@@ -1,4 +1,14 @@
 
+## Unreleased
+
+* Previously, when there were not yet any version-like tags, the distance would
+  be set to 0, so the only differentiator was the commit ID. Now, the distance
+  will be set to the number of commits so far. For example:
+
+  * No commits: base = 0.0.0, distance = 0
+  * 1 commit, no tags: base = 0.0.0, distance = 1
+  * 10 commits, no tags: base = 0.0.0, distance = 10
+
 ## v1.2.0 (2020-06-12)
 
 * Added `--debug` flag.

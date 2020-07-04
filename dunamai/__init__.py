@@ -326,7 +326,12 @@ class Version:
 
         code, msg = _run_cmd("git tag --merged HEAD --sort -creatordate")
         if not msg:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            try:
+                code, msg = _run_cmd("git rev-list --count HEAD")
+                distance = int(msg)
+            except Exception:
+                distance = 0
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags = msg.splitlines()
         tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
@@ -367,7 +372,12 @@ class Version:
             )
         )
         if not msg:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            try:
+                code, msg = _run_cmd("hg id --num --rev tip")
+                distance = int(msg) + 1
+            except Exception:
+                distance = 0
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
         tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
@@ -405,7 +415,12 @@ class Version:
 
         code, msg = _run_cmd("darcs show tags")
         if not msg:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            try:
+                code, msg = _run_cmd("darcs log --count")
+                distance = int(msg)
+            except Exception:
+                distance = 0
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags = msg.splitlines()
         tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
@@ -458,7 +473,11 @@ class Version:
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
         if not tags_to_revs:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            try:
+                distance = int(commit)
+            except Exception:
+                distance = 0
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
             code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
@@ -504,7 +523,11 @@ class Version:
 
         code, msg = _run_cmd("bzr tags")
         if not msg or not commit:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            try:
+                distance = int(commit)
+            except Exception:
+                distance = 0
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags_to_revs = {
             line.split()[0]: int(line.split()[1])
             for line in msg.splitlines()
@@ -545,7 +568,9 @@ class Version:
         commit = msg.strip("'")
 
         code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"")
-        if int(msg) <= 1:
+        # The repository creation itself counts as a commit.
+        total_commits = int(msg) - 1
+        if total_commits <= 0:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
 
         # Based on `compute_direct_ancestors` from descendants.c in the
@@ -575,7 +600,11 @@ class Version:
         """
         code, msg = _run_cmd('fossil sql "{}"'.format(" ".join(query.splitlines())))
         if not msg:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            try:
+                distance = int(total_commits)
+            except Exception:
+                distance = 0
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
 
         tags_to_distance = [
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
