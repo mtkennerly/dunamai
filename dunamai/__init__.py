@@ -524,7 +524,7 @@ class Version:
         code, msg = _run_cmd("bzr tags")
         if not msg or not commit:
             try:
-                distance = int(commit)
+                distance = int(commit) if commit is not None else 0
             except Exception:
                 distance = 0
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)

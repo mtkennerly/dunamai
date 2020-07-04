@@ -124,9 +124,7 @@ def test__version__not_a_repository(tmp_path) -> None:
     run = make_run_callback(vcs)
 
     with chdir(vcs):
-        assert run("dunamai from git", 1) == (
-            "This does not appear to be a Git project"
-        )
+        assert run("dunamai from git", 1) == "This does not appear to be a Git project"
 
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
