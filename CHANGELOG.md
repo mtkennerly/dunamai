@@ -1,5 +1,5 @@
 
-## Unreleased
+## v1.3.0 (2020-07-04)
 
 * Previously, when there were not yet any version-like tags, the distance would
   be set to 0, so the only differentiator was the commit ID. Now, the distance
