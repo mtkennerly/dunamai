@@ -10,6 +10,8 @@ control system. This facilitates uniquely identifying nightly or per-commit
 builds in continuous integration and releasing new versions of your software
 simply by creating a tag.
 
+Dunamai is also available as a [GitHub Action](https://github.com/marketplace/actions/run-dunamai).
+
 ## Features
 * Version control system support:
   * [Git](https://git-scm.com)
