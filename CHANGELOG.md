@@ -1,7 +1,7 @@
-## Unreleased
+## v1.3.1 (2020-09-27)
 
-* Fixed:
-  * Ambiguity error when using Git if a tag and branch name were identical.
+* Fixed ambiguous reference error when using Git if a tag and branch name
+  were identical.
 
 ## v1.3.0 (2020-07-04)
 
