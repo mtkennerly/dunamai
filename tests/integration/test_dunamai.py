@@ -103,6 +103,11 @@ def test__version__from_git(tmp_path) -> None:
         assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
 
+        # Check handling with identical tag and branch names:
+        run("git checkout -b v0.2.0")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
         run("git checkout v0.1.0")
         assert from_vcs() == Version("0.1.1", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.1.1", commit="abc", dirty=False)

@@ -335,7 +335,7 @@ class Version:
         tags = msg.splitlines()
         tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
-        code, msg = _run_cmd("git rev-list --count {}..HEAD".format(tag))
+        code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag))
         distance = int(msg)
 
         version = cls(base, stage=stage, distance=distance, commit=commit, dirty=dirty)
