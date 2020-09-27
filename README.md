@@ -1,6 +1,5 @@
 
 # Dunamai
-[![Build status](https://travis-ci.org/mtkennerly/dunamai.svg?branch=master)](https://travis-ci.org/mtkennerly/dunamai)
 [![Version](https://img.shields.io/pypi/v/dunamai)](https://pypi.org/project/dunamai)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

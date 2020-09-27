@@ -1,0 +1,61 @@
+on:
+  - push
+  - pull_request
+
+name: Main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - run: |
+          pip install poetry
+          poetry install
+          poetry run pre-commit run --all-files --show-diff-on-failure
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.5'
+          - '3.6'
+          - '3.7'
+          - '3.8'
+    env:
+      DARCS_EMAIL: foo <foo@example.com>
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: |
+          # Downgrade Git because of:
+          # https://lore.kernel.org/git/CAKqNo6RJqp94uLMf8Biuo=ZvMZB9Mq6RRMrUgsLW4u1ks+mnOA@mail.gmail.com/T/#u
+          sudo apt-get install dh-autoreconf libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
+          curl -o git.tar.gz https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.21.0.tar.gz
+          tar -zxf git.tar.gz
+          cd git-2.21.0
+          make configure
+          ./configure --prefix=/usr
+          sudo make install
+          which git
+          git --version
+      - run: |
+          export PATH="$PATH:/opt"
+          sudo apt-get install -y darcs bzr
+          curl https://www.fossil-scm.org/home/uv/fossil-linux-x64-2.11.2.tar.gz -o ~/fossil.tgz
+          tar -xvf ~/fossil.tgz -C /opt
+
+          git config --global user.name "foo"
+          git config --global user.email "foo@example.com"
+          bzr whoami 'foo <foo@example.com>'
+
+          pip install poetry
+          poetry install
+          poetry run pytest --verbose --cov --cov-report term-missing
