@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Iterator, Optional
@@ -7,6 +8,10 @@ from typing import Callable, Iterator, Optional
 import pytest
 
 from dunamai import Version, Vcs, _run_cmd
+
+
+def avoid_identical_ref_timestamps() -> None:
+    time.sleep(1.2)
 
 
 @contextmanager
@@ -43,8 +48,8 @@ from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
-def test__version__from_git(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git"
+def test__version__from_git__with_annotated_tags(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-annotated"
     vcs.mkdir()
     run = make_run_callback(vcs)
     from_vcs = make_from_callback(Version.from_git)
@@ -62,11 +67,12 @@ def test__version__from_git(tmp_path) -> None:
 
         # Additional one-off check not in other VCS integration tests:
         # when the only tag in the repository does not match the pattern.
-        run("git tag other")
+        run("git tag other -m Annotated")
         with pytest.raises(ValueError):
             from_vcs()
 
-        run("git tag v0.1.0")
+        avoid_identical_ref_timestamps()
+        run("git tag v0.1.0 -m Annotated")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.1.0", commit="abc", dirty=False)
         assert run("dunamai from git") == "0.1.0"
@@ -93,13 +99,15 @@ def test__version__from_git(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", distance=1, commit="abc", dirty=False)
         assert from_any_vcs() == Version("0.1.0", distance=1, commit="abc", dirty=False)
 
-        run("git tag unmatched")
+        run("git tag unmatched -m Annotated")
         assert from_vcs() == Version("0.1.0", distance=1, commit="abc", dirty=False)
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
-        run("git tag v0.2.0 -m 'Annotated'")
-        run("git tag v0.1.1 HEAD~1")
+        avoid_identical_ref_timestamps()
+        run("git tag v0.2.0 -m Annotated")
+        avoid_identical_ref_timestamps()
+        run("git tag v0.1.1 HEAD~1 -m Annotated")
         assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
 
@@ -118,8 +126,51 @@ def test__version__from_git(tmp_path) -> None:
         (vcs / "foo.txt").write_text("third")
         run("git add .")
         run('git commit -m "Third"')
-        run("git tag v0.2.1b3")
+        run("git tag v0.2.1b3 -m Annotated")
         assert from_vcs() == Version("0.2.1", stage=("b", 3), commit="abc", dirty=False)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-lightweight"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_git)
+
+    with chdir(vcs):
+        run("git init")
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run('git commit -m "Initial commit"')
+
+        run("git tag v0.1.0")
+        assert from_vcs() == Version("0.1.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.0", commit="abc", dirty=False)
+        assert run("dunamai from git") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
+
+        (vcs / "foo.txt").write_text("bye")
+        run("git add .")
+        avoid_identical_ref_timestamps()
+        run('git commit -m "Second"')
+        assert from_vcs() == Version("0.1.0", distance=1, commit="abc", dirty=False)
+        assert from_any_vcs() == Version("0.1.0", distance=1, commit="abc", dirty=False)
+
+        (vcs / "foo.txt").write_text("again")
+        run("git add .")
+        avoid_identical_ref_timestamps()
+        run('git commit -m "Third"')
+        assert from_vcs() == Version("0.1.0", distance=2, commit="abc", dirty=False)
+        assert from_any_vcs() == Version("0.1.0", distance=2, commit="abc", dirty=False)
+
+        run("git tag v0.2.0")
+        run("git tag v0.1.1 HEAD~1")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
+        run("git checkout v0.1.1")
+        assert from_vcs() == Version("0.1.1", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.1.1", commit="abc", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")

@@ -324,7 +324,9 @@ class Version:
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
 
-        code, msg = _run_cmd("git tag --merged HEAD --sort -creatordate")
+        code, msg = _run_cmd(
+            "git tag --merged HEAD --sort -taggerdate --sort -committerdate --sort -*committerdate"
+        )
         if not msg:
             try:
                 code, msg = _run_cmd("git rev-list --count HEAD")

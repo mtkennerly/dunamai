@@ -1,3 +1,10 @@
+## Unreleased
+
+* Fixed an issue with Git annotated tag sorting. When there was a newer
+  annotated tag A on an older commit and an older annotated tag B on a
+  newer commit, Dunamai would choose tag A, but will now correctly choose
+  tag B because the commit is newer.
+
 ## v1.3.1 (2020-09-27)
 
 * Fixed ambiguous reference error when using Git if a tag and branch name
