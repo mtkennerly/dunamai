@@ -65,6 +65,14 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         run('git commit -m "Initial commit"')
         assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=False)
 
+        # Detect dirty if untracked files
+        (vcs / "bar.txt").write_text("bye")
+        assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=True)
+
+        # Once the untracked file is removed we are no longer dirty
+        (vcs / "bar.txt").unlink()
+        assert from_vcs() == Version("0.0.0", distance=1, commit="abc", dirty=False)
+
         # Additional one-off check not in other VCS integration tests:
         # when the only tag in the repository does not match the pattern.
         run("git tag other -m Annotated")
