@@ -324,6 +324,11 @@ class Version:
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
 
+        if not dirty:
+            code, msg = _run_cmd("git status --porcelain=v1")
+            if msg.strip() != "":
+                dirty = True
+
         code, msg = _run_cmd(
             "git tag --merged HEAD --sort -taggerdate --sort -committerdate --sort -*committerdate"
         )
