@@ -19,7 +19,6 @@ _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
 )
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
-_GIT_ISO_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 _T = TypeVar("_T")
 
@@ -367,10 +366,8 @@ class Version:
             detailed_tags.append(
                 (
                     parts[0].replace("refs/tags/", "", 1),
-                    dt.datetime.strptime(parts[1], _GIT_ISO_STRICT_FORMAT),
-                    None
-                    if parts[2] == ""
-                    else dt.datetime.strptime(parts[2], _GIT_ISO_STRICT_FORMAT),
+                    _parse_git_timestamp_iso_strict(parts[1]),
+                    None if parts[2] == "" else _parse_git_timestamp_iso_strict(parts[2]),
                 )
             )
         tags = [
@@ -910,6 +907,12 @@ def bump_version(base: str, index: int = -1) -> str:
         i += 1
 
     return ".".join(str(x) for x in bases)
+
+
+def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
+    # Remove colon from timezone offset for pre-3.7 Python:
+    compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
+    return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
 
 
 __version__ = get_version("dunamai").serialize()
