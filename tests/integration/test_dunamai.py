@@ -183,6 +183,39 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git__with_mixed_tags(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-mixed"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_git)
+
+    with chdir(vcs):
+        run("git init")
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run('git commit -m "Initial commit"')
+
+        run("git tag v0.1.0")
+        (vcs / "foo.txt").write_text("hi 2")
+        run("git add .")
+        avoid_identical_ref_timestamps()
+        run('git commit -m "Second"')
+
+        run('git tag v0.2.0 -m "Annotated"')
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", commit="abc", dirty=False)
+
+        (vcs / "foo.txt").write_text("hi 3")
+        run("git add .")
+        avoid_identical_ref_timestamps()
+        run('git commit -m "Third"')
+
+        run("git tag v0.3.0")
+        assert from_vcs() == Version("0.3.0", commit="abc", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.3.0", commit="abc", dirty=False)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__not_a_repository(tmp_path) -> None:
     vcs = tmp_path / "dunamai-not-a-repo"
     vcs.mkdir()

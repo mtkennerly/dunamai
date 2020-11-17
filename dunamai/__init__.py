@@ -1,5 +1,6 @@
 __all__ = ["check_version", "get_version", "Style", "Vcs", "Version"]
 
+import datetime as dt
 import pkg_resources
 import re
 import shlex
@@ -18,6 +19,7 @@ _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)?)?$"
 )
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
+_GIT_ISO_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 _T = TypeVar("_T")
 
@@ -349,7 +351,8 @@ class Version:
                 dirty = True
 
         code, msg = _run_cmd(
-            "git tag --merged HEAD --sort -taggerdate --sort -committerdate --sort -*committerdate"
+            'git for-each-ref "refs/tags/*" --merged HEAD'
+            ' --format "%(refname)@{%(creatordate:iso-strict)@{%(*committerdate:iso-strict)"'
         )
         if not msg:
             try:
@@ -358,7 +361,22 @@ class Version:
             except Exception:
                 distance = 0
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
-        tags = msg.splitlines()
+        detailed_tags = []
+        for line in msg.strip().splitlines():
+            parts = line.split("@{")
+            detailed_tags.append(
+                (
+                    parts[0].replace("refs/tags/", "", 1),
+                    dt.datetime.strptime(parts[1], _GIT_ISO_STRICT_FORMAT),
+                    None
+                    if parts[2] == ""
+                    else dt.datetime.strptime(parts[2], _GIT_ISO_STRICT_FORMAT),
+                )
+            )
+        tags = [
+            t[0]
+            for t in reversed(sorted(detailed_tags, key=lambda x: x[1] if x[2] is None else x[2]))
+        ]
         tag, base, stage, unmatched = _match_version_pattern(pattern, tags, latest_tag)
 
         code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag))
