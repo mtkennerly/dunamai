@@ -1,4 +1,4 @@
-## Unreleased
+## v1.4.0 (2020-11-17)
 
 * Added the `--bump` command line option and the `bump` argument to
   `Version.serialize()`.
