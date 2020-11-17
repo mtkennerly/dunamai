@@ -68,6 +68,17 @@ common_sub_args = [
         "default": False,
         "help": "Display additional information on stderr for troubleshooting",
     },
+    {
+        "triggers": ["--bump"],
+        "action": "store_true",
+        "dest": "bump",
+        "default": False,
+        "help": (
+            "Increment the last part of the version `base` by 1,"
+            " unless the `stage` is set, in which case increment the `revision`"
+            " by 1 or set it to a default of 2 if there was no `revision`"
+        ),
+    },
 ]
 cli_spec = {
     "description": "Generate dynamic versions",
@@ -190,9 +201,10 @@ def from_vcs(
     latest_tag: bool,
     tag_dir: str,
     debug: bool,
+    bump: bool,
 ) -> None:
     version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir)
-    print(version.serialize(metadata, dirty, format, style))
+    print(version.serialize(metadata, dirty, format, style, bump))
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
         print("# Newer unmatched tags: {}".format(version._newer_unmatched_tags), file=sys.stderr)
@@ -213,6 +225,7 @@ def main() -> None:
                 args.latest_tag,
                 tag_dir,
                 args.debug,
+                args.bump,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

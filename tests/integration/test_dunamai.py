@@ -98,6 +98,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert run("dunamai from any --latest-tag") == "0.1.0"
         assert from_explicit_vcs(Vcs.Any) == Version("0.1.0", commit="abc", dirty=False)
         assert from_explicit_vcs(Vcs.Git) == Version("0.1.0", commit="abc", dirty=False)
+        assert run("dunamai from any --bump") == "0.1.1"
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="abc", dirty=True)

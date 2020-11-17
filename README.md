@@ -47,6 +47,11 @@ $ dunamai from git --no-metadata --style semver
 $ dunamai from any --format "v{base}+{distance}.{commit}"
 v0.2.0+7.g29045e8
 
+# If you'd prefer to frame the version in terms of progress toward the next
+# release rather than distance from the latest one, you can bump it:
+$ dunamai from any --bump
+0.2.1.dev7+g29045e8
+
 # Validation of custom formats:
 $ dunamai from any --format "v{base}" --style pep440
 Version 'v0.2.0' does not conform to the PEP 440 style

@@ -220,7 +220,12 @@ class Version:
         )
 
     def serialize(
-        self, metadata: bool = None, dirty: bool = False, format: str = None, style: Style = None
+        self,
+        metadata: bool = None,
+        dirty: bool = False,
+        format: str = None,
+        style: Style = None,
+        bump: bool = False,
     ) -> str:
         """
         Create a string from the version info.
@@ -243,12 +248,26 @@ class Version:
             set and no custom format given. If you specify both a style and a
             custom format, then the format will be validated against the
             style's rules.
+        :param bump: If true, increment the last part of the `base` by 1,
+            unless `stage` is set, in which case either increment `revision`
+            by 1 or set it to a default of 2 if there was no revision.
         """
+        base = self.base
+        revision = self.revision
+        if bump:
+            if self.stage is None:
+                base = bump_version(self.base)
+            else:
+                if self.revision is None:
+                    revision = 2
+                else:
+                    revision = self.revision + 1
+
         if format is not None:
             out = format.format(
-                base=self.base,
+                base=base,
                 stage=_blank(self.stage, ""),
-                revision=_blank(self.revision, ""),
+                revision=_blank(revision, ""),
                 distance=_blank(self.distance, ""),
                 commit=_blank(self.commit, ""),
                 dirty="dirty" if self.dirty else "clean",
@@ -271,30 +290,30 @@ class Version:
         pre_parts = []
         if self.stage is not None:
             pre_parts.append(self.stage)
-            if self.revision is not None:
-                pre_parts.append(str(self.revision))
+            if revision is not None:
+                pre_parts.append(str(revision))
         if self.distance > 0:
-            pre_parts.append("post")
+            pre_parts.append("pre" if bump else "post")
             pre_parts.append(str(self.distance))
 
         if style == Style.Pep440:
             if self.distance <= 0:
                 out = serialize_pep440(
-                    self.base, stage=self.stage, revision=self.revision, metadata=meta_parts
+                    base, stage=self.stage, revision=revision, metadata=meta_parts
                 )
             else:
                 out = serialize_pep440(
-                    self.base,
+                    base,
                     stage=self.stage,
-                    revision=self.revision,
-                    post=self.distance,
-                    dev=0,
+                    revision=revision,
+                    post=None if bump else self.distance,
+                    dev=self.distance if bump else 0,
                     metadata=meta_parts,
                 )
         elif style == Style.SemVer:
-            out = serialize_semver(self.base, pre=pre_parts, metadata=meta_parts)
+            out = serialize_semver(base, pre=pre_parts, metadata=meta_parts)
         elif style == Style.Pvp:
-            out = serialize_pvp(self.base, metadata=[*pre_parts, *meta_parts])
+            out = serialize_pvp(base, metadata=[*pre_parts, *meta_parts])
 
         check_version(out, style)
         return out

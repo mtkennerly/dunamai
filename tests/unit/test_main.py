@@ -18,6 +18,7 @@ def test__parse_args__from():
         latest_tag=False,
         tag_dir="tags",
         debug=False,
+        bump=False,
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "mercurial"]).vcs == "mercurial"

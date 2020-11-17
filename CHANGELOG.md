@@ -1,9 +1,13 @@
 ## Unreleased
 
+* Added the `--bump` command line option and the `bump` argument to
+  `Version.serialize()`.
 * Fixed an issue with Git annotated tag sorting. When there was a newer
   annotated tag A on an older commit and an older annotated tag B on a
   newer commit, Dunamai would choose tag A, but will now correctly choose
   tag B because the commit is newer.
+* With Git, trigger the dirty flag when there are untracked files.
+  ([Contributed by jpc4242](https://github.com/mtkennerly/dunamai/pull/6))
 
 ## v1.3.1 (2020-09-27)
 
