@@ -345,7 +345,7 @@ class Version:
         dirty = msg.endswith("-dirty")
 
         if not dirty:
-            code, msg = _run_cmd("git status --porcelain=v1")
+            code, msg = _run_cmd("git status --porcelain")
             if msg.strip() != "":
                 dirty = True
 

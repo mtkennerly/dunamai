@@ -1,3 +1,8 @@
+## v1.4.1 (2020-11-17)
+
+* For Git, replaced `--porcelain=v1` with `--porcelain` to maintain compatibility
+  with older Git versions.
+
 ## v1.4.0 (2020-11-17)
 
 * Added the `--bump` command line option and the `bump` argument to
