@@ -14,3 +14,5 @@ build/
 dist/
 htmlcov/
 pip-wheel-metadata/
+# Used by github codespaces
+pythonenv*/

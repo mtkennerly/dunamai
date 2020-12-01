@@ -271,9 +271,8 @@ def test__version__serialize__pep440_metadata() -> None:
         Version("0.1.0", distance=1, commit="abc").serialize(metadata=False) == "0.1.0.post1.dev0"
     )
 
-    assert (
-        Version("0.1.0", distance=1, commit="abc", local="def").serialize(metadata=False) == "0.1.0.post1.dev0+def"
-    )
+    serialized = Version("0.1.0", distance=1, commit="abc", local="def").serialize(metadata=False)
+    assert serialized == "0.1.0.post1.dev0+def"
 
 
 def test__version__serialize__semver_with_metadata() -> None:
@@ -495,7 +494,9 @@ def test__check_version__pvp() -> None:
 
 
 def test__default_version_pattern() -> None:
-    def check_re(tag: str, base: str = None, stage: str = None, revision: str = None, local: str = None) -> None:
+    def check_re(
+        tag: str, base: str = None, stage: str = None, revision: str = None, local: str = None
+    ) -> None:
         result = re.search(_VERSION_PATTERN, tag)
         if result is None:
             if any(x is not None for x in [base, stage, revision]):

@@ -12,7 +12,9 @@ from functools import total_ordering
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, NamedTuple
 
-_VERSION_PATTERN = r"^v(?P<base>\d+\.\d+\.\d+)(-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?(\+(?P<local>.+))?$"
+_VERSION_PATTERN = (
+    r"^v(?P<base>\d+\.\d+\.\d+)(-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?(\+(?P<local>.+))?$"
+)
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
 _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
 _VALID_SEMVER = (
@@ -67,7 +69,7 @@ _match_version_pattern_res = NamedTuple(
         ("stage_revision", Optional[Tuple[str, Optional[int]]]),
         ("newer_tags", Sequence[str]),
         ("local", Optional[str]),
-    ]
+    ],
 )
 
 
