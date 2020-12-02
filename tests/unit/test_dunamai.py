@@ -496,12 +496,16 @@ def test__check_version__pvp() -> None:
 
 def test__default_version_pattern() -> None:
     def check_re(
-        tag: str, base: str = None, stage: str = None, revision: str = None, tagged_metadata: str = None
+        tag: str,
+        base: str = None,
+        stage: str = None,
+        revision: str = None,
+        tagged_metadata: str = None,
     ) -> None:
         result = re.search(_VERSION_PATTERN, tag)
         if result is None:
             if any(x is not None for x in [base, stage, revision]):
-                raise ValueError(f"Pattern did not match, {tag}")
+                raise ValueError("Pattern did not match, {tag}".format(tag=tag))
         else:
             assert result.group("base") == base
             assert result.group("stage") == stage
