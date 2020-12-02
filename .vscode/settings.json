@@ -6,4 +6,10 @@
   "python.linting.pylintEnabled": false,
   "python.pythonPath": "${workspaceFolder}/.venv",
   "yaml.format.enable": true,
+  "python.testing.pytestArgs": [
+    "."
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.nosetestsEnabled": false,
+  "python.testing.pytestEnabled": true,
 }
