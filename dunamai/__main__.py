@@ -27,6 +27,12 @@ common_sub_args = [
         "help": "Include dirty flag if applicable",
     },
     {
+        "triggers": ["--tagged-metadata"],
+        "action": "store_true",
+        "dest": "tagged_metadata",
+        "help": "Include tagged metadata if applicable",
+    },
+    {
         "triggers": ["--pattern"],
         "default": _VERSION_PATTERN,
         "help": (
@@ -202,9 +208,10 @@ def from_vcs(
     tag_dir: str,
     debug: bool,
     bump: bool,
+    tagged_metadata: bool,
 ) -> None:
     version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir)
-    print(version.serialize(metadata, dirty, format, style, bump))
+    print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
         print("# Newer unmatched tags: {}".format(version._newer_unmatched_tags), file=sys.stderr)
@@ -226,6 +233,7 @@ def main() -> None:
                 tag_dir,
                 args.debug,
                 args.bump,
+                args.tagged_metadata,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

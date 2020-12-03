@@ -56,13 +56,14 @@ from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 
 def test__version__init() -> None:
-    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True)
+    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="def")
     assert v.base == "1"
     assert v.stage == "a"
     assert v.revision == 2
     assert v.distance == 3
     assert v.commit == "abc"
     assert v.dirty
+    assert v.tagged_metadata == "def"
 
 
 def test__version__str() -> None:
@@ -269,6 +270,10 @@ def test__version__serialize__pep440_metadata() -> None:
     assert (
         Version("0.1.0", distance=1, commit="abc").serialize(metadata=False) == "0.1.0.post1.dev0"
     )
+
+    v = Version("0.1.0", distance=1, commit="abc", tagged_metadata="def")
+    serialized = v.serialize(tagged_metadata=True)
+    assert serialized == "0.1.0.post1.dev0+def.abc"
 
 
 def test__version__serialize__semver_with_metadata() -> None:
@@ -490,15 +495,22 @@ def test__check_version__pvp() -> None:
 
 
 def test__default_version_pattern() -> None:
-    def check_re(tag: str, base: str = None, stage: str = None, revision: str = None) -> None:
+    def check_re(
+        tag: str,
+        base: str = None,
+        stage: str = None,
+        revision: str = None,
+        tagged_metadata: str = None,
+    ) -> None:
         result = re.search(_VERSION_PATTERN, tag)
         if result is None:
             if any(x is not None for x in [base, stage, revision]):
-                raise ValueError("Pattern did not match")
+                raise ValueError("Pattern did not match, {tag}".format(tag=tag))
         else:
             assert result.group("base") == base
             assert result.group("stage") == stage
             assert result.group("revision") == revision
+            assert result.group("tagged_metadata") == tagged_metadata
 
     check_re("v0.1.0", "0.1.0")
     check_re("av0.1.0")
@@ -514,6 +526,8 @@ def test__default_version_pattern() -> None:
 
     check_re("v0.1.0rc.4", "0.1.0", "rc", "4")
     check_re("v0.1.0-beta", "0.1.0", "beta")
+
+    check_re("v0.1.0rc.4+specifier", "0.1.0", "rc", "4", tagged_metadata="specifier")
 
 
 def test__serialize_pep440():
