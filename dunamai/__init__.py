@@ -17,7 +17,7 @@ _VERSION_PATTERN = r"""
     ^v(?P<base>\d+\.\d+\.\d+)                           (?# v1.2.3)
     (-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?    (?# b0)
     (\+(?P<tagged_metadata>.+))?$                       (?# +linux)
-"""
+""".strip()
 
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
 _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"

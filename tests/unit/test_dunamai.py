@@ -271,9 +271,12 @@ def test__version__serialize__pep440_metadata() -> None:
         Version("0.1.0", distance=1, commit="abc").serialize(metadata=False) == "0.1.0.post1.dev0"
     )
 
-    v = Version("0.1.0", distance=1, commit="abc", tagged_metadata="def")
-    serialized = v.serialize(tagged_metadata=True)
-    assert serialized == "0.1.0.post1.dev0+def.abc"
+    assert (
+        Version("0.1.0", distance=1, commit="abc", tagged_metadata="def").serialize(
+            tagged_metadata=True
+        )
+        == "0.1.0.post1.dev0+def.abc"
+    )
 
 
 def test__version__serialize__semver_with_metadata() -> None:
@@ -302,6 +305,13 @@ def test__version__serialize__semver_with_metadata() -> None:
         == "0.1.0-post.1"
     )
 
+    assert (
+        Version("0.1.0", distance=1, commit="abc", tagged_metadata="def").serialize(
+            style=style, tagged_metadata=True
+        )
+        == "0.1.0-post.1+def.abc"
+    )
+
 
 def test__version__serialize__pvp_with_metadata() -> None:
     style = Style.Pvp
@@ -327,6 +337,13 @@ def test__version__serialize__pvp_with_metadata() -> None:
     assert (
         Version("0.1.0", distance=1, commit="abc").serialize(metadata=False, style=style)
         == "0.1.0-post-1"
+    )
+
+    assert (
+        Version("0.1.0", distance=1, commit="abc", tagged_metadata="def").serialize(
+            style=style, tagged_metadata=True
+        )
+        == "0.1.0-post-1-def-abc"
     )
 
 
