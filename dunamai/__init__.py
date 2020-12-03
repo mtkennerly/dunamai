@@ -10,14 +10,14 @@ from collections import OrderedDict
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, Sequence, Tuple, TypeVar, Union, NamedTuple
+from typing import Any, Callable, Mapping, NamedTuple, Optional, Sequence, Tuple, TypeVar, Union
 
 _VERSION_PATTERN = r"""
     (?x)                                                (?# ignore whitespace)
     ^v(?P<base>\d+\.\d+\.\d+)                           (?# v1.2.3)
     (-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?    (?# b0)
     (\+(?P<tagged_metadata>.+))?$                       (?# +linux)
-    """
+"""
 
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
 _VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
@@ -65,8 +65,8 @@ def _run_cmd(
     return (result.returncode, output)
 
 
-_match_version_pattern_res = NamedTuple(
-    "_match_version_pattern_res",
+_MatchedVersionPattern = NamedTuple(
+    "_MatchedVersionPattern",
     [
         ("matched_tag", str),
         ("base", str),
@@ -79,7 +79,7 @@ _match_version_pattern_res = NamedTuple(
 
 def _match_version_pattern(
     pattern: str, sources: Sequence[str], latest_source: bool
-) -> _match_version_pattern_res:
+) -> _MatchedVersionPattern:
     """
     :return: Tuple of:
         * matched tag
@@ -128,7 +128,7 @@ def _match_version_pattern(
     except IndexError:
         pass
 
-    return _match_version_pattern_res(
+    return _MatchedVersionPattern(
         source, base, stage_revision, newer_unmatched_tags, tagged_metadata
     )
 
@@ -203,7 +203,7 @@ class Version:
         self.commit = commit
         #: Whether there are uncommitted changes.
         self.dirty = dirty
-        #: The version contains baked in tagged_metadata metadata
+        #: Any metadata segment from the tag itself.
         self.tagged_metadata = tagged_metadata
 
         self._matched_tag = None  # type: Optional[str]
@@ -258,9 +258,10 @@ class Version:
         """
         Create a string from the version info.
 
-        :param metadata: Metadata (commit, dirty) is normally included in
-            the tagged_metadata version part if post or dev are set. Set this to True to
-            always include metadata, or set it to False to always exclude it.
+        :param metadata: Metadata (commit ID, dirty flag) is normally included
+            in the metadata/local version part only if the distance is nonzero.
+            Set this to True to always include metadata even with no distance,
+            or set it to False to always exclude it.
         :param dirty: Set this to True to include a dirty flag in the
             metadata if applicable. Inert when metadata=False.
         :param format: Custom output format. You can use substitutions, such as
@@ -271,8 +272,8 @@ class Version:
             * {revision}
             * {distance}
             * {commit}
-            * {tagged_metadata}
             * {dirty} which expands to either "dirty" or "clean"
+            * {tagged_metadata}
         :param style: Built-in output formats. Will default to PEP 440 if not
             set and no custom format given. If you specify both a style and a
             custom format, then the format will be validated against the
@@ -280,8 +281,8 @@ class Version:
         :param bump: If true, increment the last part of the `base` by 1,
             unless `stage` is set, in which case either increment `revision`
             by 1 or set it to a default of 2 if there was no revision.
-        :param tagged_metadata: If true use the tagged_metadata in the version as the first
-            segment of metadata.
+        :param tagged_metadata: If true, insert the `tagged_metadata` in the
+            version as the first part of the metadata segment.
         """
         base = self.base
         revision = self.revision
@@ -314,7 +315,6 @@ class Version:
 
         meta_parts = []
         if metadata is not False:
-            # treat tagged_metadata segments as the first meta_part
             if tagged_metadata and self.tagged_metadata:
                 meta_parts.append(self.tagged_metadata)
             if (metadata or self.distance > 0) and self.commit is not None:
@@ -359,11 +359,7 @@ class Version:
         Determine a version based on Git tags.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -433,11 +429,7 @@ class Version:
         Determine a version based on Mercurial tags.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -489,11 +481,7 @@ class Version:
         Determine a version based on Darcs tags.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -543,11 +531,7 @@ class Version:
         Determine a version based on Subversion tags.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -615,11 +599,7 @@ class Version:
         Determine a version based on Bazaar tags.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -669,11 +649,7 @@ class Version:
         Determine a version based on Fossil tags.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
         """
@@ -755,11 +731,12 @@ class Version:
         Determine a version based on a detected version control system.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            This must contain one capture group named `base` corresponding to
+            the release segment of the source. Optionally, it may contain another
+            two groups named `stage` and `revision` corresponding to a prerelease
+            type (such as 'alpha' or 'rc') and number (such as in 'alpha-2' or 'rc3').
+            It may also contain a group named `tagged_metadata` corresponding to extra
+            metadata after the main part of the version (typically after a plus sign).
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -785,11 +762,7 @@ class Version:
         maintain a mapping from the VCS name to the appropriate function.
 
         :param pattern: Regular expression matched against the version source.
-            This should contain one capture group named `base` corresponding to
-            the release segment of the source, and optionally another two groups
-            named `stage` and `revision` corresponding to the type
-            (`alpha`, `rc`, etc) and number of prerelease. For example, with a
-            tag like v0.1.0, the pattern would be `^v(?P<base>\d+\.\d+\.\d+)$`.
+            Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.

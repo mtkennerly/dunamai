@@ -1,3 +1,9 @@
+## Unreleased
+
+* Added the `--tagged-metadata` option and corresponding attribute on the
+  `Version` class.
+  ([Contributed by mariusvniekerk](https://github.com/mtkennerly/dunamai/pull/8))
+
 ## v1.4.1 (2020-11-17)
 
 * For Git, replaced `--porcelain=v1` with `--porcelain` to maintain compatibility

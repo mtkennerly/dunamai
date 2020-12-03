@@ -37,17 +37,20 @@ common_sub_args = [
         "default": _VERSION_PATTERN,
         "help": (
             "Regular expression matched against the version source."
-            " This should contain one capture group named `base` corresponding to"
-            " the release segment of the source, and optionally another two groups"
-            " named `stage` and `revision` corresponding to a prerelease type"
-            " (such as 'alpha' or 'rc') and number (such as in 'alpha-2' or 'rc3')"
+            " This must contain one capture group named `base` corresponding to"
+            " the release segment of the source."
+            " Optionally, it may contain another two groups named `stage` and `revision`"
+            " corresponding to a prerelease type (such as 'alpha' or 'rc') and number"
+            " (such as in 'alpha-2' or 'rc3')."
+            " It may also contain a group named `tagged_metadata` corresponding to extra"
+            " metadata after the main part of the version (typically after a plus sign)."
         ),
     },
     {
         "triggers": ["--format"],
         "help": (
             "Custom output format. Available substitutions:"
-            " {base}, {stage}, {revision}, {distance}, {commit}, {dirty}"
+            " {base}, {stage}, {revision}, {distance}, {commit}, {dirty}, {tagged_metadata}"
         ),
     },
     {

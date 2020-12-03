@@ -96,6 +96,9 @@ assert version.revision == 5
 assert version.distance == 44
 assert version.commit == "g644252b"
 assert version.dirty is True
+
+# Available if the latest tag includes metadata, like v0.1.0+linux:
+assert version.tagged_metadata == "linux"
 ```
 
 ## Comparison to Versioneer
