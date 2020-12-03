@@ -3,6 +3,8 @@
 * Added the `--tagged-metadata` option and corresponding attribute on the
   `Version` class.
   ([Contributed by mariusvniekerk](https://github.com/mtkennerly/dunamai/pull/8))
+* Added explicit dependency on setuptools for environments where it is not
+  installed by default.
 
 ## v1.4.1 (2020-11-17)
 
