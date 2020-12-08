@@ -446,7 +446,11 @@ class Version:
 
             @property
             def commit_offset(self):
-                return tag_topo_lookup[self.fullref]
+                try:
+                    return tag_topo_lookup[self.fullref]
+                except KeyError:
+                    print(tag_topo_lookup)
+                    raise
 
             @property
             def sort_key(self):
