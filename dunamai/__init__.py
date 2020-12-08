@@ -505,6 +505,14 @@ class Version:
             )
         )
         tag_lookup = {}
+
+        def noralize_tag_ref(tagref: str) -> str:
+            """Older versions of git do not correctly respect --decorate-refs"""
+            if tagref.startswith("refs/tags/"):
+                return tagref
+            else:
+                return "refs/tags/{}".format(tagref)
+
         for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
             # lines have the pattern
             # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
@@ -517,6 +525,7 @@ class Version:
                     tag.strip() for tag in tags.split(",") if tag.strip().startswith("tag: ")
                 ]
                 taglist = [tag.split()[-1] for tag in taglist]
+                taglist = [noralize_tag_ref(tag) for tag in taglist]
                 for tag in taglist:
                     tag_lookup[tag] = tag_offset
         return tag_lookup
