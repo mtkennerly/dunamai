@@ -10,7 +10,19 @@ from collections import OrderedDict
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from typing import Any, Callable, Mapping, NamedTuple, Optional, Sequence, Tuple, TypeVar, Union
+from textwrap import dedent
+from typing import (
+    Any,
+    Callable,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 _VERSION_PATTERN = r"""
     (?x)                                                (?# ignore whitespace)
@@ -379,9 +391,16 @@ class Version:
             if msg.strip() != "":
                 dirty = True
 
+        tag_topo_lookup = cls._from_git_tag_topo_order()
+
         code, msg = _run_cmd(
             'git for-each-ref "refs/tags/*" --merged HEAD'
-            ' --format "%(refname)@{%(creatordate:iso-strict)@{%(*committerdate:iso-strict)"'
+            ' --format "%(refname)'
+            "@{%(objectname)"
+            "@{%(creatordate:iso-strict)"
+            "@{%(*committerdate:iso-strict)"
+            "@{%(taggerdate:iso-strict)"
+            '"'
         )
         if not msg:
             try:
@@ -390,20 +409,66 @@ class Version:
             except Exception:
                 distance = 0
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
-        detailed_tags = []
+
+        class GitRefInfo:
+            def __init__(
+                self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str
+            ):
+                self.fullref = ref
+                self.commit = commit
+                self.creatordate = self.normalize_git_dt(creatordate)
+                self.committerdate = self.normalize_git_dt(committerdate)
+                self.taggerdate = self.normalize_git_dt(taggerdate)
+
+            @staticmethod
+            def normalize_git_dt(dtstr: str) -> Optional[dt.datetime]:
+                if dtstr == "":
+                    return None
+                else:
+                    return _parse_git_timestamp_iso_strict(dtstr)
+
+            def __repr__(self):
+                return "{ref} of:{offset} {created} {committed} {tagged}".format(
+                    ref=self.fullref,
+                    offset=self.commit_offset,
+                    created=self.creatordate,
+                    committed=self.committerdate,
+                    tagged=self.taggerdate,
+                )
+
+            def best_date(self):
+                if self.taggerdate is not None:
+                    return self.taggerdate
+                elif self.committerdate is not None:
+                    return self.committerdate
+                else:
+                    return self.creatordate
+
+            @property
+            def commit_offset(self):
+                return tag_topo_lookup[self.commit, self.fullref]
+
+            @property
+            def sort_key(self):
+                return -self.commit_offset, self.best_date()
+
+            @property
+            def ref(self):
+                return self.fullref.replace("refs/tags/", "")
+
+        detailed_tags = []  # type: List[GitRefInfo]
+
         for line in msg.strip().splitlines():
             parts = line.split("@{")
             detailed_tags.append(
-                (
-                    parts[0].replace("refs/tags/", "", 1),
-                    _parse_git_timestamp_iso_strict(parts[1]),
-                    None if parts[2] == "" else _parse_git_timestamp_iso_strict(parts[2]),
+                GitRefInfo(
+                    *parts,
                 )
             )
-        tags = [
-            t[0]
-            for t in reversed(sorted(detailed_tags, key=lambda x: x[1] if x[2] is None else x[2]))
-        ]
+
+        detailed_tags.sort(key=lambda t: t.sort_key)
+        detailed_tags.reverse()
+        tags = [t.ref for t in detailed_tags]
         tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
             pattern, tags, latest_tag
         )
@@ -422,6 +487,39 @@ class Version:
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
         return version
+
+    @classmethod
+    def _from_git_tag_topo_order(cls) -> Mapping[Tuple[str, str], int]:
+        """"""
+        code, logmsg = _run_cmd(
+            dedent(
+                """
+            git log
+                --simplify-by-decoration
+                --topo-order
+                --decorate=full
+                "--decorate-refs=refs/tags/*"
+                HEAD
+                "--format=%H%d"
+            """
+            )
+        )
+        tag_lookup = {}
+        for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
+            # lines have the pattern
+            # <gitsha>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
+            commit, _, tags = line.partition("(")
+            commit = commit.strip()
+            if tags:
+                # remove trailing ')'
+                tags = tags[:-1]
+                taglist = [
+                    tag.strip() for tag in tags.split(",") if tag.strip().startswith("tag: ")
+                ]
+                taglist = [tag.split()[-1] for tag in taglist]
+                for tag in taglist:
+                    tag_lookup[commit, tag] = tag_offset
+        return tag_lookup
 
     @classmethod
     def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
