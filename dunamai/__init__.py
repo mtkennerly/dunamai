@@ -446,7 +446,7 @@ class Version:
 
             @property
             def commit_offset(self):
-                return tag_topo_lookup[self.commit, self.fullref]
+                return tag_topo_lookup[self.fullref]
 
             @property
             def sort_key(self):
@@ -460,11 +460,7 @@ class Version:
 
         for line in msg.strip().splitlines():
             parts = line.split("@{")
-            detailed_tags.append(
-                GitRefInfo(
-                    *parts,
-                )
-            )
+            detailed_tags.append(GitRefInfo(*parts))
 
         detailed_tags.sort(key=lambda t: t.sort_key)
         detailed_tags.reverse()
@@ -489,7 +485,7 @@ class Version:
         return version
 
     @classmethod
-    def _from_git_tag_topo_order(cls) -> Mapping[Tuple[str, str], int]:
+    def _from_git_tag_topo_order(cls) -> Mapping[str, int]:
         """"""
         code, logmsg = _run_cmd(
             dedent(
@@ -507,7 +503,7 @@ class Version:
         tag_lookup = {}
         for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
             # lines have the pattern
-            # <gitsha>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
+            # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
             commit, _, tags = line.partition("(")
             commit = commit.strip()
             if tags:
@@ -518,7 +514,7 @@ class Version:
                 ]
                 taglist = [tag.split()[-1] for tag in taglist]
                 for tag in taglist:
-                    tag_lookup[commit, tag] = tag_offset
+                    tag_lookup[tag] = tag_offset
         return tag_lookup
 
     @classmethod
