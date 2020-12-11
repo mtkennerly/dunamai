@@ -113,6 +113,9 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
+        # check that we find the expected tag that has the most recent tag creation time
+        avoid_identical_ref_timestamps()
+        run("git tag v0.2.0b1 -m Annotated")
         avoid_identical_ref_timestamps()
         run("git tag v0.2.0 -m Annotated")
         avoid_identical_ref_timestamps()
