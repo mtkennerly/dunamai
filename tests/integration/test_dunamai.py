@@ -343,45 +343,76 @@ def test__version__from_subversion(tmp_path) -> None:
         assert from_vcs() == Version("0.0.0", distance=0, commit=None, dirty=False)
 
         run("svn mkdir trunk tags")
-        (vcs / "trunk" / "foo.txt").write_text("hi")
+
+        # No tags yet, so version should be 0.0.0.
         assert from_vcs() == Version("0.0.0", distance=0, commit=None, dirty=True)
 
         run("svn add --force .")
         run('svn commit -m "Initial commit"')  # commit 1
         run("svn update")
+
+        # A single commit, but still no tags. Version should be 0.0.0.
         assert from_vcs() == Version("0.0.0", distance=1, commit="1", dirty=False)
 
-        run('svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri))  # commit 2
-        run("svn update")
-        assert from_vcs() == Version("0.1.0", commit="2", dirty=False)
-        assert run("dunamai from subversion") == "0.1.0"
-        assert run("dunamai from any") == "0.1.0"
+        with chdir(vcs / "trunk"):
+            # ^-- Make sure things work when we're in trunk, too.
+            Path("foo.txt").write_text("hi")
+            run("svn add --force .")
+            run('svn commit -m "Initial foo.txt commit"')  # commit 2
+            run("svn update")
 
+            # Two commits, but still no tag. Version should still be 0.0.0.
+            assert from_vcs() == Version("0.0.0", distance=2, commit="2", dirty=False)
+
+            run(
+                'svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri)
+            )  # commit 3 and first tag!
+            run("svn update")
+
+            # 3 commits, one tag (v.0.1.0), version should be 0.1.0.
+            assert from_vcs() == Version("0.1.0", commit="3", dirty=False)
+            assert run("dunamai from subversion") == "0.1.0"
+            assert run("dunamai from any") == "0.1.0"
+
+        # Dirty the working directory. Make sure we identify it as such.
         (vcs / "trunk" / "foo.txt").write_text("bye")
-        assert from_vcs() == Version("0.1.0", commit="2", dirty=True)
+        assert from_vcs() == Version("0.1.0", commit="3", dirty=True)
 
-        run('svn commit -m "Second"')  # commit 3
+        # Fourth commit, still just one tag. Version should be 0.1.0, and dirty flag should be reset.
+        run('svn commit -m "Fourth"')  # commit 4
         run("svn update")
-        assert from_vcs() == Version("0.1.0", distance=1, commit="3", dirty=False)
-        assert from_any_vcs_unmocked() == Version("0.1.0", distance=1, commit="3", dirty=False)
+        assert from_vcs() == Version("0.1.0", distance=1, commit="4", dirty=False)
+        assert from_any_vcs_unmocked() == Version("0.1.0", distance=1, commit="4", dirty=False)
 
         # Ensure we get the tag based on the highest commit, not necessarily
         # just the newest tag.
-        run('svn copy {0}/trunk {0}/tags/v0.2.0 -m "Tag 2"'.format(vcs_srv_uri))  # commit 4
-        run('svn copy {0}/trunk {0}/tags/v0.1.1 -r 1 -m "Tag 3"'.format(vcs_srv_uri))  # commit 5
+        run('svn copy {0}/trunk {0}/tags/v0.2.0 -m "Tag 2"'.format(vcs_srv_uri))  # commit 5
+        run('svn copy {0}/trunk {0}/tags/v0.1.1 -r 1 -m "Tag 3"'.format(vcs_srv_uri))  # commit 6
         run("svn update")
-        assert from_vcs() == Version("0.2.0", distance=1, commit="5", dirty=False)
-        assert from_vcs(latest_tag=True) == Version("0.2.0", distance=1, commit="5", dirty=False)
+        assert from_vcs() == Version("0.2.0", distance=1, commit="6", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.2.0", distance=1, commit="6", dirty=False)
 
-        run('svn copy {0}/trunk {0}/tags/unmatched -m "Tag 4"'.format(vcs_srv_uri))  # commit 6
+        run('svn copy {0}/trunk {0}/tags/unmatched -m "Tag 4"'.format(vcs_srv_uri))  # commit 7
         run("svn update")
-        assert from_vcs() == Version("0.2.0", distance=2, commit="6", dirty=False)
+        assert from_vcs() == Version("0.2.0", distance=2, commit="7", dirty=False)
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
+        # Checkout an earlier commit. Commit 2 occurred before the first tag
+        # (v0.1.0, commit #3), so version should be 0.0.0.
         run("svn update -r 2")
-        assert from_vcs() == Version("0.1.0", commit="2", dirty=False)
-        assert from_vcs(latest_tag=True) == Version("0.1.0", commit="2", dirty=False)
+        assert from_vcs() == Version("0.0.0", distance=2, commit="2", dirty=False)
+        assert from_vcs(latest_tag=True) == Version("0.0.0", distance=2, commit="2", dirty=False)
+
+        with chdir(vcs / "trunk"):
+            # Do this in trunk, to make sure things still work there.
+            # Checkout an earlier commit. Commit 3 was first tag (v0.1.0, commit
+            # #3), so version should be 0.1.0.
+            run("svn update -r 3")
+            assert from_vcs() == Version("0.1.0", distance=0, commit="3", dirty=False)
+            assert from_vcs(latest_tag=True) == Version(
+                "0.1.0", distance=0, commit="3", dirty=False
+            )
 
 
 @pytest.mark.skipif(shutil.which("bzr") is None, reason="Requires Bazaar")
