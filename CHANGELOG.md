@@ -1,3 +1,8 @@
+## Unreleased
+
+* For Git, avoided use of `--decorate-refs` to maintain compatibility with
+  older Git versions.
+
 ## v1.5.1 (2020-12-16)
 
 * Improved ordering of Git tags, particularly when commit dates were not chronological.

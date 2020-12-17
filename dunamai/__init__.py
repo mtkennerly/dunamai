@@ -244,7 +244,6 @@ class _GitRefInfo:
 
     @staticmethod
     def normalize_tag_ref(ref: str) -> str:
-        # Older versions of git do not correctly respect --decorate-refs
         if ref.startswith("refs/tags/"):
             return ref
         else:
@@ -253,12 +252,15 @@ class _GitRefInfo:
     @staticmethod
     def from_git_tag_topo_order() -> Mapping[str, int]:
         code, logmsg = _run_cmd(
-            "git log --simplify-by-decoration --topo-order --decorate=full"
-            ' "--decorate-refs=refs/tags/*" HEAD "--format=%H%d"'
+            'git log --simplify-by-decoration --topo-order --decorate=full HEAD "--format=%H%d"'
         )
         tag_lookup = {}
 
         for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
+            # Simulate "--decorate-refs=refs/tags/*" for older Git versions:
+            if " (" in line and "tag: " not in line:
+                continue
+
             # lines have the pattern
             # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
             commit, _, tags = line.partition("(")
