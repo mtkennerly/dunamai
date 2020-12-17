@@ -57,7 +57,11 @@ class Vcs(Enum):
 
 
 def _run_cmd(
-    command: str, codes: Sequence[int] = (0,), where: Path = None, shell: bool = False
+    command: str,
+    codes: Sequence[int] = (0,),
+    where: Path = None,
+    shell: bool = False,
+    env: dict = None,
 ) -> Tuple[int, str]:
     result = subprocess.run(
         shlex.split(command),
@@ -65,6 +69,7 @@ def _run_cmd(
         stderr=subprocess.STDOUT,
         cwd=str(where) if where is not None else None,
         shell=shell,
+        env=env,
     )
     output = result.stdout.decode().strip()
     if codes and result.returncode not in codes:

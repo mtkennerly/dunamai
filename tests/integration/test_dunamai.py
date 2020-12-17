@@ -25,8 +25,8 @@ def chdir(where: Path) -> Iterator[None]:
 
 
 def make_run_callback(where: Path) -> Callable:
-    def inner(command, expected_code: int = 0):
-        _, out = _run_cmd(command, where=where, codes=[expected_code])
+    def inner(command, expected_code: int = 0, env: dict = None):
+        _, out = _run_cmd(command, where=where, codes=[expected_code], env=env)
         return out
 
     return inner
@@ -216,6 +216,43 @@ def test__version__from_git__with_mixed_tags(tmp_path) -> None:
         run("git tag v0.3.0")
         assert from_vcs() == Version("0.3.0", commit="abc", dirty=False)
         assert from_vcs(latest_tag=True) == Version("0.3.0", commit="abc", dirty=False)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-nonchronological"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_git)
+
+    with chdir(vcs):
+        run("git init")
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run(
+            'git commit -m "Initial commit"',
+            env={
+                "GIT_COMMITTER_DATE": "2000-01-02T01:00:00",
+                "GIT_AUTHOR_DATE": "2000-01-02T01:00:00",
+                **os.environ,
+            },
+        )
+
+        run("git tag v0.1.0")
+        (vcs / "foo.txt").write_text("hi 2")
+        run("git add .")
+        avoid_identical_ref_timestamps()
+        run(
+            'git commit -m "Second"',
+            env={
+                "GIT_COMMITTER_DATE": "2000-01-01T01:00:00",
+                "GIT_AUTHOR_DATE": "2000-01-01T01:00:00",
+                **os.environ,
+            },
+        )
+
+        run("git tag v0.2.0")
+        assert from_vcs() == Version("0.2.0", commit="abc", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
