@@ -256,11 +256,12 @@ class _GitRefInfo:
         )
         tag_lookup = {}
 
-        for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
-            # Simulate "--decorate-refs=refs/tags/*" for older Git versions:
-            if " (" in line and "tag: " not in line:
-                continue
+        # Simulate "--decorate-refs=refs/tags/*" for older Git versions:
+        filtered_lines = [
+            x for x in logmsg.strip().splitlines(keepends=False) if " (" not in x or "tag: " in x
+        ]
 
+        for tag_offset, line in enumerate(filtered_lines):
             # lines have the pattern
             # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
             commit, _, tags = line.partition("(")

@@ -1,4 +1,4 @@
-## Unreleased
+## v1.5.2 (2020-12-17)
 
 * For Git, avoided use of `--decorate-refs` to maintain compatibility with
   older Git versions.
