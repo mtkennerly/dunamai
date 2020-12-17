@@ -10,7 +10,6 @@ from collections import OrderedDict
 from enum import Enum
 from functools import total_ordering
 from pathlib import Path
-from textwrap import dedent
 from typing import (
     Any,
     Callable,
@@ -179,6 +178,97 @@ def _detect_vcs(expected_vcs: Vcs = None) -> Vcs:
                 if code == 0:
                     return vcs
         raise RuntimeError("Unable to detect version control system.")
+
+
+class _GitRefInfo:
+    def __init__(
+        self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str
+    ):
+        self.fullref = ref
+        self.commit = commit
+        self.creatordate = self.normalize_git_dt(creatordate)
+        self.committerdate = self.normalize_git_dt(committerdate)
+        self.taggerdate = self.normalize_git_dt(taggerdate)
+        self.tag_topo_lookup = {}  # type: Mapping[str, int]
+
+    def with_tag_topo_lookup(self, lookup: Mapping[str, int]) -> "_GitRefInfo":
+        self.tag_topo_lookup = lookup
+        return self
+
+    @staticmethod
+    def normalize_git_dt(timestamp: str) -> Optional[dt.datetime]:
+        if timestamp == "":
+            return None
+        else:
+            return _parse_git_timestamp_iso_strict(timestamp)
+
+    def __repr__(self):
+        return (
+            "_GitRefInfo(ref={!r}, commit={!r}, creatordate={!r},"
+            " committerdate={!r}, taggerdate={!r})"
+        ).format(
+            self.fullref, self.commit_offset, self.creatordate, self.committerdate, self.taggerdate
+        )
+
+    def best_date(self) -> Optional[dt.datetime]:
+        if self.taggerdate is not None:
+            return self.taggerdate
+        elif self.committerdate is not None:
+            return self.committerdate
+        else:
+            return self.creatordate
+
+    @property
+    def commit_offset(self) -> int:
+        try:
+            return self.tag_topo_lookup[self.fullref]
+        except KeyError:
+            raise RuntimeError(
+                "Unable to determine commit offset for ref {} in data: {}".format(
+                    self.fullref, self.tag_topo_lookup
+                )
+            )
+
+    @property
+    def sort_key(self) -> Tuple[int, Optional[dt.datetime]]:
+        return (-self.commit_offset, self.best_date())
+
+    @property
+    def ref(self) -> str:
+        return self.fullref.replace("refs/tags/", "")
+
+    @staticmethod
+    def normalize_tag_ref(ref: str) -> str:
+        # Older versions of git do not correctly respect --decorate-refs
+        if ref.startswith("refs/tags/"):
+            return ref
+        else:
+            return "refs/tags/{}".format(ref)
+
+    @staticmethod
+    def from_git_tag_topo_order() -> Mapping[str, int]:
+        code, logmsg = _run_cmd(
+            "git log --simplify-by-decoration --topo-order --decorate=full"
+            ' "--decorate-refs=refs/tags/*" HEAD "--format=%H%d"'
+        )
+        tag_lookup = {}
+
+        for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
+            # lines have the pattern
+            # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
+            commit, _, tags = line.partition("(")
+            commit = commit.strip()
+            if tags:
+                # remove trailing ')'
+                tags = tags[:-1]
+                taglist = [
+                    tag.strip() for tag in tags.split(",") if tag.strip().startswith("tag: ")
+                ]
+                taglist = [tag.split()[-1] for tag in taglist]
+                taglist = [_GitRefInfo.normalize_tag_ref(tag) for tag in taglist]
+                for tag in taglist:
+                    tag_lookup[tag] = tag_offset
+        return tag_lookup
 
 
 @total_ordering
@@ -391,8 +481,6 @@ class Version:
             if msg.strip() != "":
                 dirty = True
 
-        tag_topo_lookup = cls._from_git_tag_topo_order()
-
         code, msg = _run_cmd(
             'git for-each-ref "refs/tags/*" --merged HEAD'
             ' --format "%(refname)'
@@ -410,65 +498,14 @@ class Version:
                 distance = 0
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
 
-        class GitRefInfo:
-            def __init__(
-                self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str
-            ):
-                self.fullref = ref
-                self.commit = commit
-                self.creatordate = self.normalize_git_dt(creatordate)
-                self.committerdate = self.normalize_git_dt(committerdate)
-                self.taggerdate = self.normalize_git_dt(taggerdate)
-
-            @staticmethod
-            def normalize_git_dt(dtstr: str) -> Optional[dt.datetime]:
-                if dtstr == "":
-                    return None
-                else:
-                    return _parse_git_timestamp_iso_strict(dtstr)
-
-            def __repr__(self):
-                return "{ref} of:{offset} {created} {committed} {tagged}".format(
-                    ref=self.fullref,
-                    offset=self.commit_offset,
-                    created=self.creatordate,
-                    committed=self.committerdate,
-                    tagged=self.taggerdate,
-                )
-
-            def best_date(self):
-                if self.taggerdate is not None:
-                    return self.taggerdate
-                elif self.committerdate is not None:
-                    return self.committerdate
-                else:
-                    return self.creatordate
-
-            @property
-            def commit_offset(self):
-                try:
-                    return tag_topo_lookup[self.fullref]
-                except KeyError:
-                    print(tag_topo_lookup)
-                    raise
-
-            @property
-            def sort_key(self):
-                return -self.commit_offset, self.best_date()
-
-            @property
-            def ref(self):
-                return self.fullref.replace("refs/tags/", "")
-
-        detailed_tags = []  # type: List[GitRefInfo]
+        detailed_tags = []  # type: List[_GitRefInfo]
+        tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order()
 
         for line in msg.strip().splitlines():
             parts = line.split("@{")
-            detailed_tags.append(GitRefInfo(*parts))
+            detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
-        detailed_tags.sort(key=lambda t: t.sort_key)
-        detailed_tags.reverse()
-        tags = [t.ref for t in detailed_tags]
+        tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
         tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
             pattern, tags, latest_tag
         )
@@ -487,48 +524,6 @@ class Version:
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
         return version
-
-    @classmethod
-    def _from_git_tag_topo_order(cls) -> Mapping[str, int]:
-        """"""
-        code, logmsg = _run_cmd(
-            dedent(
-                """
-            git log
-                --simplify-by-decoration
-                --topo-order
-                --decorate=full
-                "--decorate-refs=refs/tags/*"
-                HEAD
-                "--format=%H%d"
-            """
-            )
-        )
-        tag_lookup = {}
-
-        def noralize_tag_ref(tagref: str) -> str:
-            """Older versions of git do not correctly respect --decorate-refs"""
-            if tagref.startswith("refs/tags/"):
-                return tagref
-            else:
-                return "refs/tags/{}".format(tagref)
-
-        for tag_offset, line in enumerate(logmsg.strip().splitlines(keepends=False)):
-            # lines have the pattern
-            # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
-            commit, _, tags = line.partition("(")
-            commit = commit.strip()
-            if tags:
-                # remove trailing ')'
-                tags = tags[:-1]
-                taglist = [
-                    tag.strip() for tag in tags.split(",") if tag.strip().startswith("tag: ")
-                ]
-                taglist = [tag.split()[-1] for tag in taglist]
-                taglist = [noralize_tag_ref(tag) for tag in taglist]
-                for tag in taglist:
-                    tag_lookup[tag] = tag_offset
-        return tag_lookup
 
     @classmethod
     def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":

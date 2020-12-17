@@ -1,3 +1,10 @@
+## Unreleased
+
+* Improved ordering of Git tags, particularly when commit dates were not chronological.
+  ([Contributed by mariusvniekerk](https://github.com/mtkennerly/dunamai/pull/9))
+* Improved Subversion handling when in a subdirectory of the repository.
+  ([Contributed by Spirotot](https://github.com/mtkennerly/dunamai/pull/10))
+
 ## v1.5.0 (2020-12-02)
 
 * Added the `--tagged-metadata` option and corresponding attribute on the

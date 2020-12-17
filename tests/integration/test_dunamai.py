@@ -378,7 +378,8 @@ def test__version__from_subversion(tmp_path) -> None:
         (vcs / "trunk" / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", commit="3", dirty=True)
 
-        # Fourth commit, still just one tag. Version should be 0.1.0, and dirty flag should be reset.
+        # Fourth commit, still just one tag. Version should be 0.1.0, and dirty flag
+        # should be reset.
         run('svn commit -m "Fourth"')  # commit 4
         run("svn update")
         assert from_vcs() == Version("0.1.0", distance=1, commit="4", dirty=False)
