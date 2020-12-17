@@ -651,10 +651,10 @@ class Version:
         code, msg = _run_cmd("svn status")
         dirty = bool(msg)
 
-        code, msg = _run_cmd("svn info --show-item url")
+        code, msg = _run_cmd("svn info --show-item repos-root-url")
         url = msg.strip("/")
 
-        code, msg = _run_cmd("svn info --show-item last-changed-revision")
+        code, msg = _run_cmd("svn info --show-item revision")
         if not msg or msg == "0":
             commit = None
         else:
