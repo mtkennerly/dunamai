@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed Semantic Versioning enforcement to allow metadata segments with
+  more than two dot-separated identifiers.
+
 ## v1.5.2 (2020-12-17)
 
 * For Git, avoided use of `--decorate-refs` to maintain compatibility with

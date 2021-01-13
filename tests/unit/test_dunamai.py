@@ -466,6 +466,7 @@ def test__check_version__semver() -> None:
     check_version("0.1.0", style=style)
     check_version("0.1.0-alpha.1", style=style)
     check_version("0.1.0+abc", style=style)
+    check_version("0.1.0+a.b.c", style=style)
     check_version("0.1.0-alpha.1.beta.2+abc.dirty", style=style)
 
     with pytest.raises(ValueError):
