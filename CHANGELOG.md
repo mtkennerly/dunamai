@@ -1,4 +1,4 @@
-## Unreleased
+## v1.5.3 (2021-01-13)
 
 * Fixed Semantic Versioning enforcement to allow metadata segments with
   more than two dot-separated identifiers.
