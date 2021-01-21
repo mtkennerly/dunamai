@@ -270,7 +270,7 @@ class _GitRefInfo:
                 # remove trailing ')'
                 tags = tags[:-1]
                 taglist = [
-                    tag.strip() for tag in tags.split(",") if tag.strip().startswith("tag: ")
+                    tag.strip() for tag in tags.split(", ") if tag.strip().startswith("tag: ")
                 ]
                 taglist = [tag.split()[-1] for tag in taglist]
                 taglist = [_GitRefInfo.normalize_tag_ref(tag) for tag in taglist]
@@ -325,8 +325,16 @@ class Version:
     def __repr__(self) -> str:
         return (
             "Version(base={!r}, stage={!r}, revision={!r},"
-            " distance={!r}, commit={!r}, dirty={!r})"
-        ).format(self.base, self.stage, self.revision, self.distance, self.commit, self.dirty)
+            " distance={!r}, commit={!r}, dirty={!r}, tagged_metadata={!r})"
+        ).format(
+            self.base,
+            self.stage,
+            self.revision,
+            self.distance,
+            self.commit,
+            self.dirty,
+            self.tagged_metadata,
+        )
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Version):

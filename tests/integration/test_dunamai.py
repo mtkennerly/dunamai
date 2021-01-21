@@ -141,6 +141,13 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         run("git tag v0.2.1b3 -m Annotated")
         assert from_vcs() == Version("0.2.1", stage=("b", 3), commit="abc", dirty=False)
 
+        # Additional one-off check: tag containing comma.
+        (vcs / "foo.txt").write_text("fourth")
+        run("git add .")
+        run('git commit -m "Fourth"')
+        run("git tag v0.3.0+a,b -m Annotated")
+        assert from_vcs() == Version("0.3.0", commit="abc", dirty=False, tagged_metadata="a,b")
+
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__with_lightweight_tags(tmp_path) -> None:

@@ -72,9 +72,10 @@ def test__version__str() -> None:
 
 
 def test__version__repr() -> None:
-    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True)
+    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="tagged")
     assert repr(v) == (
-        "Version(base='1', stage='a', revision=2, distance=3, commit='abc', dirty=True)"
+        "Version(base='1', stage='a', revision=2, distance=3,"
+        " commit='abc', dirty=True, tagged_metadata='tagged')"
     )
 
 
