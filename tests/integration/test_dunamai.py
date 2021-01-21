@@ -518,7 +518,7 @@ def test__version__from_fossil(tmp_path) -> None:
 
     with chdir(vcs):
         run("fossil init repo")
-        run("fossil open repo")
+        run("fossil open repo --force")
         assert from_vcs() == Version("0.0.0", distance=0, commit="abc", dirty=False)
 
         (vcs / "foo.txt").write_text("hi")

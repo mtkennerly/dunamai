@@ -1,3 +1,7 @@
+## v1.5.4 (2021-01-20)
+
+* Fixed handling of Git tags that contain commas.
+
 ## v1.5.3 (2021-01-13)
 
 * Fixed Semantic Versioning enforcement to allow metadata segments with
