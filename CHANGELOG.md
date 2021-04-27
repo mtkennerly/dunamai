@@ -1,4 +1,4 @@
-## Unreleased
+## v1.5.5 (2021-04-26)
 
 * Fixed handling of Git tags that contain slashes.
   ([Contributed by ioben](https://github.com/mtkennerly/dunamai/pull/17))
