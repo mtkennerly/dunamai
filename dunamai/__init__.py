@@ -498,7 +498,7 @@ class Version:
                 dirty = True
 
         code, msg = _run_cmd(
-            'git for-each-ref "refs/tags/*" --merged HEAD'
+            'git for-each-ref "refs/tags/**" --merged HEAD'
             ' --format "%(refname)'
             "@{%(objectname)"
             "@{%(creatordate:iso-strict)"
