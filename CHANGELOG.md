@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed handling of Git tags that contain slashes.
+  ([Contributed by ioben](https://github.com/mtkennerly/dunamai/pull/17))
+
 ## v1.5.4 (2021-01-20)
 
 * Fixed handling of Git tags that contain commas.

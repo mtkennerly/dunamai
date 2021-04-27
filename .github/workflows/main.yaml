@@ -52,7 +52,7 @@ jobs:
       - run: |
           export PATH="$PATH:/opt"
           sudo apt-get install -y darcs bzr
-          curl https://www.fossil-scm.org/home/uv/fossil-linux-x64-2.14.tar.gz -o ~/fossil.tgz
+          curl https://www.fossil-scm.org/home/uv/fossil-linux-x64-2.14.1.tar.gz -o ~/fossil.tgz
           tar -xvf ~/fossil.tgz -C /opt
 
           git config --global user.name "foo"
