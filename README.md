@@ -159,6 +159,13 @@ prompted the creation of Dunamai as an alternative:
   $ poetry version $(dunamai from any)
   ```
 
+  Or you can use the [poetry-dynamic-versioning](https://github.com/mtkennerly/poetry-dynamic-versioning) plugin.
+
+## Other notes
+* When using Git, the initial commit must **not** be both tagged and empty
+  (i.e., created with `--allow-empty`). This is related to a reporting issue
+  in Git. For more info, [click here](https://github.com/mtkennerly/dunamai/issues/14).
+
 ## Development
 This project is managed using [Poetry](https://poetry.eustace.io).
 Development requires Python 3.6+ because of [Black](https://github.com/ambv/black).
