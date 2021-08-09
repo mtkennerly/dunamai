@@ -1,4 +1,4 @@
-## Unreleased
+## v1.6.0 (2021-08-09)
 
 * Fixed an oversight where the default version tag pattern would only find
   tags with exactly three parts in the base (e.g., `v1.0.0` and `v1.2.3`).
