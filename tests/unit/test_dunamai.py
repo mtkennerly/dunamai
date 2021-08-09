@@ -548,6 +548,9 @@ def test__default_version_pattern() -> None:
 
     check_re("v0.1.0rc.4+specifier", "0.1.0", "rc", "4", tagged_metadata="specifier")
 
+    check_re("v1", "1")
+    check_re("v1b2", "1", "b", "2")
+
 
 def test__serialize_pep440():
     assert serialize_pep440("1.2.3") == "1.2.3"

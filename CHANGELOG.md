@@ -1,3 +1,11 @@
+## Unreleased
+
+* Fixed an oversight where the default version tag pattern would only find
+  tags with exactly three parts in the base (e.g., `v1.0.0` and `v1.2.3`).
+  This is now relaxed so that `v1`, `v1.2.3.4`, and so on are also recognized.
+* Added support for execution via `python -m dunamai`.
+  ([Contributed by jstriebel](https://github.com/mtkennerly/dunamai/pull/19))
+
 ## v1.5.5 (2021-04-26)
 
 * Fixed handling of Git tags that contain slashes.
