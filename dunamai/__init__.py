@@ -1,7 +1,15 @@
 __all__ = ["check_version", "get_version", "Style", "Vcs", "Version"]
 
+import sys
+
+from packaging.version import parse
+
+if sys.version_info < (3, 8):
+    import importlib_metadata as importlib_metadata
+else:
+    import importlib.metadata as importlib_metadata
+
 import datetime as dt
-import pkg_resources
 import re
 import shlex
 import shutil
@@ -81,16 +89,12 @@ def _run_cmd(
     return (result.returncode, output)
 
 
-_MatchedVersionPattern = NamedTuple(
-    "_MatchedVersionPattern",
-    [
-        ("matched_tag", str),
-        ("base", str),
-        ("stage_revision", Optional[Tuple[str, Optional[int]]]),
-        ("newer_tags", Sequence[str]),
-        ("tagged_metadata", Optional[str]),
-    ],
-)
+class _MatchedVersionPattern(NamedTuple):
+    matched_tag: str
+    base: str
+    stage_revision: Optional[Tuple[str, Optional[int]]]
+    newer_tags: Sequence[str]
+    tagged_metadata: Optional[str]
 
 
 def _match_version_pattern(
@@ -122,9 +126,7 @@ def _match_version_pattern(
             if base is not None:
                 break
         except IndexError:
-            raise ValueError(
-                "Pattern '{}' did not include required capture group 'base'".format(pattern)
-            )
+            raise ValueError(f"Pattern '{pattern}' did not include required capture group 'base'")
     if pattern_match is None or base is None:
         if latest_source:
             raise ValueError(
@@ -133,7 +135,7 @@ def _match_version_pattern(
                 )
             )
         else:
-            raise ValueError("Pattern '{}' did not match any tags from {}".format(pattern, sources))
+            raise ValueError(f"Pattern '{pattern}' did not match any tags from {sources}")
 
     try:
         stage = pattern_match.group("stage")
@@ -169,12 +171,10 @@ def _detect_vcs(expected_vcs: Vcs = None) -> Vcs:
         command = checks[expected_vcs]
         program = command.split()[0]
         if not shutil.which(program):
-            raise RuntimeError("Unable to find '{}' program".format(program))
+            raise RuntimeError(f"Unable to find '{program}' program")
         code, _ = _run_cmd(command, codes=[])
         if code != 0:
-            raise RuntimeError(
-                "This does not appear to be a {} project".format(expected_vcs.value.title())
-            )
+            raise RuntimeError(f"This does not appear to be a {expected_vcs.value.title()} project")
         return expected_vcs
     else:
         for vcs, command in checks.items():
@@ -247,7 +247,7 @@ class _GitRefInfo:
         if ref.startswith("refs/tags/"):
             return ref
         else:
-            return "refs/tags/{}".format(ref)
+            return f"refs/tags/{ref}"
 
     @staticmethod
     def from_git_tag_topo_order() -> Mapping[str, int]:
@@ -289,7 +289,7 @@ class Version:
         distance: int = 0,
         commit: str = None,
         dirty: bool = None,
-        tagged_metadata: Optional[str] = None
+        tagged_metadata: Optional[str] = None,
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -338,9 +338,7 @@ class Version:
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Version):
-            raise TypeError(
-                "Cannot compare Version with type {}".format(other.__class__.__qualname__)
-            )
+            raise TypeError(f"Cannot compare Version with type {other.__class__.__qualname__}")
         return (
             self.base == other.base
             and self.stage == other.stage
@@ -352,11 +350,9 @@ class Version:
 
     def __lt__(self, other: Any) -> bool:
         if not isinstance(other, Version):
-            raise TypeError(
-                "Cannot compare Version with type {}".format(other.__class__.__qualname__)
-            )
+            raise TypeError(f"Cannot compare Version with type {other.__class__.__qualname__}")
         return (
-            pkg_resources.parse_version(self.base) < pkg_resources.parse_version(other.base)
+            parse(self.base) < parse(other.base)
             and _blank(self.stage, "") < _blank(other.stage, "")
             and _blank(self.revision, 0) < _blank(other.revision, 0)
             and _blank(self.distance, 0) < _blank(other.distance, 0)
@@ -526,7 +522,7 @@ class Version:
             pattern, tags, latest_tag
         )
 
-        code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag))
+        code, msg = _run_cmd(f"git rev-list --count refs/tags/{tag}..HEAD")
         distance = int(msg)
 
         version = cls(
@@ -562,7 +558,7 @@ class Version:
 
         code, msg = _run_cmd(
             'hg log -r "sort(tag(){}, -rev)" --template "{{join(tags, \':\')}}\\n"'.format(
-                " and ancestors({})".format(commit) if commit is not None else ""
+                f" and ancestors({commit})" if commit is not None else ""
             )
         )
         if not msg:
@@ -625,7 +621,7 @@ class Version:
             pattern, tags, latest_tag
         )
 
-        code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag))
+        code, msg = _run_cmd(f"darcs log --from-tag {tag} --count")
         # The tag itself is in the list, so offset by 1.
         distance = int(msg) - 1
 
@@ -673,7 +669,7 @@ class Version:
 
         if not commit:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
-        code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
+        code, msg = _run_cmd(f'svn ls -v -r {commit} "{url}/{tag_dir}"')
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
         if not tags_to_revs:
@@ -684,9 +680,9 @@ class Version:
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
-            code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
+            code, msg = _run_cmd(f'svn log -v "{url}/{tag_dir}/{tag}" --stop-on-copy')
             for line in msg.splitlines():
-                match = re.search(r"A /{}/{} \(from .+?:(\d+)\)".format(tag_dir, tag), line)
+                match = re.search(fr"A /{tag_dir}/{tag} \(from .+?:(\d+)\)", line)
                 if match:
                     source = int(match.group(1))
                     tags_to_sources_revs[tag] = (source, rev)
@@ -742,7 +738,7 @@ class Version:
             for line in msg.splitlines()
             if line.split()[1] != "?"
         }
-        tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
+        tags = [x[1] for x in sorted(((v, k) for k, v in tags_to_revs.items()), reverse=True)]
         tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
             pattern, tags, latest_tag
         )
@@ -918,7 +914,7 @@ def check_version(version: str, style: Style = Style.Pep440) -> None:
         Style.SemVer: ("Semantic Versioning", _VALID_SEMVER),
         Style.Pvp: ("PVP", _VALID_PVP),
     }[style]
-    failure_message = "Version '{}' does not conform to the {} style".format(version, name)
+    failure_message = f"Version '{version}' does not conform to the {name} style"
     if not re.search(pattern, version):
         raise ValueError(failure_message)
     if style == Style.SemVer:
@@ -934,7 +930,7 @@ def get_version(
     fallback: Version = Version("0.0.0"),
 ) -> Version:
     """
-    Check pkg_resources info or a fallback function to determine the version.
+    Check packaging info or a fallback function to determine the version.
     This is intended as a convenient default for setting your `__version__` if
     you do not want to include a generated version statically during packaging.
 
@@ -951,8 +947,8 @@ def get_version(
             return first_ver
 
     try:
-        return Version(pkg_resources.get_distribution(name).version)
-    except pkg_resources.DistributionNotFound:
+        return Version(importlib_metadata.version(name))
+    except importlib_metadata.PackageNotFoundError:
         pass
 
     if third_choice:

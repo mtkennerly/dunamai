@@ -1,5 +1,11 @@
+import sys
+
+if sys.version_info < (3, 8):
+    import importlib_metadata as importlib_metadata
+else:
+    import importlib.metadata as importlib_metadata
+
 import os
-import pkg_resources
 import re
 from contextlib import contextmanager
 from pathlib import Path
@@ -8,17 +14,17 @@ from typing import Callable, Iterator, Optional
 import pytest
 
 from dunamai import (
+    _VERSION_PATTERN,
+    Style,
+    Vcs,
+    Version,
+    _run_cmd,
     bump_version,
     check_version,
     get_version,
-    Version,
     serialize_pep440,
     serialize_pvp,
     serialize_semver,
-    Style,
-    Vcs,
-    _run_cmd,
-    _VERSION_PATTERN,
 )
 
 
@@ -414,7 +420,7 @@ def test__version__serialize__format() -> None:
 
 
 def test__get_version__from_name() -> None:
-    assert get_version("dunamai") == Version(pkg_resources.get_distribution("dunamai").version)
+    assert get_version("dunamai") == Version(importlib_metadata.version("dunamai"))
 
 
 def test__get_version__first_choice() -> None:
@@ -524,7 +530,7 @@ def test__default_version_pattern() -> None:
         result = re.search(_VERSION_PATTERN, tag)
         if result is None:
             if any(x is not None for x in [base, stage, revision]):
-                raise ValueError("Pattern did not match, {tag}".format(tag=tag))
+                raise ValueError(f"Pattern did not match, {tag}")
         else:
             assert result.group("base") == base
             assert result.group("stage") == stage

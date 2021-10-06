@@ -7,7 +7,7 @@ from typing import Callable, Iterator, Optional
 
 import pytest
 
-from dunamai import Version, Vcs, _run_cmd
+from dunamai import Vcs, Version, _run_cmd
 
 
 def avoid_identical_ref_timestamps() -> None:
@@ -387,7 +387,7 @@ def test__version__from_subversion(tmp_path) -> None:
         run_srv("svnadmin create .")
 
     with chdir(vcs):
-        run('svn checkout "{}" .'.format(vcs_srv_uri))
+        run(f'svn checkout "{vcs_srv_uri}" .')
         assert from_vcs() == Version("0.0.0", distance=0, commit=None, dirty=False)
 
         run("svn mkdir trunk tags")

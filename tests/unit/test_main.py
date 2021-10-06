@@ -3,7 +3,7 @@ from argparse import Namespace
 import pytest
 
 from dunamai import _run_cmd
-from dunamai.__main__ import parse_args, _VERSION_PATTERN
+from dunamai.__main__ import _VERSION_PATTERN, parse_args
 
 
 def test__parse_args__from():

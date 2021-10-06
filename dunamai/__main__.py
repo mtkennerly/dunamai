@@ -2,8 +2,7 @@ import argparse
 import sys
 from typing import Mapping, Optional
 
-from dunamai import check_version, Version, Style, Vcs, _VERSION_PATTERN
-
+from dunamai import _VERSION_PATTERN, Style, Vcs, Version, check_version
 
 common_sub_args = [
     {
@@ -216,8 +215,8 @@ def from_vcs(
     version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir)
     print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
     if debug:
-        print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
-        print("# Newer unmatched tags: {}".format(version._newer_unmatched_tags), file=sys.stderr)
+        print(f"# Matched tag: {version._matched_tag}", file=sys.stderr)
+        print(f"# Newer unmatched tags: {version._newer_unmatched_tags}", file=sys.stderr)
 
 
 def main() -> None:
