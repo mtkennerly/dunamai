@@ -18,7 +18,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.5"
-setuptools = ">=8.0"
+packaging = ">=20.9"  # 20.9 is the last with Python 3.5 compat
+importlib-metadata = {version = ">=2.1.1", python = "<3.8"}  # 2.1.1 is the last with Python 3.5 compat
 
 [tool.poetry.dev-dependencies]
 pytest = "^3.0"
@@ -36,6 +37,9 @@ dunamai = 'dunamai.__main__:main'
 
 [tool.black]
 line-length = 100
+
+[tool.pytest.ini_options]
+addopts = '--import-mode=importlib'  # allow using test files with same name
 
 [build-system]
 requires = ["poetry>=0.12"]
