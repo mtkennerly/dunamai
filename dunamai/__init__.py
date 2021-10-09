@@ -1,7 +1,6 @@
 __all__ = ["check_version", "get_version", "Style", "Vcs", "Version"]
 
 import datetime as dt
-import pkg_resources
 import re
 import shlex
 import shutil
@@ -355,8 +354,9 @@ class Version:
             raise TypeError(
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
+        import packaging.version as pv
         return (
-            pkg_resources.parse_version(self.base) < pkg_resources.parse_version(other.base)
+            pv.Version(self.base) < pv.Version(other.base)
             and _blank(self.stage, "") < _blank(other.stage, "")
             and _blank(self.revision, 0) < _blank(other.revision, 0)
             and _blank(self.distance, 0) < _blank(other.distance, 0)
@@ -951,8 +951,12 @@ def get_version(
             return first_ver
 
     try:
-        return Version(pkg_resources.get_distribution(name).version)
-    except pkg_resources.DistributionNotFound:
+        import importlib.metadata as ilm
+    except ImportError:
+        import importlib_metadata as ilm
+    try:
+        return Version(ilm.version(name))
+    except ilm.PackageNotFoundError:
         pass
 
     if third_choice:
