@@ -355,6 +355,7 @@ class Version:
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
         import packaging.version as pv
+
         return (
             pv.Version(self.base) < pv.Version(other.base)
             and _blank(self.stage, "") < _blank(other.stage, "")
