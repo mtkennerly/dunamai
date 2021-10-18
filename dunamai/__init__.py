@@ -954,7 +954,7 @@ def get_version(
     try:
         import importlib.metadata as ilm
     except ImportError:
-        import importlib_metadata as ilm
+        import importlib_metadata as ilm  # type: ignore
     try:
         return Version(ilm.version(name))
     except ilm.PackageNotFoundError:
