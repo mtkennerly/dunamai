@@ -55,7 +55,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
     from_vcs = make_from_callback(Version.from_git)
 
     with chdir(vcs):
-        run("git init")
+        run("git init --initial-branch=master")
         assert from_vcs() == Version("0.0.0", distance=0, commit=None, dirty=True)
 
         (vcs / "foo.txt").write_text("hi")
