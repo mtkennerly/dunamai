@@ -1,3 +1,10 @@
+## Unreleased
+
+* Added a `py.typed` file for PEP-561.
+  ([Contributed by wwuck](https://github.com/mtkennerly/dunamai/pull/25))
+* Replaced `pkg_resources` dependency with `packaging` and `importlib_metadata`.
+  ([Contributed by flying-sheep](https://github.com/mtkennerly/dunamai/pull/29))
+
 ## v1.6.0 (2021-08-09)
 
 * Fixed an oversight where the default version tag pattern would only find

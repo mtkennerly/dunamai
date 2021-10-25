@@ -354,7 +354,9 @@ class Version:
             raise TypeError(
                 "Cannot compare Version with type {}".format(other.__class__.__qualname__)
             )
+
         import packaging.version as pv
+
         return (
             pv.Version(self.base) < pv.Version(other.base)
             and _blank(self.stage, "") < _blank(other.stage, "")
@@ -953,7 +955,7 @@ def get_version(
     try:
         import importlib.metadata as ilm
     except ImportError:
-        import importlib_metadata as ilm
+        import importlib_metadata as ilm  # type: ignore
     try:
         return Version(ilm.version(name))
     except ilm.PackageNotFoundError:
