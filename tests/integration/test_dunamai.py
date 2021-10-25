@@ -56,7 +56,11 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
 
     with chdir(vcs):
         run("git init")
-        run("git branch -m master")
+        try:
+            # Compatibility for newer Git versions:
+            run("git branch -m master")
+        except Exception:
+            pass
         assert from_vcs() == Version("0.0.0", distance=0, commit=None, dirty=True)
 
         (vcs / "foo.txt").write_text("hi")
