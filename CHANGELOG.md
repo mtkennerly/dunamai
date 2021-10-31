@@ -1,9 +1,15 @@
 ## Unreleased
 
+* Broadened the default version tag pattern to allow more separator styles
+  recognized in PEP 440 pre-normalized forms (`-`, `.`, and `_`).
+* Enhanced `serialize_pep440()` to normalize the alternative prerelease names
+  (`alpha` -> `a`, `beta` -> `b`, `c`/`pre`/`preview` -> `rc`) and
+  capitalizations (`RC` -> `rc`, etc).
 * Added a `py.typed` file for PEP-561.
   ([Contributed by wwuck](https://github.com/mtkennerly/dunamai/pull/25))
 * Replaced `pkg_resources` dependency with `packaging` and `importlib_metadata`.
   ([Contributed by flying-sheep](https://github.com/mtkennerly/dunamai/pull/29))
+* Added some missing public items to `__all__`.
 
 ## v1.6.0 (2021-08-09)
 

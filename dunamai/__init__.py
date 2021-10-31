@@ -1,4 +1,14 @@
-__all__ = ["check_version", "get_version", "Style", "Vcs", "Version"]
+__all__ = [
+    "bump_version",
+    "check_version",
+    "get_version",
+    "serialize_pep440",
+    "serialize_pvp",
+    "serialize_semver",
+    "Style",
+    "Vcs",
+    "Version",
+]
 
 import datetime as dt
 import re
@@ -23,10 +33,10 @@ from typing import (
 )
 
 _VERSION_PATTERN = r"""
-    (?x)                                                (?# ignore whitespace)
-    ^v(?P<base>\d+(\.\d+)*)                             (?# v1.2.3)
-    (-?((?P<stage>[a-zA-Z]+)\.?(?P<revision>\d+)?))?    (?# b0)
-    (\+(?P<tagged_metadata>.+))?$                       (?# +linux)
+    (?x)                                                        (?# ignore whitespace)
+    ^v(?P<base>\d+(\.\d+)*)                                     (?# v1.2.3)
+    ([-._]?((?P<stage>[a-zA-Z]+)[-._]?(?P<revision>\d+)?))?     (?# b0)
+    (\+(?P<tagged_metadata>.+))?$                               (?# +linux)
 """.strip()
 
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
@@ -1001,7 +1011,14 @@ def serialize_pep440(
     out.append(base)
 
     if stage is not None:
-        out.append(stage)
+        alternative_stages = {
+            "alpha": "a",
+            "beta": "b",
+            "c": "rc",
+            "pre": "rc",
+            "preview": "rc",
+        }
+        out.append(alternative_stages.get(stage.lower(), stage.lower()))
         if revision is None:
             # PEP 440 does not allow omitting the revision, so assume 0.
             out.append(0)

@@ -546,6 +546,11 @@ def test__default_version_pattern() -> None:
     check_re("v0.1.0rc.4", "0.1.0", "rc", "4")
     check_re("v0.1.0-beta", "0.1.0", "beta")
 
+    check_re("v0.1.0a2", "0.1.0", "a", "2")
+    check_re("v0.1.0-a-2", "0.1.0", "a", "2")
+    check_re("v0.1.0.a.2", "0.1.0", "a", "2")
+    check_re("v0.1.0_a_2", "0.1.0", "a", "2")
+
     check_re("v0.1.0rc.4+specifier", "0.1.0", "rc", "4", tagged_metadata="specifier")
 
     check_re("v1", "1")
@@ -570,6 +575,13 @@ def test__serialize_pep440():
         )
         == "0!1.2.3a4.post5.dev6+foo.bar"
     )
+
+    assert serialize_pep440("1.2.3", stage="alpha", revision=4) == "1.2.3a4"
+    assert serialize_pep440("1.2.3", stage="ALphA", revision=4) == "1.2.3a4"
+    assert serialize_pep440("1.2.3", stage="beta", revision=4) == "1.2.3b4"
+    assert serialize_pep440("1.2.3", stage="c", revision=4) == "1.2.3rc4"
+    assert serialize_pep440("1.2.3", stage="pre", revision=4) == "1.2.3rc4"
+    assert serialize_pep440("1.2.3", stage="preview", revision=4) == "1.2.3rc4"
 
     with pytest.raises(ValueError):
         serialize_pep440("foo")
