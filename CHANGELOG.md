@@ -1,4 +1,4 @@
-## Unreleased
+## v1.7.0 (2021-10-31)
 
 * Broadened the default version tag pattern to allow more separator styles
   recognized in PEP 440 pre-normalized forms (`-`, `.`, and `_`).
