@@ -1,3 +1,8 @@
+## Unreleased
+
+* Changed the build backend to poetry-core.
+  ([Contributed by fabaff](https://github.com/mtkennerly/dunamai/pull/35))
+
 ## v1.7.0 (2021-10-31)
 
 * Broadened the default version tag pattern to allow more separator styles
