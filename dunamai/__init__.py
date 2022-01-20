@@ -392,8 +392,10 @@ class Version:
             in the metadata/local version part only if the distance is nonzero.
             Set this to True to always include metadata even with no distance,
             or set it to False to always exclude it.
+            This is ignored when `format` is used.
         :param dirty: Set this to True to include a dirty flag in the
             metadata if applicable. Inert when metadata=False.
+            This is ignored when `format` is used.
         :param format: Custom output format. You can use substitutions, such as
             "v{base}" to get "v0.1.0". Available substitutions:
 
@@ -413,6 +415,7 @@ class Version:
             by 1 or set it to a default of 2 if there was no revision.
         :param tagged_metadata: If true, insert the `tagged_metadata` in the
             version as the first part of the metadata segment.
+            This is ignored when `format` is used.
         """
         base = self.base
         revision = self.revision
