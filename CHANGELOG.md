@@ -3,6 +3,7 @@
 * Changed the build backend to poetry-core.
   ([Contributed by fabaff](https://github.com/mtkennerly/dunamai/pull/35))
 * Clarified serialization options that are ignored when using a custom format.
+* Relaxed dependency range of `importlib-metadata` for compatibility with Poetry.
 
 ## v1.7.0 (2021-10-31)
 
