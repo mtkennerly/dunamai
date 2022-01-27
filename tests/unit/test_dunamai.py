@@ -498,16 +498,12 @@ def test__check_version__semver() -> None:
         Version("00.0.0").serialize(style=style)
     with pytest.raises(ValueError):
         Version("0.01.0").serialize(style=style)
-    with pytest.raises(ValueError):
-        Version("0.1.0-alpha.02").serialize(style=style)
     # But leading zeroes are fine for non-numeric parts:
     Version("0.1.0-alpha.02a").serialize(style=style)
 
     # Identifiers can't be empty:
     with pytest.raises(ValueError):
         Version("0.1.0-.").serialize(style=style)
-    with pytest.raises(ValueError):
-        Version("0.1.0-a.").serialize(style=style)
     with pytest.raises(ValueError):
         Version("0.1.0-.a").serialize(style=style)
 
