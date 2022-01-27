@@ -1,5 +1,6 @@
 __all__ = [
     "bump_version",
+    "bump_complete_version",
     "check_version",
     "get_version",
     "serialize_pep440",
@@ -10,6 +11,7 @@ __all__ = [
     "Version",
 ]
 
+import copy
 import datetime as dt
 import re
 import shlex
@@ -1141,6 +1143,35 @@ def bump_version(base: str, index: int = -1) -> str:
         i += 1
 
     return ".".join(str(x) for x in bases)
+
+
+def bump_complete_version(version: Version, index: int = -1) -> Version:
+    """
+    Increment a version.
+    If there is no pre-release the core version is bumped. Otherwise, the revision number.
+    The index parameter is only used when the base version is bumped.
+
+    :param version: Version, such as 0.1.0a8+linux.
+    :param index: Numerical position to increment. Default: -1.
+        This follows Python indexing rules, so positive numbers start from
+        the left side and count up from 0, while negative numbers start from
+        the right side and count down from -1.
+        Only has an effect when the core version (e.g. 0.1.0) is bumped.
+    :return: Bumped version.
+    """
+    base = version.base
+    revision = version.revision
+    if version.stage is None:
+        base = bump_version(version.base, index)
+    else:
+        if version.revision is None:
+            revision = 2
+        else:
+            revision = version.revision + 1
+    new_version = copy.copy(version)
+    new_version.base = base
+    new_version.revision = revision
+    return new_version
 
 
 def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
