@@ -1,6 +1,8 @@
 from typing import Sequence, Union
 from dunamai import Version
 
+__all__ = ["pep440", "pep440_meta", "pep440_meta_id", "format_pieces_as_pep440"]
+
 
 def format_pieces_as_pep440(
     base: str,
