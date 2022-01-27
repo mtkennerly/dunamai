@@ -56,7 +56,9 @@ from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 
 def test__version__init() -> None:
-    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="def")
+    v = Version(
+        "1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="def", epoch=4
+    )
     assert v.base == "1"
     assert v.stage == "a"
     assert v.revision == 2
@@ -64,6 +66,7 @@ def test__version__init() -> None:
     assert v.commit == "abc"
     assert v.dirty
     assert v.tagged_metadata == "def"
+    assert v.epoch == 4
 
 
 def test__version__str() -> None:
@@ -72,10 +75,12 @@ def test__version__str() -> None:
 
 
 def test__version__repr() -> None:
-    v = Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="tagged")
+    v = Version(
+        "1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="tagged", epoch=4
+    )
     assert repr(v) == (
         "Version(base='1', stage='a', revision=2, distance=3,"
-        " commit='abc', dirty=True, tagged_metadata='tagged')"
+        " commit='abc', dirty=True, tagged_metadata='tagged', epoch=4)"
     )
 
 
@@ -134,6 +139,8 @@ def test__version__serialize__pep440() -> None:
     assert Version("1").serialize(bump=True) == "2"
     assert Version("0.1.0", stage=("a", None)).serialize(bump=True) == "0.1.0a2"
     assert Version("0.1.0", stage=("b", 2)).serialize(bump=True) == "0.1.0b3"
+
+    assert Version("0.1.0", epoch=2).serialize() == "2!0.1.0"
 
 
 def test__version__serialize__semver() -> None:
@@ -194,6 +201,8 @@ def test__version__serialize__semver() -> None:
     )
     assert Version("0.1.0", stage=("beta", 2)).serialize(style=style, bump=True) == "0.1.0-beta.3"
 
+    assert Version("0.1.0", epoch=2).serialize(style=style) == "0.1.0"
+
 
 def test__version__serialize__pvp() -> None:
     style = Style.Pvp
@@ -252,6 +261,8 @@ def test__version__serialize__pvp() -> None:
         Version("0.1.0", stage=("alpha", None)).serialize(style=style, bump=True) == "0.1.0-alpha-2"
     )
     assert Version("0.1.0", stage=("beta", 2)).serialize(style=style, bump=True) == "0.1.0-beta-3"
+
+    assert Version("0.1.0", epoch=2).serialize(style=style) == "0.1.0"
 
 
 def test__version__serialize__pep440_metadata() -> None:
@@ -444,6 +455,7 @@ def test__check_version__pep440() -> None:
     check_version("0.01.0")
 
     check_version("2!0.1.0")
+    check_version("23!0.1.0")
     check_version("0.1.0a1")
     check_version("0.1.0b1")
     check_version("0.1.0rc1")
@@ -520,6 +532,7 @@ def test__default_version_pattern() -> None:
         stage: str = None,
         revision: str = None,
         tagged_metadata: str = None,
+        epoch: str = None,
     ) -> None:
         result = re.search(_VERSION_PATTERN, tag)
         if result is None:
@@ -530,6 +543,7 @@ def test__default_version_pattern() -> None:
             assert result.group("stage") == stage
             assert result.group("revision") == revision
             assert result.group("tagged_metadata") == tagged_metadata
+            assert result.group("epoch") == epoch
 
     check_re("v0.1.0", "0.1.0")
     check_re("av0.1.0")
@@ -555,6 +569,8 @@ def test__default_version_pattern() -> None:
 
     check_re("v1", "1")
     check_re("v1b2", "1", "b", "2")
+
+    check_re("v1!2", "2", epoch="1")
 
 
 def test__serialize_pep440():

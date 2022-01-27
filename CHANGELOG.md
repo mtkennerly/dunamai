@@ -4,6 +4,10 @@
   ([Contributed by fabaff](https://github.com/mtkennerly/dunamai/pull/35))
 * Clarified serialization options that are ignored when using a custom format.
 * Relaxed dependency range of `importlib-metadata` for compatibility with Poetry.
+* Added `epoch` to default tag pattern and format placeholders.
+* Fixed PEP 440 validation to allow multiple digits in the epoch.
+* Improved parsing of optional pattern groups so that we don't stop checking at
+  the first one that's omitted.
 
 ## v1.7.0 (2021-10-31)
 

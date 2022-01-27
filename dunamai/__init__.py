@@ -34,13 +34,13 @@ from typing import (
 
 _VERSION_PATTERN = r"""
     (?x)                                                        (?# ignore whitespace)
-    ^v(?P<base>\d+(\.\d+)*)                                     (?# v1.2.3)
+    ^v((?P<epoch>\d+)!)?(?P<base>\d+(\.\d+)*)                   (?# v1.2.3 or v1!2000.1.2)
     ([-._]?((?P<stage>[a-zA-Z]+)[-._]?(?P<revision>\d+)?))?     (?# b0)
     (\+(?P<tagged_metadata>.+))?$                               (?# +linux)
 """.strip()
 
 # PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
-_VALID_PEP440 = r"^(\d!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
+_VALID_PEP440 = r"^(\d+!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
 _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?$"
 )
@@ -98,6 +98,7 @@ _MatchedVersionPattern = NamedTuple(
         ("stage_revision", Optional[Tuple[str, Optional[int]]]),
         ("newer_tags", Sequence[str]),
         ("tagged_metadata", Optional[str]),
+        ("epoch", Optional[int]),
     ],
 )
 
@@ -120,6 +121,7 @@ def _match_version_pattern(
     stage_revision = None
     newer_unmatched_tags = []
     tagged_metadata = None
+    epoch: Optional[Union[str, int]] = None
 
     for source in sources[:1] if latest_source else sources:
         pattern_match = re.search(pattern, source)
@@ -144,17 +146,23 @@ def _match_version_pattern(
         else:
             raise ValueError("Pattern '{}' did not match any tags from {}".format(pattern, sources))
 
-    try:
-        stage = pattern_match.group("stage")
-        revision = pattern_match.group("revision")
-        tagged_metadata = pattern_match.group("tagged_metadata")
-        if stage is not None:
-            stage_revision = (stage, None) if revision is None else (stage, int(revision))
-    except IndexError:
-        pass
+    stage = pattern_match.groupdict().get("stage")
+    revision = pattern_match.groupdict().get("revision")
+    tagged_metadata = pattern_match.groupdict().get("tagged_metadata")
+    epoch = pattern_match.groupdict().get("epoch")
+    if stage is not None:
+        try:
+            stage_revision = (stage, None if revision is None else int(revision))
+        except ValueError:
+            raise ValueError("Revision '{}' is not a valid number".format(revision))
+    if epoch is not None:
+        try:
+            epoch = int(epoch)
+        except ValueError:
+            raise ValueError("Epoch '{}' is not a valid number".format(epoch))
 
     return _MatchedVersionPattern(
-        source, base, stage_revision, newer_unmatched_tags, tagged_metadata
+        source, base, stage_revision, newer_unmatched_tags, tagged_metadata, epoch
     )
 
 
@@ -298,7 +306,8 @@ class Version:
         distance: int = 0,
         commit: str = None,
         dirty: bool = None,
-        tagged_metadata: Optional[str] = None
+        tagged_metadata: Optional[str] = None,
+        epoch: int = None
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -307,6 +316,7 @@ class Version:
         :param distance: Number of commits since the last tag.
         :param commit: Commit hash/identifier.
         :param dirty: True if the working directory does not match the commit.
+        :param epoch: Optional PEP 440 epoch.
         """
         #: Release segment.
         self.base = base
@@ -324,6 +334,8 @@ class Version:
         self.dirty = dirty
         #: Any metadata segment from the tag itself.
         self.tagged_metadata = tagged_metadata
+        #: Optional PEP 440 epoch.
+        self.epoch = epoch
 
         self._matched_tag = None  # type: Optional[str]
         self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
@@ -334,7 +346,7 @@ class Version:
     def __repr__(self) -> str:
         return (
             "Version(base={!r}, stage={!r}, revision={!r},"
-            " distance={!r}, commit={!r}, dirty={!r}, tagged_metadata={!r})"
+            " distance={!r}, commit={!r}, dirty={!r}, tagged_metadata={!r}, epoch={!r})"
         ).format(
             self.base,
             self.stage,
@@ -343,6 +355,7 @@ class Version:
             self.commit,
             self.dirty,
             self.tagged_metadata,
+            self.epoch,
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -357,6 +370,8 @@ class Version:
             and self.distance == other.distance
             and self.commit == other.commit
             and self.dirty == other.dirty
+            and self.tagged_metadata == other.tagged_metadata
+            and self.epoch == other.epoch
         )
 
     def __lt__(self, other: Any) -> bool:
@@ -374,6 +389,8 @@ class Version:
             and _blank(self.distance, 0) < _blank(other.distance, 0)
             and _blank(self.commit, "") < _blank(other.commit, "")
             and bool(self.dirty) < bool(other.dirty)
+            and _blank(self.tagged_metadata, "") < _blank(other.tagged_metadata, "")
+            and _blank(self.epoch, 0) < _blank(other.epoch, 0)
         )
 
     def serialize(
@@ -406,6 +423,7 @@ class Version:
             * {commit}
             * {dirty} which expands to either "dirty" or "clean"
             * {tagged_metadata}
+            * {epoch}
         :param style: Built-in output formats. Will default to PEP 440 if not
             set and no custom format given. If you specify both a style and a
             custom format, then the format will be validated against the
@@ -437,6 +455,7 @@ class Version:
                 commit=_blank(self.commit, ""),
                 tagged_metadata=_blank(self.tagged_metadata, ""),
                 dirty="dirty" if self.dirty else "clean",
+                epoch=_blank(self.epoch, ""),
             )
             if style is not None:
                 check_version(out, style)
@@ -467,7 +486,11 @@ class Version:
         if style == Style.Pep440:
             if self.distance <= 0:
                 out = serialize_pep440(
-                    base, stage=self.stage, revision=revision, metadata=meta_parts
+                    base,
+                    stage=self.stage,
+                    revision=revision,
+                    metadata=meta_parts,
+                    epoch=self.epoch,
                 )
             else:
                 out = serialize_pep440(
@@ -477,6 +500,7 @@ class Version:
                     post=None if bump else self.distance,
                     dev=self.distance if bump else 0,
                     metadata=meta_parts,
+                    epoch=self.epoch,
                 )
         elif style == Style.SemVer:
             out = serialize_semver(base, pre=pre_parts, metadata=meta_parts)
@@ -537,7 +561,7 @@ class Version:
             detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
         tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
-        tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
         )
 
@@ -551,6 +575,7 @@ class Version:
             commit=commit,
             dirty=dirty,
             tagged_metadata=tagged_metadata,
+            epoch=epoch,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -588,7 +613,7 @@ class Version:
                 distance = 0
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
-        tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
         )
 
@@ -603,6 +628,7 @@ class Version:
             commit=commit,
             dirty=dirty,
             tagged_metadata=tagged_metadata,
+            epoch=epoch,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -636,7 +662,7 @@ class Version:
                 distance = 0
             return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
         tags = msg.splitlines()
-        tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
         )
 
@@ -651,6 +677,7 @@ class Version:
             commit=commit,
             dirty=dirty,
             tagged_metadata=tagged_metadata,
+            epoch=epoch,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -706,7 +733,7 @@ class Version:
                     source = int(match.group(1))
                     tags_to_sources_revs[tag] = (source, rev)
         tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
-        tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
         )
 
@@ -721,6 +748,7 @@ class Version:
             commit=commit,
             dirty=dirty,
             tagged_metadata=tagged_metadata,
+            epoch=epoch,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -758,7 +786,7 @@ class Version:
             if line.split()[1] != "?"
         }
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
-        tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
         )
 
@@ -771,6 +799,7 @@ class Version:
             commit=commit,
             dirty=dirty,
             tagged_metadata=tagged_metadata,
+            epoch=epoch,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -839,7 +868,7 @@ class Version:
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
             for line in msg.splitlines()
         ]
-        tag, base, stage, unmatched, tagged_metadata = _match_version_pattern(
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, [t for t, d in tags_to_distance], latest_tag
         )
         distance = dict(tags_to_distance)[tag]
@@ -851,6 +880,7 @@ class Version:
             commit=commit,
             dirty=dirty,
             tagged_metadata=tagged_metadata,
+            epoch=epoch,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -870,6 +900,7 @@ class Version:
             type (such as 'alpha' or 'rc') and number (such as in 'alpha-2' or 'rc3').
             It may also contain a group named `tagged_metadata` corresponding to extra
             metadata after the main part of the version (typically after a plus sign).
+            There may also be a group named `epoch` for the PEP 440 concept.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.

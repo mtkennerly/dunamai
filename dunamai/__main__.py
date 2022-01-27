@@ -44,13 +44,15 @@ common_sub_args = [
             " (such as in 'alpha-2' or 'rc3')."
             " It may also contain a group named `tagged_metadata` corresponding to extra"
             " metadata after the main part of the version (typically after a plus sign)."
+            " There may also be a group named `epoch` for the PEP 440 concept."
         ),
     },
     {
         "triggers": ["--format"],
         "help": (
             "Custom output format. Available substitutions:"
-            " {base}, {stage}, {revision}, {distance}, {commit}, {dirty}, {tagged_metadata}"
+            " {base}, {stage}, {revision}, {distance}, {commit}, {dirty},"
+            " {tagged_metadata}, {epoch}"
         ),
     },
     {
