@@ -308,7 +308,7 @@ class Version:
         dirty: bool = None,
         tagged_metadata: Optional[str] = None,
         epoch: int = None,
-        pattern: str = _VERSION_PATTERN,
+        pattern: str = _VERSION_PATTERN
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -322,7 +322,7 @@ class Version:
             Refer to `from_any_vcs` for more info.
         """
         try:
-            v_base = base if base.startswith("v") else f"v{base}"
+            v_base = base if base.startswith("v") else "v" + base
             matched_pattern = _match_version_pattern(pattern, [v_base], True)
             base = matched_pattern.base
             if stage is None:
@@ -330,7 +330,7 @@ class Version:
             if tagged_metadata is None:
                 tagged_metadata = matched_pattern.tagged_metadata
             elif matched_pattern.tagged_metadata is not None:
-                tagged_metadata = f"{tagged_metadata}.{matched_pattern.tagged_metadata}"
+                tagged_metadata = "{0}.{1}".format(tagged_metadata, matched_pattern.tagged_metadata)
             if epoch is None:
                 epoch = matched_pattern.epoch
             self._matched_tag = matched_pattern.matched_tag
