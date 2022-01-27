@@ -978,6 +978,7 @@ def get_version(
     first_choice: Callable[[], Optional[Version]] = None,
     third_choice: Callable[[], Optional[Version]] = None,
     fallback: Version = Version("0.0.0"),
+    ignore: Union[str, Version] = "0",
 ) -> Version:
     """
     Check pkg_resources info or a fallback function to determine the version.
@@ -990,10 +991,15 @@ def get_version(
     :param third_choice: Callback to determine a version if the installed
         package cannot be found by name.
     :param fallback: If no other matches found, use this version.
+    :param ignore: Ignore this version if it is found.
     """
+
+    if isinstance(ignore, str):
+        ignore = Version(ignore)
+
     if first_choice:
         first_ver = first_choice()
-        if first_ver:
+        if first_ver and first_ver != ignore:
             return first_ver
 
     try:
@@ -1001,13 +1007,15 @@ def get_version(
     except ImportError:
         import importlib_metadata as ilm  # type: ignore
     try:
-        return Version(ilm.version(name))
+        ilm_version = Version(ilm.version(name))
+        if ilm_version != ignore:
+            return ilm_version
     except ilm.PackageNotFoundError:
         pass
 
     if third_choice:
         third_ver = third_choice()
-        if third_ver:
+        if third_ver and third_ver != ignore:
             return third_ver
 
     return fallback
