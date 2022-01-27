@@ -1,4 +1,4 @@
-## v1.8.0
+## v1.8.0 (2022-01-27)
 
 * Changed the build backend to poetry-core.
   ([Contributed by fabaff](https://github.com/mtkennerly/dunamai/pull/35))
