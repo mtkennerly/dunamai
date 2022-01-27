@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = [
     "bump_version",
     "check_version",
@@ -507,6 +509,23 @@ class Version:
         elif style == Style.Pvp:
             out = serialize_pvp(base, metadata=[*pre_parts, *meta_parts])
 
+        check_version(out, style)
+        return out
+
+    def serialize_with_formatter(
+        self, formatter: Callable[[Version], str], style: Style = Style.Pep440
+    ) -> str:
+        """
+        Create a string from the version info using the given formatter.
+
+        :param formatter: A function that converts this version into a string
+            representing the version.
+        :param style: Built-in output formats. Will default to PEP 440 if not
+            set and no custom format given. If you specify both a style and a
+            custom format, then the format will be validated against the
+            style's rules.
+        """
+        out = formatter(self)
         check_version(out, style)
         return out
 
