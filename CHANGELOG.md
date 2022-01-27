@@ -1,4 +1,4 @@
-## Unreleased
+## v1.8.0
 
 * Changed the build backend to poetry-core.
   ([Contributed by fabaff](https://github.com/mtkennerly/dunamai/pull/35))
