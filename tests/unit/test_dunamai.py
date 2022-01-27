@@ -136,11 +136,26 @@ def test__version__serialize__pep440() -> None:
     assert Version("1", stage=("rc", 2)).serialize() == "1rc2"
 
     assert Version("0.1.0").serialize(bump=True) == "0.1.1"
+    assert Version("0.1.0", distance=3).serialize(bump=True) == "0.1.1.dev3"
     assert Version("1").serialize(bump=True) == "2"
+    assert Version("1", distance=3).serialize(bump=True) == "2.dev3"
     assert Version("0.1.0", stage=("a", None)).serialize(bump=True) == "0.1.0a2"
+    assert Version("0.1.0", stage=("a", None), distance=3).serialize(bump=True) == "0.1.0a2.dev3"
     assert Version("0.1.0", stage=("b", 2)).serialize(bump=True) == "0.1.0b3"
+    assert Version("0.1.0", stage=("b", 2), distance=3).serialize(bump=True) == "0.1.0b3.dev3"
 
     assert Version("0.1.0", epoch=2).serialize() == "2!0.1.0"
+
+    assert Version("0.1.0", stage=("post", 1)).serialize() == "0.1.0.post1"
+    assert Version("0.1.0", stage=("post", 1)).serialize(bump=True) == "0.1.0.post2"
+    assert Version("0.1.0", stage=("post", 1), distance=3).serialize() == "0.1.0.post1.dev3"
+    assert (
+        Version("0.1.0", stage=("post", 1), distance=3).serialize(bump=True) == "0.1.0.post2.dev3"
+    )
+    assert Version("0.1.0", stage=("dev", 1)).serialize() == "0.1.0.dev1"
+    assert Version("0.1.0", stage=("dev", 1)).serialize(bump=True) == "0.1.0.dev2"
+    assert Version("0.1.0", stage=("dev", 1), distance=3).serialize() == "0.1.0.dev4"
+    assert Version("0.1.0", stage=("dev", 1), distance=3).serialize(bump=True) == "0.1.0.dev5"
 
 
 def test__version__serialize__semver() -> None:
@@ -196,6 +211,7 @@ def test__version__serialize__semver() -> None:
     assert Version("0.1.0", stage=("rc", 2)).serialize(style=style) == "0.1.0-rc.2"
 
     assert Version("0.1.0").serialize(style=style, bump=True) == "0.1.1"
+    assert Version("0.1.0", distance=3).serialize(style=style, bump=True) == "0.1.1-pre.3"
     assert (
         Version("0.1.0", stage=("alpha", None)).serialize(style=style, bump=True) == "0.1.0-alpha.2"
     )
@@ -257,6 +273,7 @@ def test__version__serialize__pvp() -> None:
     assert Version("0.1.0", stage=("rc", 2)).serialize(style=style) == "0.1.0-rc-2"
 
     assert Version("0.1.0").serialize(style=style, bump=True) == "0.1.1"
+    assert Version("0.1.0", distance=3).serialize(style=style, bump=True) == "0.1.1-pre-3"
     assert (
         Version("0.1.0", stage=("alpha", None)).serialize(style=style, bump=True) == "0.1.0-alpha-2"
     )

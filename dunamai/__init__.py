@@ -484,24 +484,39 @@ class Version:
             pre_parts.append(str(self.distance))
 
         if style == Style.Pep440:
-            if self.distance <= 0:
-                out = serialize_pep440(
-                    base,
-                    stage=self.stage,
-                    revision=revision,
-                    metadata=meta_parts,
-                    epoch=self.epoch,
-                )
-            else:
-                out = serialize_pep440(
-                    base,
-                    stage=self.stage,
-                    revision=revision,
-                    post=None if bump else self.distance,
-                    dev=self.distance if bump else 0,
-                    metadata=meta_parts,
-                    epoch=self.epoch,
-                )
+            stage = self.stage
+            post = None
+            dev = None
+            if stage == "post":
+                stage = None
+                post = revision
+            elif stage == "dev":
+                stage = None
+                dev = revision
+            if self.distance > 0:
+                if bump:
+                    if dev is None:
+                        dev = self.distance
+                    else:
+                        dev += self.distance
+                else:
+                    if post is None and dev is None:
+                        post = self.distance
+                        dev = 0
+                    elif dev is None:
+                        dev = self.distance
+                    else:
+                        dev += self.distance
+
+            out = serialize_pep440(
+                base,
+                stage=stage,
+                revision=revision,
+                post=post,
+                dev=dev,
+                metadata=meta_parts,
+                epoch=self.epoch,
+            )
         elif style == Style.SemVer:
             out = serialize_semver(base, pre=pre_parts, metadata=meta_parts)
         elif style == Style.Pvp:
