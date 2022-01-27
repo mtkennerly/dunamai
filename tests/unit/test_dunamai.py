@@ -442,6 +442,47 @@ def test__get_version__fallback() -> None:
     assert get_version("dunamai_nonexistent_test") == Version("0.0.0")
 
 
+def test__get_version__from_name__ignore() -> None:
+    assert get_version(
+        "dunamai", ignore=pkg_resources.get_distribution("dunamai").version, fallback=Version("2")
+    ) == Version("2")
+    assert get_version(
+        "dunamai",
+        ignore=Version(pkg_resources.get_distribution("dunamai").version),
+        fallback=Version("2"),
+    ) == Version("2")
+
+
+def test__get_version__first_choice__ignore() -> None:
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1"),
+        ignore="1",
+        fallback=Version("2"),
+    ) == Version("2")
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1"),
+        ignore=Version("1"),
+        fallback=Version("2"),
+    ) == Version("2")
+
+
+def test__get_version__third_choice__ignore() -> None:
+    assert get_version(
+        "dunamai_nonexistent_test",
+        third_choice=lambda: Version("3"),
+        ignore="3",
+        fallback=Version("2"),
+    ) == Version("2")
+    assert get_version(
+        "dunamai_nonexistent_test",
+        third_choice=lambda: Version("3"),
+        ignore=Version("3"),
+        fallback=Version("2"),
+    ) == Version("2")
+
+
 def test__version__from_any_vcs(tmp_path) -> None:
     with chdir(tmp_path):
         with pytest.raises(RuntimeError):
