@@ -993,7 +993,6 @@ def get_version(
     :param fallback: If no other matches found, use this version.
     :param ignore: Ignore this version if it is found.
     """
-
     if isinstance(ignore, str):
         ignore = Version(ignore)
 
@@ -1019,6 +1018,33 @@ def get_version(
             return third_ver
 
     return fallback
+
+
+def get_version_from_vcs(
+    name: str,
+    first_choice: Callable[[], Optional[Version]] = None,
+    third_choice: Callable[[], Optional[Version]] = Version.from_any_vcs,
+    fallback: Version = Version("0.0.0"),
+    ignore: Union[str, Version] = "0",
+) -> Version:
+    """
+    A shortcut call on the `get_version` function with the third choice any vcs.
+
+    Check pkg_resources info or a fallback function to determine the version.
+    This is intended as a convenient default for setting your `__version__` if
+    you do not want to include a generated version statically during packaging.
+
+    :param name: Installed package name.
+    :param first_choice: Callback to determine a version before checking
+        to see if the named package is installed.
+    :param third_choice: Callback to determine a version if the installed
+        package cannot be found by name.
+    :param fallback: If no other matches found, use this version.
+    :param ignore: Ignore this version if it is found.
+    """
+    return get_version(
+        name, first_choice=first_choice, third_choice=third_choice, fallback=fallback, ignore=ignore
+    )
 
 
 def serialize_pep440(
