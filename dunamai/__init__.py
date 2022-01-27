@@ -121,7 +121,7 @@ def _match_version_pattern(
     stage_revision = None
     newer_unmatched_tags = []
     tagged_metadata = None
-    epoch: Optional[Union[str, int]] = None
+    epoch = None  # type: Optional[Union[str, int]]
 
     for source in sources[:1] if latest_source else sources:
         pattern_match = re.search(pattern, source)
