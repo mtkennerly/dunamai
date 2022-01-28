@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 __all__ = [
     "bump_version",
     "check_version",
@@ -399,7 +397,7 @@ class Version:
         self,
         metadata: bool = None,
         dirty: bool = False,
-        format: str = None,
+        format: Union[str, Callable[["Version"], str]] = None,
         style: Style = None,
         bump: bool = False,
         tagged_metadata: bool = False,
@@ -415,8 +413,9 @@ class Version:
         :param dirty: Set this to True to include a dirty flag in the
             metadata if applicable. Inert when metadata=False.
             This is ignored when `format` is used.
-        :param format: Custom output format. You can use substitutions, such as
-            "v{base}" to get "v0.1.0". Available substitutions:
+        :param format: Custom output format. It is either a formatted string or a
+            callback. In the string you can use substitutions, such as "v{base}"
+            to get "v0.1.0". Available substitutions:
 
             * {base}
             * {stage}
@@ -509,23 +508,6 @@ class Version:
         elif style == Style.Pvp:
             out = serialize_pvp(base, metadata=[*pre_parts, *meta_parts])
 
-        check_version(out, style)
-        return out
-
-    def serialize_with_formatter(
-        self, formatter: Callable[[Version], str], style: Style = Style.Pep440
-    ) -> str:
-        """
-        Create a string from the version info using the given formatter.
-
-        :param formatter: A function that converts this version into a string
-            representing the version.
-        :param style: Built-in output formats. Will default to PEP 440 if not
-            set and no custom format given. If you specify both a style and a
-            custom format, then the format will be validated against the
-            style's rules.
-        """
-        out = formatter(self)
         check_version(out, style)
         return out
 
