@@ -1,3 +1,8 @@
+## Unreleased
+
+* Changed `Version.serialize`'s `format` argument to support passing a callback.
+  ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/40))
+
 ## v1.8.0 (2022-01-27)
 
 * Changed the build backend to poetry-core.

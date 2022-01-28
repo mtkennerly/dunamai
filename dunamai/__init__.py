@@ -449,14 +449,11 @@ class Version:
                     revision = self.revision + 1
 
         if format is not None:
-            if isinstance(format, Callable):
-                if bump:
-                    new_version = copy.copy(self)
-                    new_version.base = base
-                    new_version.revision = revision
-                    out = format(new_version)
-                else:
-                    out = format(self)
+            if callable(format):
+                new_version = copy.deepcopy(self)
+                new_version.base = base
+                new_version.revision = revision
+                out = format(new_version)
             else:
                 out = format.format(
                     base=base,

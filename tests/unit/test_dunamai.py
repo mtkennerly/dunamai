@@ -430,7 +430,7 @@ def test__version__serialize__pvp_with_dirty() -> None:
     )
 
 
-def test__version__serialize__format() -> None:
+def test__version__serialize__format_as_str() -> None:
     format = "{base},{stage},{revision},{distance},{commit},{dirty}"
     assert Version("0.1.0").serialize(format=format) == "0.1.0,,,0,,clean"
     assert (
@@ -439,6 +439,16 @@ def test__version__serialize__format() -> None:
     )
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format="v{base}", style=Style.Pep440)
+
+
+def test__version__serialize__format_as_callable() -> None:
+    def format(v):
+        return "{},{},{}".format(v.base, v.stage, v.revision)
+
+    assert Version("0.1.0").serialize(format=format) == "0.1.0,None,None"
+    assert Version("1", stage=("a", 2)).serialize(format=format) == "1,a,2"
+    with pytest.raises(ValueError):
+        Version("0.1.0").serialize(format=lambda v: "v{}".format(v.base), style=Style.Pep440)
 
 
 def test__get_version__from_name() -> None:
