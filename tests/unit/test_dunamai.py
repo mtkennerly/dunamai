@@ -442,13 +442,21 @@ def test__version__serialize__format_as_str() -> None:
 
 
 def test__version__serialize__format_as_callable() -> None:
-    def format(v):
+    def format(v: Version) -> str:
         return "{},{},{}".format(v.base, v.stage, v.revision)
 
     assert Version("0.1.0").serialize(format=format) == "0.1.0,None,None"
     assert Version("1", stage=("a", 2)).serialize(format=format) == "1,a,2"
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format=lambda v: "v{}".format(v.base), style=Style.Pep440)
+
+    def immutable(v: Version) -> str:
+        v.distance += 100
+        return v.serialize()
+
+    version = Version("0.1.0")
+    version.serialize(format=immutable)
+    assert version.distance == 0
 
 
 def test__get_version__from_name() -> None:
