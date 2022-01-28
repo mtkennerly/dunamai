@@ -444,11 +444,11 @@ def test__get_version__fallback() -> None:
 
 def test__get_version__from_name__ignore() -> None:
     assert get_version(
-        "dunamai", ignore=pkg_resources.get_distribution("dunamai").version, fallback=Version("2")
+        "dunamai", ignore=[pkg_resources.get_distribution("dunamai").version], fallback=Version("2")
     ) == Version("2")
     assert get_version(
         "dunamai",
-        ignore=Version(pkg_resources.get_distribution("dunamai").version),
+        ignore=[Version(pkg_resources.get_distribution("dunamai").version)],
         fallback=Version("2"),
     ) == Version("2")
 
@@ -457,13 +457,13 @@ def test__get_version__first_choice__ignore() -> None:
     assert get_version(
         "dunamai_nonexistent_test",
         first_choice=lambda: Version("1"),
-        ignore="1",
+        ignore=["1"],
         fallback=Version("2"),
     ) == Version("2")
     assert get_version(
         "dunamai_nonexistent_test",
         first_choice=lambda: Version("1"),
-        ignore=Version("1"),
+        ignore=[Version("1")],
         fallback=Version("2"),
     ) == Version("2")
 
@@ -472,13 +472,13 @@ def test__get_version__third_choice__ignore() -> None:
     assert get_version(
         "dunamai_nonexistent_test",
         third_choice=lambda: Version("3"),
-        ignore="3",
+        ignore=["3"],
         fallback=Version("2"),
     ) == Version("2")
     assert get_version(
         "dunamai_nonexistent_test",
         third_choice=lambda: Version("3"),
-        ignore=Version("3"),
+        ignore=[Version("3")],
         fallback=Version("2"),
     ) == Version("2")
 
