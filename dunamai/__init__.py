@@ -10,6 +10,7 @@ __all__ = [
     "Version",
 ]
 
+import copy
 import datetime as dt
 import re
 import shlex
@@ -448,16 +449,25 @@ class Version:
                     revision = self.revision + 1
 
         if format is not None:
-            out = format.format(
-                base=base,
-                stage=_blank(self.stage, ""),
-                revision=_blank(revision, ""),
-                distance=_blank(self.distance, ""),
-                commit=_blank(self.commit, ""),
-                tagged_metadata=_blank(self.tagged_metadata, ""),
-                dirty="dirty" if self.dirty else "clean",
-                epoch=_blank(self.epoch, ""),
-            )
+            if isinstance(format, Callable):
+                if bump:
+                    new_version = copy.copy(self)
+                    new_version.base = base
+                    new_version.revision = revision
+                    out = format(new_version)
+                else:
+                    out = format(self)
+            else:
+                out = format.format(
+                    base=base,
+                    stage=_blank(self.stage, ""),
+                    revision=_blank(revision, ""),
+                    distance=_blank(self.distance, ""),
+                    commit=_blank(self.commit, ""),
+                    tagged_metadata=_blank(self.tagged_metadata, ""),
+                    dirty="dirty" if self.dirty else "clean",
+                    epoch=_blank(self.epoch, ""),
+                )
             if style is not None:
                 check_version(out, style)
             return out
