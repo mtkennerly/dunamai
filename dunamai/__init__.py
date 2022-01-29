@@ -307,8 +307,7 @@ class Version:
         commit: str = None,
         dirty: bool = None,
         tagged_metadata: Optional[str] = None,
-        epoch: int = None,
-        pattern: str = _VERSION_PATTERN
+        epoch: int = None
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -318,44 +317,7 @@ class Version:
         :param commit: Commit hash/identifier.
         :param dirty: True if the working directory does not match the commit.
         :param epoch: Optional PEP 440 epoch.
-        :param pattern: Regular expression matched against the base.
-            Refer to `from_any_vcs` for more info.
         """
-        try:
-            v_base = base if base.startswith("v") else "v" + base
-            matched_pattern = _match_version_pattern(pattern, [v_base], True)
-            base = matched_pattern.base
-            if stage is None:
-                stage = matched_pattern.stage_revision
-            if tagged_metadata is None:
-                tagged_metadata = matched_pattern.tagged_metadata
-            elif matched_pattern.tagged_metadata is not None:
-                tagged_metadata = "{0}.{1}".format(tagged_metadata, matched_pattern.tagged_metadata)
-            if epoch is None:
-                epoch = matched_pattern.epoch
-            self._matched_tag = matched_pattern.matched_tag
-            self._newer_unmatched_tags = matched_pattern.newer_tags
-        except ValueError:
-            self._matched_tag = None  # type: Optional[str]
-            self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
-
-        if dirty is None and tagged_metadata:
-            if "dirty" in tagged_metadata.split("."):
-                dirty = True
-                tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != "dirty")
-        if distance == 0 and tagged_metadata:
-            for m in tagged_metadata.split("."):
-                match = re.match(r"d(?P<dis>\d+)", m)
-                if match:
-                    distance = int(match.group("dis"))
-                    tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
-        if commit is None and tagged_metadata:
-            for m in tagged_metadata.split("."):
-                match = re.match(r"g(?P<commit>[\da-z]+)", m)
-                if match:
-                    commit = match.group("commit")
-                    tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
-
         #: Release segment.
         self.base = base
         #: Alphabetical part of prerelease segment.
@@ -374,6 +336,9 @@ class Version:
         self.tagged_metadata = tagged_metadata
         #: Optional PEP 440 epoch.
         self.epoch = epoch
+
+        self._matched_tag = None  # type: Optional[str]
+        self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
 
     def __str__(self) -> str:
         return self.serialize()
@@ -544,6 +509,55 @@ class Version:
 
         check_version(out, style)
         return out
+
+    @classmethod
+    def parse(cls, version: str, pattern: str = _VERSION_PATTERN) -> "Version":
+        """
+        :param version: Full version, such as 0.3.0a3+d7.gb6a9020.dirty.
+        :param pattern: Regular expression matched against the version.
+            Refer to `from_any_vcs` for more info.
+        """
+        try:
+            v_version = version if version.startswith("v") else "v" + version
+            matched_pattern = _match_version_pattern(pattern, [v_version], True)
+            base = matched_pattern.base
+            stage = matched_pattern.stage_revision
+            tagged_metadata = matched_pattern.tagged_metadata
+            epoch = matched_pattern.epoch
+            distance = 0
+            commit = None
+            dirty = None
+
+            if tagged_metadata is not None:
+                if "dirty" in tagged_metadata.split("."):
+                    dirty = True
+                    tagged_metadata = ".".join(
+                        e for e in tagged_metadata.split(".") if e != "dirty"
+                    )
+                for m in tagged_metadata.split("."):
+                    match = re.match(r"d(?P<dis>\d+)", m)
+                    if match:
+                        distance = int(match.group("dis"))
+                        tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
+                for m in tagged_metadata.split("."):
+                    match = re.match(r"g(?P<commit>[\da-z]+)", m)
+                    if match:
+                        commit = match.group("commit")
+                        tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
+                if tagged_metadata.strip() == "":
+                    tagged_metadata = None
+
+            return cls(
+                base,
+                stage=stage,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                tagged_metadata=tagged_metadata,
+                epoch=epoch,
+            )
+        except ValueError:
+            return cls(version)
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":

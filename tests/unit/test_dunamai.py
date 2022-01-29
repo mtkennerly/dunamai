@@ -1,5 +1,5 @@
 import os
-import pkg_resources
+import pkg_resources  # type: ignore
 import re
 from contextlib import contextmanager
 from pathlib import Path
@@ -498,12 +498,16 @@ def test__check_version__semver() -> None:
         Version("00.0.0").serialize(style=style)
     with pytest.raises(ValueError):
         Version("0.01.0").serialize(style=style)
+    with pytest.raises(ValueError):
+        Version("0.1.0-alpha.02").serialize(style=style)
     # But leading zeroes are fine for non-numeric parts:
     Version("0.1.0-alpha.02a").serialize(style=style)
 
     # Identifiers can't be empty:
     with pytest.raises(ValueError):
         Version("0.1.0-.").serialize(style=style)
+    with pytest.raises(ValueError):
+        Version("0.1.0-a.").serialize(style=style)
     with pytest.raises(ValueError):
         Version("0.1.0-.a").serialize(style=style)
 
@@ -648,3 +652,28 @@ def test__bump_version():
 
     with pytest.raises(ValueError):
         bump_version("foo", 0)
+
+
+def test__parse():
+    assert Version.parse("1.2.3") == Version("1.2.3")
+    assert Version.parse("1.2.3a") == Version("1.2.3", stage=("a", None))
+    assert Version.parse("1.2.3a3") == Version("1.2.3", stage=("a", 3))
+    assert Version.parse("1.2.3+d7") == Version("1.2.3", distance=7)
+    assert Version.parse("1.2.3+gb6a9020") == Version("1.2.3", commit="b6a9020")
+    assert Version.parse("1.2.3+dirty") == Version("1.2.3", dirty=True)
+    assert Version.parse("1.2.3a3+d7.gb6a9020.dirty") == Version(
+        "1.2.3", stage=("a", 3), distance=7, commit="b6a9020", dirty=True
+    )
+    assert Version.parse("1.2.3a3+d7.gb6a9020.dirty.linux") == Version(
+        "1.2.3", stage=("a", 3), distance=7, commit="b6a9020", dirty=True, tagged_metadata="linux"
+    )
+    assert Version.parse("2!1.2.3") == Version("1.2.3", epoch=2)
+    assert Version.parse("2!1.2.3a3+d7.gb6a9020.dirty.linux") == Version(
+        "1.2.3",
+        stage=("a", 3),
+        distance=7,
+        commit="b6a9020",
+        dirty=True,
+        tagged_metadata="linux",
+        epoch=2,
+    )
