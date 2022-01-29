@@ -171,6 +171,12 @@ def _blank(value: Optional[_T], default: _T) -> _T:
     return value if value is not None else default
 
 
+def _equal_if_set(x: _T, y: Optional[_T], unset: Sequence[Any] = (None,)) -> bool:
+    if y in unset:
+        return True
+    return x == y
+
+
 def _detect_vcs(expected_vcs: Vcs = None) -> Vcs:
     checks = OrderedDict(
         [
@@ -375,36 +381,24 @@ class Version:
             and self.epoch == other.epoch
         )
 
-    def equals_ignored_version(self, ignored_version: "Version") -> bool:
+    def _matches_partial(self, other: "Version") -> bool:
         """
-        Compare this version to another version but ignore None values in the ignored version.
-        :param ignored_version: The version to compare to.
-        :return: True if this version equals the ignored version.
+        Compare this version to another version, but ignore None values in the other version.
+        Distance is also ignored when `other.distance == 0`.
+
+        :param other: The version to compare to.
+        :return: True if this version equals the other version.
         """
-        if self.base != ignored_version.base:
-            return False
-        if ignored_version.stage is not None:
-            if self.stage != ignored_version.stage:
-                return False
-        if ignored_version.revision is not None:
-            if self.revision != ignored_version.revision:
-                return False
-        if ignored_version.distance is not None:
-            if self.distance != ignored_version.distance:
-                return False
-        if ignored_version.commit is not None:
-            if self.commit != ignored_version.commit:
-                return False
-        if ignored_version.dirty is not None:
-            if self.dirty != ignored_version.dirty:
-                return False
-        if ignored_version.tagged_metadata is not None:
-            if self.tagged_metadata != ignored_version.tagged_metadata:
-                return False
-        if ignored_version.epoch is not None:
-            if self.epoch != ignored_version.epoch:
-                return False
-        return True
+        return (
+            _equal_if_set(self.base, other.base)
+            and _equal_if_set(self.stage, other.stage)
+            and _equal_if_set(self.revision, other.revision)
+            and _equal_if_set(self.distance, other.distance, unset=[None, 0])
+            and _equal_if_set(self.commit, other.commit)
+            and _equal_if_set(self.dirty, other.dirty)
+            and _equal_if_set(self.tagged_metadata, other.tagged_metadata)
+            and _equal_if_set(self.epoch, other.epoch)
+        )
 
     def __lt__(self, other: Any) -> bool:
         if not isinstance(other, Version):
@@ -1047,11 +1041,15 @@ def get_version(
     :param fallback: If no other matches found, use this version.
     :param ignore: Ignore a found version if it is part of this list. When
         comparing the found version to an ignored one, fields with None in the ignored
-        version are not taken into account.
+        version are not taken into account. If the ignored version has distance=0,
+        then that field is also ignored.
     """
+    if ignore is None:
+        ignore = []
+
     if first_choice:
         first_ver = first_choice()
-        if first_ver and not _version_in_list_of_ignored_versions(first_ver, ignore):
+        if first_ver and not any(first_ver._matches_partial(v) for v in ignore):
             return first_ver
 
     try:
@@ -1060,14 +1058,14 @@ def get_version(
         import importlib_metadata as ilm  # type: ignore
     try:
         ilm_version = Version(ilm.version(name))
-        if not _version_in_list_of_ignored_versions(ilm_version, ignore):
+        if not any(ilm_version._matches_partial(v) for v in ignore):
             return ilm_version
     except ilm.PackageNotFoundError:
         pass
 
     if third_choice:
         third_ver = third_choice()
-        if third_ver and not _version_in_list_of_ignored_versions(third_ver, ignore):
+        if third_ver and not any(third_ver._matches_partial(v) for v in ignore):
             return third_ver
 
     return fallback
@@ -1207,14 +1205,6 @@ def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
     return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
-
-
-def _version_in_list_of_ignored_versions(version: Version, ignore: Optional[Sequence[Version]]):
-    if ignore:
-        for ignored_version in ignore:
-            if version.equals_ignored_version(ignored_version):
-                return True
-    return False
 
 
 __version__ = get_version("dunamai").serialize()

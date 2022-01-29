@@ -2,6 +2,8 @@
 
 * Changed `Version.serialize`'s `format` argument to support passing a callback.
   ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/40))
+* Added `ignore` option to `get_version()`.
+  ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/39))
 
 ## v1.8.0 (2022-01-27)
 

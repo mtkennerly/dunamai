@@ -1,5 +1,5 @@
 import os
-import pkg_resources  # type: ignore
+import pkg_resources
 import re
 from contextlib import contextmanager
 from pathlib import Path
@@ -497,6 +497,27 @@ def test__get_version__first_choice__ignore() -> None:
             fallback=Version("2"),
         )
         == Version("2")
+    )
+
+
+def test__get_version__first_choice__ignore_with_distance() -> None:
+    assert (
+        get_version(
+            "dunamai_nonexistent_test",
+            first_choice=lambda: Version("1", distance=2),
+            ignore=[Version("1")],
+            fallback=Version("2"),
+        )
+        == Version("2")
+    )
+    assert (
+        get_version(
+            "dunamai_nonexistent_test",
+            first_choice=lambda: Version("1"),
+            ignore=[Version("1", distance=2)],
+            fallback=Version("2"),
+        )
+        != Version("2")
     )
 
 
