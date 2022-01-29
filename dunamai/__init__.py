@@ -511,53 +511,75 @@ class Version:
         return out
 
     @classmethod
-    def parse(cls, version: str, pattern: str = _VERSION_PATTERN) -> "Version":
+    def parse(cls, version: Union[str, "Version"], pattern: str = _VERSION_PATTERN) -> "Version":
         """
         :param version: Full version, such as 0.3.0a3+d7.gb6a9020.dirty.
         :param pattern: Regular expression matched against the version.
             Refer to `from_any_vcs` for more info.
         """
+        if isinstance(version, Version):
+            base = version.base
+        else:
+            base = version
+
         try:
-            v_version = version if version.startswith("v") else "v" + version
-            matched_pattern = _match_version_pattern(pattern, [v_version], True)
-            base = matched_pattern.base
+            v_base = base if base.startswith("v") else "v" + base
+            matched_pattern = _match_version_pattern(pattern, [v_base], True)
+        except ValueError:
+            if isinstance(version, Version):
+                return version
+            return cls(version)
+
+        base = matched_pattern.base
+        tagged_metadata = matched_pattern.tagged_metadata
+        if isinstance(version, Version):
+            if version.stage is None:
+                stage = matched_pattern.stage_revision
+            else:
+                stage = (version.stage, version.revision)
+            distance = version.distance
+            commit = version.commit
+            dirty = version.dirty
+            if version.tagged_metadata is not None:
+                if tagged_metadata is None:
+                    tagged_metadata = version.tagged_metadata
+                else:
+                    tagged_metadata = "{0}.{1}".format(tagged_metadata, version.tagged_metadata)
+            epoch = matched_pattern.epoch if version.epoch is None else version.epoch
+        else:
             stage = matched_pattern.stage_revision
-            tagged_metadata = matched_pattern.tagged_metadata
-            epoch = matched_pattern.epoch
             distance = 0
             commit = None
             dirty = None
+            epoch = matched_pattern.epoch
 
-            if tagged_metadata is not None:
-                if "dirty" in tagged_metadata.split("."):
-                    dirty = True
-                    tagged_metadata = ".".join(
-                        e for e in tagged_metadata.split(".") if e != "dirty"
-                    )
-                for m in tagged_metadata.split("."):
-                    match = re.match(r"d(?P<dis>\d+)", m)
-                    if match:
-                        distance = int(match.group("dis"))
-                        tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
-                for m in tagged_metadata.split("."):
-                    match = re.match(r"g(?P<commit>[\da-z]+)", m)
-                    if match:
-                        commit = match.group("commit")
-                        tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
-                if tagged_metadata.strip() == "":
-                    tagged_metadata = None
-
-            return cls(
-                base,
-                stage=stage,
-                distance=distance,
-                commit=commit,
-                dirty=dirty,
-                tagged_metadata=tagged_metadata,
-                epoch=epoch,
-            )
-        except ValueError:
-            return cls(version)
+        if tagged_metadata:
+            if "dirty" in tagged_metadata.split("."):
+                dirty = True
+                tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != "dirty")
+        if distance == 0 and tagged_metadata:
+            for m in tagged_metadata.split("."):
+                match = re.match(r"d(?P<dis>\d+)", m)
+                if match:
+                    distance = int(match.group("dis"))
+                    tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
+        if commit is None and tagged_metadata:
+            for m in tagged_metadata.split("."):
+                match = re.match(r"g(?P<commit>[\da-z]+)", m)
+                if match:
+                    commit = match.group("commit")
+                    tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
+        if tagged_metadata is not None and tagged_metadata.strip() == "":
+            tagged_metadata = None
+        return cls(
+            base,
+            stage=stage,
+            distance=distance,
+            commit=commit,
+            dirty=dirty,
+            tagged_metadata=tagged_metadata,
+            epoch=epoch,
+        )
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
