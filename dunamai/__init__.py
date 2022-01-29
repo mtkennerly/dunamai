@@ -375,6 +375,37 @@ class Version:
             and self.epoch == other.epoch
         )
 
+    def equals_ignored_version(self, ignored_version: "Version") -> bool:
+        """
+        Compare this version to another version but ignore None values in the ignored version.
+        :param ignored_version: The version to compare to.
+        :return: True if this version equals the ignored version.
+        """
+        if self.base != ignored_version.base:
+            return False
+        if ignored_version.stage is not None:
+            if self.stage != ignored_version.stage:
+                return False
+        if ignored_version.revision is not None:
+            if self.revision != ignored_version.revision:
+                return False
+        if ignored_version.distance is not None:
+            if self.distance != ignored_version.distance:
+                return False
+        if ignored_version.commit is not None:
+            if self.commit != ignored_version.commit:
+                return False
+        if ignored_version.dirty is not None:
+            if self.dirty != ignored_version.dirty:
+                return False
+        if ignored_version.tagged_metadata is not None:
+            if self.tagged_metadata != ignored_version.tagged_metadata:
+                return False
+        if ignored_version.epoch is not None:
+            if self.epoch != ignored_version.epoch:
+                return False
+        return True
+
     def __lt__(self, other: Any) -> bool:
         if not isinstance(other, Version):
             raise TypeError(
@@ -1001,6 +1032,7 @@ def get_version(
     first_choice: Callable[[], Optional[Version]] = None,
     third_choice: Callable[[], Optional[Version]] = None,
     fallback: Version = Version("0.0.0"),
+    ignore: Sequence[Version] = None,
 ) -> Version:
     """
     Check pkg_resources info or a fallback function to determine the version.
@@ -1013,10 +1045,13 @@ def get_version(
     :param third_choice: Callback to determine a version if the installed
         package cannot be found by name.
     :param fallback: If no other matches found, use this version.
+    :param ignore: Ignore a found version if it is part of this list. When
+        comparing the found version to an ignored one, fields with None in the ignored
+        version are not taken into account.
     """
     if first_choice:
         first_ver = first_choice()
-        if first_ver:
+        if first_ver and not _version_in_list_of_ignored_versions(first_ver, ignore):
             return first_ver
 
     try:
@@ -1024,13 +1059,15 @@ def get_version(
     except ImportError:
         import importlib_metadata as ilm  # type: ignore
     try:
-        return Version(ilm.version(name))
+        ilm_version = Version(ilm.version(name))
+        if not _version_in_list_of_ignored_versions(ilm_version, ignore):
+            return ilm_version
     except ilm.PackageNotFoundError:
         pass
 
     if third_choice:
         third_ver = third_choice()
-        if third_ver:
+        if third_ver and not _version_in_list_of_ignored_versions(third_ver, ignore):
             return third_ver
 
     return fallback
@@ -1170,6 +1207,14 @@ def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
     return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
+
+
+def _version_in_list_of_ignored_versions(version: Version, ignore: Optional[Sequence[Version]]):
+    if ignore:
+        for ignored_version in ignore:
+            if version.equals_ignored_version(ignored_version):
+                return True
+    return False
 
 
 __version__ = get_version("dunamai").serialize()
