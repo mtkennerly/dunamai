@@ -555,66 +555,68 @@ class Version:
         return out
 
     @classmethod
-    def parse(cls, version: Union[str, "Version"], pattern: str = _VERSION_PATTERN) -> "Version":
+    def parse(cls, version: str, pattern: str = _VERSION_PATTERN) -> "Version":
         """
+        Attempt to parse a string into a Version instance.
+
+        This uses inexact heuristics, so its output may vary slightly between
+        releases. Consider this a "best effort" conversion.
+
         :param version: Full version, such as 0.3.0a3+d7.gb6a9020.dirty.
         :param pattern: Regular expression matched against the version.
             Refer to `from_any_vcs` for more info.
         """
-        if isinstance(version, Version):
-            base = version.base
-        else:
-            base = version
-
         try:
-            v_base = base if base.startswith("v") else "v" + base
-            matched_pattern = _match_version_pattern(pattern, [v_base], True)
+            prefixed = version if version.startswith("v") else "v{}".format(version)
+            matched_pattern = _match_version_pattern(pattern, [prefixed], True)
         except ValueError:
-            if isinstance(version, Version):
-                return version
             return cls(version)
 
         base = matched_pattern.base
+        stage = matched_pattern.stage_revision
+        distance = None
+        commit = None
+        dirty = None
         tagged_metadata = matched_pattern.tagged_metadata
-        if isinstance(version, Version):
-            if version.stage is None:
-                stage = matched_pattern.stage_revision
-            else:
-                stage = (version.stage, version.revision)
-            distance = version.distance
-            commit = version.commit
-            dirty = version.dirty
-            if version.tagged_metadata is not None:
-                if tagged_metadata is None:
-                    tagged_metadata = version.tagged_metadata
-                else:
-                    tagged_metadata = "{0}.{1}".format(tagged_metadata, version.tagged_metadata)
-            epoch = matched_pattern.epoch if version.epoch is None else version.epoch
-        else:
-            stage = matched_pattern.stage_revision
-            distance = 0
-            commit = None
-            dirty = None
-            epoch = matched_pattern.epoch
+        epoch = matched_pattern.epoch
 
         if tagged_metadata:
-            if "dirty" in tagged_metadata.split("."):
-                dirty = True
-                tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != "dirty")
-        if distance == 0 and tagged_metadata:
-            for m in tagged_metadata.split("."):
-                match = re.match(r"d(?P<dis>\d+)", m)
-                if match:
-                    distance = int(match.group("dis"))
-                    tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
-        if commit is None and tagged_metadata:
-            for m in tagged_metadata.split("."):
-                match = re.match(r"g(?P<commit>[\da-z]+)", m)
-                if match:
-                    commit = match.group("commit")
-                    tagged_metadata = ".".join(e for e in tagged_metadata.split(".") if e != m)
+            pop = []  # type: list
+            parts = tagged_metadata.split(".")
+
+            for i, value in enumerate(parts):
+                if dirty is None:
+                    if value == "dirty":
+                        dirty = True
+                        pop.append(i)
+                        continue
+                    elif value == "clean":
+                        dirty = False
+                        pop.append(i)
+                        continue
+                if distance is None:
+                    match = re.match(r"d?(\d+)", value)
+                    if match:
+                        distance = int(match.group(1))
+                        pop.append(i)
+                        continue
+                if commit is None:
+                    match = re.match(r"g?([\da-z]+)", value)
+                    if match:
+                        commit = match.group(1)
+                        pop.append(i)
+                        continue
+
+            for i in reversed(sorted(pop)):
+                parts.pop(i)
+
+            tagged_metadata = ".".join(parts)
+
+        if distance is None:
+            distance = 0
         if tagged_metadata is not None and tagged_metadata.strip() == "":
             tagged_metadata = None
+
         return cls(
             base,
             stage=stage,
@@ -1118,6 +1120,7 @@ def get_version(
     third_choice: Callable[[], Optional[Version]] = None,
     fallback: Version = Version("0.0.0"),
     ignore: Sequence[Version] = None,
+    parser: Callable[[str], Version] = Version,
 ) -> Version:
     """
     Check pkg_resources info or a fallback function to determine the version.
@@ -1134,6 +1137,9 @@ def get_version(
         comparing the found version to an ignored one, fields with None in the ignored
         version are not taken into account. If the ignored version has distance=0,
         then that field is also ignored.
+    :param parser: Callback to convert a string into a Version instance.
+        This will be used for the second choice.
+        For example, you can pass `Version.parse` here.
     """
     if ignore is None:
         ignore = []
@@ -1148,7 +1154,7 @@ def get_version(
     except ImportError:
         import importlib_metadata as ilm  # type: ignore
     try:
-        ilm_version = Version(ilm.version(name))
+        ilm_version = parser(ilm.version(name))
         if not any(ilm_version._matches_partial(v) for v in ignore):
             return ilm_version
     except ilm.PackageNotFoundError:

@@ -4,6 +4,7 @@
   ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/40))
 * Added `ignore` option to `get_version()`.
   ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/39))
+* Added `parser` option to `get_version()`.
 * Added `Version.parse()`.
   ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/41))
 * Added `Version.bump()`.
