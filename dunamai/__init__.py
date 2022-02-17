@@ -1,6 +1,5 @@
 __all__ = [
     "bump_version",
-    "bump_complete_version",
     "check_version",
     "get_version",
     "serialize_pep440",
@@ -466,13 +465,9 @@ class Version:
         base = self.base
         revision = self.revision
         if bump:
-            if self.stage is None:
-                base = bump_version(self.base)
-            else:
-                if self.revision is None:
-                    revision = 2
-                else:
-                    revision = self.revision + 1
+            bumped = self.bump()
+            base = bumped.base
+            revision = bumped.revision
 
         if format is not None:
             if callable(format):
@@ -629,6 +624,30 @@ class Version:
             tagged_metadata=tagged_metadata,
             epoch=epoch,
         )
+
+    def bump(self, index: int = -1) -> "Version":
+        """
+        Increment the version.
+
+        The base is bumped unless there is a stage defined, in which case,
+        the revision is bumped instead.
+
+        :param index: Numerical position to increment in the base. Default: -1.
+            This follows Python indexing rules, so positive numbers start from
+            the left side and count up from 0, while negative numbers start from
+            the right side and count down from -1.
+            Only has an effect when the base is bumped.
+        :return: Bumped version.
+        """
+        bumped = copy.deepcopy(self)
+        if bumped.stage is None:
+            bumped.base = bump_version(bumped.base, index)
+        else:
+            if bumped.revision is None:
+                bumped.revision = 2
+            else:
+                bumped.revision = bumped.revision + 1
+        return bumped
 
     @classmethod
     def from_git(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
@@ -1271,35 +1290,6 @@ def bump_version(base: str, index: int = -1) -> str:
         i += 1
 
     return ".".join(str(x) for x in bases)
-
-
-def bump_complete_version(version: Version, index: int = -1) -> Version:
-    """
-    Increment a version.
-    If there is no pre-release the core version is bumped. Otherwise, the revision number.
-    The index parameter is only used when the base version is bumped.
-
-    :param version: Version, such as 0.1.0a8+linux.
-    :param index: Numerical position to increment. Default: -1.
-        This follows Python indexing rules, so positive numbers start from
-        the left side and count up from 0, while negative numbers start from
-        the right side and count down from -1.
-        Only has an effect when the core version (e.g. 0.1.0) is bumped.
-    :return: Bumped version.
-    """
-    base = version.base
-    revision = version.revision
-    if version.stage is None:
-        base = bump_version(version.base, index)
-    else:
-        if version.revision is None:
-            revision = 2
-        else:
-            revision = version.revision + 1
-    new_version = copy.copy(version)
-    new_version.base = base
-    new_version.revision = revision
-    return new_version
 
 
 def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:

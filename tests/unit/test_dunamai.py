@@ -459,6 +459,14 @@ def test__version__serialize__format_as_callable() -> None:
     assert version.distance == 0
 
 
+def test__version__bump() -> None:
+    assert Version("1.2.3").bump().serialize() == "1.2.4"
+    assert Version("1.2.3").bump(-2).serialize() == "1.3.0"
+    assert Version("1.2.3").bump(0).serialize() == "2.0.0"
+    assert Version("1.2.3", stage=("a", None)).bump().serialize() == "1.2.3a2"
+    assert Version("1.2.3", stage=("a", 4)).bump().serialize() == "1.2.3a5"
+
+
 def test__get_version__from_name() -> None:
     assert get_version("dunamai") == Version(pkg_resources.get_distribution("dunamai").version)
 
