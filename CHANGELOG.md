@@ -1,4 +1,4 @@
-## Unreleased
+## v1.9.0 (2022-02-20)
 
 * Changed `Version.serialize`'s `format` argument to support passing a callback.
   ([Contributed by marnikow](https://github.com/mtkennerly/dunamai/pull/40))
