@@ -1,3 +1,4 @@
+import datetime as dt
 import os
 import pkg_resources
 import re
@@ -76,11 +77,20 @@ def test__version__str() -> None:
 
 def test__version__repr() -> None:
     v = Version(
-        "1", stage=("a", 2), distance=3, commit="abc", dirty=True, tagged_metadata="tagged", epoch=4
+        "1",
+        stage=("a", 2),
+        distance=3,
+        commit="abc",
+        dirty=True,
+        tagged_metadata="tagged",
+        epoch=4,
+        branch="master",
+        timestamp=dt.datetime(2000, 1, 2),
     )
     assert repr(v) == (
-        "Version(base='1', stage='a', revision=2, distance=3,"
-        " commit='abc', dirty=True, tagged_metadata='tagged', epoch=4)"
+        "Version(base='1', stage='a', revision=2, distance=3, commit='abc',"
+        " dirty=True, tagged_metadata='tagged', epoch=4, branch='master',"
+        " timestamp=datetime.datetime(2000, 1, 2, 0, 0))"
     )
 
 
@@ -431,11 +441,22 @@ def test__version__serialize__pvp_with_dirty() -> None:
 
 
 def test__version__serialize__format_as_str() -> None:
-    format = "{base},{stage},{revision},{distance},{commit},{dirty}"
-    assert Version("0.1.0").serialize(format=format) == "0.1.0,,,0,,clean"
+    format = (
+        "{base},{stage},{revision},{distance},{commit},{dirty}"
+        ",{branch},{branch_escaped},{timestamp}"
+    )
+    assert Version("0.1.0").serialize(format=format) == "0.1.0,,,0,,clean,,,"
     assert (
-        Version("1", stage=("a", 2), distance=3, commit="abc", dirty=True).serialize(format=format)
-        == "1,a,2,3,abc,dirty"
+        Version(
+            "1",
+            stage=("a", 2),
+            distance=3,
+            commit="abc",
+            dirty=True,
+            branch="a/b",
+            timestamp=dt.datetime(2001, 2, 3, 4, 5, 6),
+        ).serialize(format=format)
+        == "1,a,2,3,abc,dirty,a/b,ab,20010203040506"
     )
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format="v{base}", style=Style.Pep440)

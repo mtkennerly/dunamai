@@ -32,6 +32,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from xml.etree import ElementTree
 
 _VERSION_PATTERN = r"""
     (?x)                                                        (?# ignore whitespace)
@@ -46,6 +47,7 @@ _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?$"
 )
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
+_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 _T = TypeVar("_T")
 
@@ -169,6 +171,10 @@ def _match_version_pattern(
 
 def _blank(value: Optional[_T], default: _T) -> _T:
     return value if value is not None else default
+
+
+def _escape_branch(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]", "", value)
 
 
 def _equal_if_set(x: _T, y: Optional[_T], unset: Sequence[Any] = (None,)) -> bool:
@@ -314,7 +320,9 @@ class Version:
         commit: str = None,
         dirty: bool = None,
         tagged_metadata: Optional[str] = None,
-        epoch: int = None
+        epoch: int = None,
+        branch: str = None,
+        timestamp: dt.datetime = None,
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -324,6 +332,8 @@ class Version:
         :param commit: Commit hash/identifier.
         :param dirty: True if the working directory does not match the commit.
         :param epoch: Optional PEP 440 epoch.
+        :param branch: Name of the current branch.
+        :param timestamp: Timestamp of the current commit.
         """
         #: Release segment.
         self.base = base
@@ -343,6 +353,10 @@ class Version:
         self.tagged_metadata = tagged_metadata
         #: Optional PEP 440 epoch.
         self.epoch = epoch
+        #: Name of the current branch.
+        self.branch = branch
+        #: Timestamp of the current commit.
+        self.timestamp = timestamp
 
         self._matched_tag = None  # type: Optional[str]
         self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
@@ -352,8 +366,8 @@ class Version:
 
     def __repr__(self) -> str:
         return (
-            "Version(base={!r}, stage={!r}, revision={!r},"
-            " distance={!r}, commit={!r}, dirty={!r}, tagged_metadata={!r}, epoch={!r})"
+            "Version(base={!r}, stage={!r}, revision={!r}, distance={!r}, commit={!r},"
+            " dirty={!r}, tagged_metadata={!r}, epoch={!r}, branch={!r}, timestamp={!r})"
         ).format(
             self.base,
             self.stage,
@@ -363,6 +377,8 @@ class Version:
             self.dirty,
             self.tagged_metadata,
             self.epoch,
+            self.branch,
+            self.timestamp,
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -379,6 +395,8 @@ class Version:
             and self.dirty == other.dirty
             and self.tagged_metadata == other.tagged_metadata
             and self.epoch == other.epoch
+            and self.branch == other.branch
+            and self.timestamp == other.timestamp
         )
 
     def _matches_partial(self, other: "Version") -> bool:
@@ -398,6 +416,8 @@ class Version:
             and _equal_if_set(self.dirty, other.dirty)
             and _equal_if_set(self.tagged_metadata, other.tagged_metadata)
             and _equal_if_set(self.epoch, other.epoch)
+            and _equal_if_set(self.branch, other.branch)
+            and _equal_if_set(self.timestamp, other.timestamp)
         )
 
     def __lt__(self, other: Any) -> bool:
@@ -417,6 +437,9 @@ class Version:
             and bool(self.dirty) < bool(other.dirty)
             and _blank(self.tagged_metadata, "") < _blank(other.tagged_metadata, "")
             and _blank(self.epoch, 0) < _blank(other.epoch, 0)
+            and _blank(self.branch, "") < _blank(other.branch, "")
+            and _blank(self.timestamp, dt.datetime(0, 0, 0, 0, 0, 0))
+            < _blank(other.timestamp, dt.datetime(0, 0, 0, 0, 0, 0))
         )
 
     def serialize(
@@ -451,6 +474,9 @@ class Version:
             * {dirty} which expands to either "dirty" or "clean"
             * {tagged_metadata}
             * {epoch}
+            * {branch}
+            * {branch_escaped} which omits any non-letter/number characters
+            * {timestamp} which expands to YYYYmmddHHMMSS
         :param style: Built-in output formats. Will default to PEP 440 if not
             set and no custom format given. If you specify both a style and a
             custom format, then the format will be validated against the
@@ -485,6 +511,9 @@ class Version:
                     tagged_metadata=_blank(self.tagged_metadata, ""),
                     dirty="dirty" if self.dirty else "clean",
                     epoch=_blank(self.epoch, ""),
+                    branch=_blank(self.branch, ""),
+                    branch_escaped=_escape_branch(_blank(self.branch, "")),
+                    timestamp=self.timestamp.strftime("%Y%m%d%H%M%S") if self.timestamp else "",
                 )
             if style is not None:
                 check_version(out, style)
@@ -664,10 +693,19 @@ class Version:
         """
         _detect_vcs(Vcs.Git)
 
+        code, msg = _run_cmd("git symbolic-ref --short HEAD", codes=[0, 128])
+        if code == 128:
+            branch = None
+        else:
+            branch = msg
+
         code, msg = _run_cmd('git log -n 1 --format="format:%h"', codes=[0, 128])
         if code == 128:
-            return cls("0.0.0", distance=0, dirty=True)
+            return cls("0.0.0", distance=0, dirty=True, branch=branch)
         commit = msg
+
+        code, msg = _run_cmd('git log -n 1 --pretty=format:"%cI"')
+        timestamp = dt.datetime.strptime(msg, _TIMESTAMP_FORMAT)
 
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
@@ -692,7 +730,14 @@ class Version:
                 distance = int(msg)
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
+            return cls(
+                "0.0.0",
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+            )
 
         detailed_tags = []  # type: List[_GitRefInfo]
         tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order()
@@ -717,6 +762,8 @@ class Version:
             dirty=dirty,
             tagged_metadata=tagged_metadata,
             epoch=epoch,
+            branch=branch,
+            timestamp=timestamp,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -738,8 +785,14 @@ class Version:
         code, msg = _run_cmd("hg summary")
         dirty = "commit: (clean)" not in msg.splitlines()
 
+        code, msg = _run_cmd("hg branch")
+        branch = msg
+
         code, msg = _run_cmd('hg id --template "{id|short}"')
         commit = msg if set(msg) != {"0"} else None
+
+        code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"')
+        timestamp = dt.datetime.strptime(msg, _TIMESTAMP_FORMAT) if msg != "" else None
 
         code, msg = _run_cmd(
             'hg log -r "sort(tag(){}, -rev)" --template "{{join(tags, \':\')}}\\n"'.format(
@@ -752,7 +805,14 @@ class Version:
                 distance = int(msg) + 1
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
+            return cls(
+                "0.0.0",
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+            )
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
         tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
@@ -770,6 +830,8 @@ class Version:
             dirty=dirty,
             tagged_metadata=tagged_metadata,
             epoch=epoch,
+            branch=branch,
+            timestamp=timestamp,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -791,8 +853,14 @@ class Version:
         code, msg = _run_cmd("darcs status", codes=[0, 1])
         dirty = msg != "No changes!"
 
-        code, msg = _run_cmd("darcs log --last 1")
-        commit = msg.split()[1].strip() if msg else None
+        code, msg = _run_cmd("darcs log --last 1 --xml-output")
+        root = ElementTree.fromstring(msg)
+        if len(root) == 0:
+            commit = None
+            timestamp = None
+        else:
+            commit = root[0].attrib["hash"]
+            timestamp = dt.datetime.strptime(root[0].attrib["date"], "%Y%m%d%H%M%S")
 
         code, msg = _run_cmd("darcs show tags")
         if not msg:
@@ -801,7 +869,7 @@ class Version:
                 distance = int(msg)
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty, timestamp=timestamp)
         tags = msg.splitlines()
         tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
@@ -819,6 +887,7 @@ class Version:
             dirty=dirty,
             tagged_metadata=tagged_metadata,
             epoch=epoch,
+            timestamp=timestamp,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -854,8 +923,13 @@ class Version:
         else:
             commit = msg
 
+        timestamp = None
+        if commit:
+            code, msg = _run_cmd("svn info --show-item last-changed-date")
+            timestamp = dt.datetime.strptime(msg, "%Y-%m-%dT%H:%M:%S.%f%z")
+
         if not commit:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=0, commit=commit, dirty=dirty, timestamp=timestamp)
         code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
@@ -864,7 +938,7 @@ class Version:
                 distance = int(commit)
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
+            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty, timestamp=timestamp)
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
             code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
@@ -890,6 +964,7 @@ class Version:
             dirty=dirty,
             tagged_metadata=tagged_metadata,
             epoch=epoch,
+            timestamp=timestamp,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -911,8 +986,22 @@ class Version:
         code, msg = _run_cmd("bzr status")
         dirty = msg != ""
 
-        code, msg = _run_cmd("bzr log --limit 1 --line")
-        commit = msg.split(":", 1)[0] if msg else None
+        code, msg = _run_cmd("bzr log --limit 1")
+        commit = None
+        branch = None
+        timestamp = None
+        for line in msg.splitlines():
+            info = line.split("revno: ", maxsplit=1)
+            if len(info) == 2:
+                commit = info[1]
+
+            info = line.split("branch nick: ", maxsplit=1)
+            if len(info) == 2:
+                branch = info[1]
+
+            info = line.split("timestamp: ", maxsplit=1)
+            if len(info) == 2:
+                timestamp = dt.datetime.strptime(info[1], "%a %Y-%m-%d %H:%M:%S %z")
 
         code, msg = _run_cmd("bzr tags")
         if not msg or not commit:
@@ -920,7 +1009,14 @@ class Version:
                 distance = int(commit) if commit is not None else 0
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
+            return cls(
+                "0.0.0",
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+            )
         tags_to_revs = {
             line.split()[0]: int(line.split()[1])
             for line in msg.splitlines()
@@ -941,6 +1037,8 @@ class Version:
             dirty=dirty,
             tagged_metadata=tagged_metadata,
             epoch=epoch,
+            branch=branch,
+            timestamp=timestamp,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -961,16 +1059,28 @@ class Version:
         code, msg = _run_cmd("fossil changes --differ")
         dirty = bool(msg)
 
+        code, msg = _run_cmd("fossil branch current")
+        branch = msg
+
         code, msg = _run_cmd(
             "fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\""
         )
         commit = msg.strip("'")
 
+        code, msg = _run_cmd(
+            'fossil sql "'
+            "SELECT DATETIME(mtime) FROM event JOIN blob ON event.objid=blob.rid WHERE type = 'ci'"
+            " AND uuid = (SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1) LIMIT 1\""
+        )
+        timestamp = dt.datetime.strptime(msg.strip("'"), "%Y-%m-%d %H:%M:%S")
+
         code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"")
         # The repository creation itself counts as a commit.
         total_commits = int(msg) - 1
         if total_commits <= 0:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty)
+            return cls(
+                "0.0.0", distance=0, commit=commit, dirty=dirty, branch=branch, timestamp=timestamp
+            )
 
         # Based on `compute_direct_ancestors` from descendants.c in the
         # Fossil source code:
@@ -1003,7 +1113,14 @@ class Version:
                 distance = int(total_commits)
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty)
+            return cls(
+                "0.0.0",
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+            )
 
         tags_to_distance = [
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
@@ -1022,6 +1139,8 @@ class Version:
             dirty=dirty,
             tagged_metadata=tagged_metadata,
             epoch=epoch,
+            branch=branch,
+            timestamp=timestamp,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1301,7 +1420,7 @@ def bump_version(base: str, index: int = -1) -> str:
 def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
-    return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
+    return dt.datetime.strptime(compat, _TIMESTAMP_FORMAT)
 
 
 __version__ = get_version("dunamai").serialize()

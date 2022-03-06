@@ -52,7 +52,7 @@ common_sub_args = [
         "help": (
             "Custom output format. Available substitutions:"
             " {base}, {stage}, {revision}, {distance}, {commit}, {dirty},"
-            " {tagged_metadata}, {epoch}"
+            " {tagged_metadata}, {epoch}, {branch}, {branch_escaped}, {timestamp}"
         ),
     },
     {

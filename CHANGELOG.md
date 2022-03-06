@@ -1,3 +1,9 @@
+## Unreleased
+
+* Added `branch` and `timestamp` to the `Version` class,
+  along with associated format placeholders (`branch`, `branch_escaped`, `timestamp`).
+  `branch` is not populated for Darcs and Subversion repositories.
+
 ## v1.9.0 (2022-02-20)
 
 * Changed `Version.serialize`'s `format` argument to support passing a callback.
