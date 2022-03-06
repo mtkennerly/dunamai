@@ -47,7 +47,6 @@ _VALID_SEMVER = (
     r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?$"
 )
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
-_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 _T = TypeVar("_T")
 
@@ -322,7 +321,7 @@ class Version:
         tagged_metadata: Optional[str] = None,
         epoch: int = None,
         branch: str = None,
-        timestamp: dt.datetime = None,
+        timestamp: dt.datetime = None
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -705,7 +704,7 @@ class Version:
         commit = msg
 
         code, msg = _run_cmd('git log -n 1 --pretty=format:"%cI"')
-        timestamp = dt.datetime.strptime(msg, _TIMESTAMP_FORMAT)
+        timestamp = _parse_git_timestamp_iso_strict(msg)
 
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
@@ -792,7 +791,7 @@ class Version:
         commit = msg if set(msg) != {"0"} else None
 
         code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"')
-        timestamp = dt.datetime.strptime(msg, _TIMESTAMP_FORMAT) if msg != "" else None
+        timestamp = _parse_git_timestamp_iso_strict(msg) if msg != "" else None
 
         code, msg = _run_cmd(
             'hg log -r "sort(tag(){}, -rev)" --template "{{join(tags, \':\')}}\\n"'.format(
@@ -926,7 +925,8 @@ class Version:
         timestamp = None
         if commit:
             code, msg = _run_cmd("svn info --show-item last-changed-date")
-            timestamp = dt.datetime.strptime(msg, "%Y-%m-%dT%H:%M:%S.%f%z")
+            # Normalize "Z" for pre-3.7 compatibility:
+            timestamp = dt.datetime.strptime(re.sub(r"Z$", "+0000", msg), "%Y-%m-%dT%H:%M:%S.%f%z")
 
         if not commit:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty, timestamp=timestamp)
@@ -1420,7 +1420,7 @@ def bump_version(base: str, index: int = -1) -> str:
 def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
-    return dt.datetime.strptime(compat, _TIMESTAMP_FORMAT)
+    return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
 
 
 __version__ = get_version("dunamai").serialize()
