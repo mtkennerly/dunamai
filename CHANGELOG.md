@@ -3,6 +3,13 @@
 * Added `branch` and `timestamp` to the `Version` class,
   along with associated format placeholders (`branch`, `branch_escaped`, `timestamp`).
   `branch` is not populated for Darcs and Subversion repositories.
+* Fixed validation for PEP 440, where the local segment was allowed to contain any characters.
+* Fixed validation for Semantic Versioning, where some segments were allowed to contain
+  these additional characters:
+
+  ```
+  [ \ ] ^ _ `
+  ```
 
 ## v1.9.0 (2022-02-20)
 

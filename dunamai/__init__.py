@@ -41,11 +41,21 @@ _VERSION_PATTERN = r"""
     (\+(?P<tagged_metadata>.+))?$                               (?# +linux)
 """.strip()
 
-# PEP 440: [N!]N(.N)*[{a|b|rc}N][.postN][.devN][+<local version label>]
-_VALID_PEP440 = r"^(\d+!)?\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?(\.dev\d+)?(\+.+)?$"
-_VALID_SEMVER = (
-    r"^\d+\.\d+\.\d+(\-[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?(\+[a-zA-z0-9\-]+(\.[a-zA-z0-9\-]+)*)?$"
-)
+_VALID_PEP440 = r"""
+    (?x)
+    ^(\d+!)?
+    \d+(\.\d+)*
+    ((a|b|rc)\d+)?
+    (\.post\d+)?
+    (\.dev\d+)?
+    (\+([a-zA-Z0-9]|[a-zA-Z0-9]{2}|[a-zA-Z0-9][a-zA-Z0-9.]+[a-zA-Z0-9]))?$
+""".strip()
+_VALID_SEMVER = r"""
+    (?x)
+    ^\d+\.\d+\.\d+
+    (\-[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*)?
+    (\+[a-zA-Z0-9\-]+(\.[a-zA-Z0-9\-]+)*)?$
+""".strip()
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
 
 _T = TypeVar("_T")

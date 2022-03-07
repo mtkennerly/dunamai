@@ -643,6 +643,13 @@ def test__check_version__pep440() -> None:
         check_version("0.1.0.other0")
 
     check_version("0.1.0+abc.dirty")
+    check_version("0.1.0+abc..dirty")
+    with pytest.raises(ValueError):
+        check_version("0.1.0+abc_dirty")
+    with pytest.raises(ValueError):
+        check_version("0.1.0+.abc")
+    with pytest.raises(ValueError):
+        check_version("0.1.0+abc.")
 
     check_version("2!0.1.0a1.post0.dev0+abc.dirty")
 
@@ -666,6 +673,9 @@ def test__check_version__semver() -> None:
     # "-" is a valid identifier.
     Version("0.1.0--").serialize(style=style)
     Version("0.1.0--.-").serialize(style=style)
+
+    with pytest.raises(ValueError):
+        check_version("0.1.0+abc_dirty", style=style)
 
     # No leading zeroes in numeric segments:
     with pytest.raises(ValueError):
@@ -697,6 +707,8 @@ def test__check_version__pvp() -> None:
 
     with pytest.raises(ValueError):
         check_version("0.1.0-a.1", style=style)
+    with pytest.raises(ValueError):
+        check_version("0.1.0-abc_dirty", style=style)
 
 
 def test__default_version_pattern() -> None:
