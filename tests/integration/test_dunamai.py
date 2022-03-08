@@ -33,7 +33,9 @@ def make_run_callback(where: Path) -> Callable:
     return inner
 
 
-def make_from_callback(function: Callable, clear: bool = True) -> Callable:
+def make_from_callback(
+    function: Callable, clear: bool = True, chronological: bool = True
+) -> Callable:
     def inner(*args, fresh: bool = False, **kwargs):
         version = function(*args, **kwargs)
         if fresh:
@@ -42,7 +44,12 @@ def make_from_callback(function: Callable, clear: bool = True) -> Callable:
         else:
             assert isinstance(version.commit, str)
             assert len(version.commit) > 0
-            assert isinstance(version.timestamp, dt.datetime)
+
+            if chronological:
+                assert isinstance(version.timestamp, dt.datetime)
+                now = dt.datetime.now().astimezone(dt.timezone.utc)
+                delta = dt.timedelta(minutes=1)
+                assert now - delta <= version.timestamp <= now + delta
         if clear:
             version.commit = None
         version.timestamp = None
@@ -251,7 +258,7 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
     vcs = tmp_path / "dunamai-git-nonchronological"
     vcs.mkdir()
     run = make_run_callback(vcs)
-    from_vcs = make_from_callback(Version.from_git)
+    from_vcs = make_from_callback(Version.from_git, chronological=False)
     b = "master"
 
     with chdir(vcs):

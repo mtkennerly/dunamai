@@ -85,12 +85,12 @@ def test__version__repr() -> None:
         tagged_metadata="tagged",
         epoch=4,
         branch="master",
-        timestamp=dt.datetime(2000, 1, 2),
+        timestamp=dt.datetime(2000, 1, 2, 3, 4, 5).replace(tzinfo=dt.timezone.utc),
     )
     assert repr(v) == (
         "Version(base='1', stage='a', revision=2, distance=3, commit='abc',"
         " dirty=True, tagged_metadata='tagged', epoch=4, branch='master',"
-        " timestamp=datetime.datetime(2000, 1, 2, 0, 0))"
+        " timestamp=datetime.datetime(2000, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc))"
     )
 
 
@@ -454,7 +454,7 @@ def test__version__serialize__format_as_str() -> None:
             commit="abc",
             dirty=True,
             branch="a/b",
-            timestamp=dt.datetime(2001, 2, 3, 4, 5, 6),
+            timestamp=dt.datetime(2001, 2, 3, 4, 5, 6, tzinfo=dt.timezone.utc),
         ).serialize(format=format)
         == "1,a,2,3,abc,dirty,a/b,ab,20010203040506"
     )

@@ -365,7 +365,7 @@ class Version:
         #: Name of the current branch.
         self.branch = branch
         #: Timestamp of the current commit.
-        self.timestamp = timestamp
+        self.timestamp = timestamp.astimezone(dt.timezone.utc) if timestamp else None
 
         self._matched_tag = None  # type: Optional[str]
         self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
@@ -485,7 +485,7 @@ class Version:
             * {epoch}
             * {branch}
             * {branch_escaped} which omits any non-letter/number characters
-            * {timestamp} which expands to YYYYmmddHHMMSS
+            * {timestamp} which expands to YYYYmmddHHMMSS as UTC
         :param style: Built-in output formats. Will default to PEP 440 if not
             set and no custom format given. If you specify both a style and a
             custom format, then the format will be validated against the
@@ -869,7 +869,7 @@ class Version:
             timestamp = None
         else:
             commit = root[0].attrib["hash"]
-            timestamp = dt.datetime.strptime(root[0].attrib["date"], "%Y%m%d%H%M%S")
+            timestamp = dt.datetime.strptime(root[0].attrib["date"] + "Z", "%Y%m%d%H%M%S%z")
 
         code, msg = _run_cmd("darcs show tags")
         if not msg:
@@ -1082,7 +1082,7 @@ class Version:
             "SELECT DATETIME(mtime) FROM event JOIN blob ON event.objid=blob.rid WHERE type = 'ci'"
             " AND uuid = (SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1) LIMIT 1\""
         )
-        timestamp = dt.datetime.strptime(msg.strip("'"), "%Y-%m-%d %H:%M:%S")
+        timestamp = dt.datetime.strptime(msg.strip("'") + "Z", "%Y-%m-%d %H:%M:%S%z")
 
         code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"")
         # The repository creation itself counts as a commit.
