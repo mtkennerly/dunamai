@@ -47,7 +47,7 @@ def make_from_callback(
 
             if chronological:
                 assert isinstance(version.timestamp, dt.datetime)
-                now = dt.datetime.now().astimezone(dt.timezone.utc)
+                now = dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc)
                 delta = dt.timedelta(minutes=1)
                 assert now - delta <= version.timestamp <= now + delta
         if clear:
