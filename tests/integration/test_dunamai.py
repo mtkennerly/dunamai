@@ -4,7 +4,7 @@ import shutil
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Optional
 
 import pytest
 
@@ -26,7 +26,7 @@ def chdir(where: Path) -> Iterator[None]:
 
 
 def make_run_callback(where: Path) -> Callable:
-    def inner(command, expected_code: int = 0, env: dict = None):
+    def inner(command, expected_code: int = 0, env: Optional[dict] = None):
         _, out = _run_cmd(command, where=where, codes=[expected_code], env=env)
         return out
 

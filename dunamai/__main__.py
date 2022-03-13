@@ -164,7 +164,9 @@ cli_spec = {
 }
 
 
-def build_parser(spec: Mapping, parser: argparse.ArgumentParser = None) -> argparse.ArgumentParser:
+def build_parser(
+    spec: Mapping, parser: Optional[argparse.ArgumentParser] = None
+) -> argparse.ArgumentParser:
     if parser is None:
         parser = argparse.ArgumentParser(
             description=spec["description"], formatter_class=argparse.ArgumentDefaultsHelpFormatter
