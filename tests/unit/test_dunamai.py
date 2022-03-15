@@ -714,11 +714,11 @@ def test__check_version__pvp() -> None:
 def test__default_version_pattern() -> None:
     def check_re(
         tag: str,
-        base: str = None,
-        stage: str = None,
-        revision: str = None,
-        tagged_metadata: str = None,
-        epoch: str = None,
+        base: Optional[str] = None,
+        stage: Optional[str] = None,
+        revision: Optional[str] = None,
+        tagged_metadata: Optional[str] = None,
+        epoch: Optional[str] = None,
     ) -> None:
         result = re.search(_VERSION_PATTERN, tag)
         if result is None:

@@ -18,6 +18,7 @@ repos:
       - id: mypy
         args:
           - --ignore-missing-imports
+          - --no-implicit-optional
   - repo: local
     hooks:
       - id: flake8

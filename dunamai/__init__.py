@@ -80,9 +80,9 @@ class Vcs(Enum):
 def _run_cmd(
     command: str,
     codes: Sequence[int] = (0,),
-    where: Path = None,
+    where: Optional[Path] = None,
     shell: bool = False,
-    env: dict = None,
+    env: Optional[dict] = None,
 ) -> Tuple[int, str]:
     result = subprocess.run(
         shlex.split(command),
@@ -192,7 +192,7 @@ def _equal_if_set(x: _T, y: Optional[_T], unset: Sequence[Any] = (None,)) -> boo
     return x == y
 
 
-def _detect_vcs(expected_vcs: Vcs = None) -> Vcs:
+def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
     checks = OrderedDict(
         [
             (Vcs.Git, "git status"),
@@ -324,14 +324,14 @@ class Version:
         self,
         base: str,
         *,
-        stage: Tuple[str, Optional[int]] = None,
+        stage: Optional[Tuple[str, Optional[int]]] = None,
         distance: int = 0,
-        commit: str = None,
-        dirty: bool = None,
+        commit: Optional[str] = None,
+        dirty: Optional[bool] = None,
         tagged_metadata: Optional[str] = None,
-        epoch: int = None,
-        branch: str = None,
-        timestamp: dt.datetime = None
+        epoch: Optional[int] = None,
+        branch: Optional[str] = None,
+        timestamp: Optional[dt.datetime] = None
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -457,10 +457,10 @@ class Version:
 
     def serialize(
         self,
-        metadata: bool = None,
+        metadata: Optional[bool] = None,
         dirty: bool = False,
-        format: Union[str, Callable[["Version"], str]] = None,
-        style: Style = None,
+        format: Optional[Union[str, Callable[["Version"], str]]] = None,
+        style: Optional[Style] = None,
         bump: bool = False,
         tagged_metadata: bool = False,
     ) -> str:
@@ -1249,10 +1249,10 @@ def check_version(version: str, style: Style = Style.Pep440) -> None:
 
 def get_version(
     name: str,
-    first_choice: Callable[[], Optional[Version]] = None,
-    third_choice: Callable[[], Optional[Version]] = None,
+    first_choice: Optional[Callable[[], Optional[Version]]] = None,
+    third_choice: Optional[Callable[[], Optional[Version]]] = None,
     fallback: Version = Version("0.0.0"),
-    ignore: Sequence[Version] = None,
+    ignore: Optional[Sequence[Version]] = None,
     parser: Callable[[str], Version] = Version,
 ) -> Version:
     """
@@ -1303,12 +1303,12 @@ def get_version(
 
 def serialize_pep440(
     base: str,
-    stage: str = None,
-    revision: int = None,
-    post: int = None,
-    dev: int = None,
-    epoch: int = None,
-    metadata: Sequence[Union[str, int]] = None,
+    stage: Optional[str] = None,
+    revision: Optional[int] = None,
+    post: Optional[int] = None,
+    dev: Optional[int] = None,
+    epoch: Optional[int] = None,
+    metadata: Optional[Sequence[Union[str, int]]] = None,
 ) -> str:
     """
     Serialize a version based on PEP 440.
@@ -1362,7 +1362,9 @@ def serialize_pep440(
 
 
 def serialize_semver(
-    base: str, pre: Sequence[Union[str, int]] = None, metadata: Sequence[Union[str, int]] = None
+    base: str,
+    pre: Optional[Sequence[Union[str, int]]] = None,
+    metadata: Optional[Sequence[Union[str, int]]] = None,
 ) -> str:
     """
     Serialize a version based on Semantic Versioning.
@@ -1387,7 +1389,7 @@ def serialize_semver(
     return serialized
 
 
-def serialize_pvp(base: str, metadata: Sequence[Union[str, int]] = None) -> str:
+def serialize_pvp(base: str, metadata: Optional[Sequence[Union[str, int]]] = None) -> str:
     """
     Serialize a version based on the Haskell Package Versioning Policy.
     Use this instead of `Version.serialize()` if you want more control
