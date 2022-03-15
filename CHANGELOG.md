@@ -1,3 +1,8 @@
+## Unreleased
+
+* Explicitly specified `Optional[...]` typing on arguments with a default of `None`.
+  ([Contributed by jonathangreen](https://github.com/mtkennerly/dunamai/pull/44))
+
 ## v1.10.0 (2022-03-08)
 
 * Added `branch` and `timestamp` to the `Version` class,
