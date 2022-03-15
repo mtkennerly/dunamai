@@ -1,4 +1,4 @@
-## Unreleased
+## v1.11.0 (2022-03-15)
 
 * Explicitly specified `Optional[...]` typing on arguments with a default of `None`.
   ([Contributed by jonathangreen](https://github.com/mtkennerly/dunamai/pull/44))
