@@ -3,14 +3,14 @@ from argparse import Namespace
 import pytest
 
 from dunamai import _run_cmd
-from dunamai.__main__ import parse_args, _VERSION_PATTERN
+from dunamai.__main__ import parse_args, VERSION_SOURCE_PATTERN
 
 
 def test__parse_args__from():
     assert parse_args(["from", "any"]) == Namespace(
         command="from",
         vcs="any",
-        pattern=_VERSION_PATTERN,
+        pattern=VERSION_SOURCE_PATTERN,
         dirty=False,
         metadata=None,
         format=None,

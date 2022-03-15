@@ -2,7 +2,7 @@ import argparse
 import sys
 from typing import Mapping, Optional
 
-from dunamai import check_version, Version, Style, Vcs, _VERSION_PATTERN
+from dunamai import check_version, Version, Style, Vcs, VERSION_SOURCE_PATTERN
 
 
 common_sub_args = [
@@ -34,7 +34,7 @@ common_sub_args = [
     },
     {
         "triggers": ["--pattern"],
-        "default": _VERSION_PATTERN,
+        "default": VERSION_SOURCE_PATTERN,
         "help": (
             "Regular expression matched against the version source."
             " This must contain one capture group named `base` corresponding to"

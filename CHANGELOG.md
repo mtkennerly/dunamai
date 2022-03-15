@@ -2,6 +2,7 @@
 
 * Explicitly specified `Optional[...]` typing on arguments with a default of `None`.
   ([Contributed by jonathangreen](https://github.com/mtkennerly/dunamai/pull/44))
+* Made `VERSION_SOURCE_PATTERN` public for consumption by other tools.
 
 ## v1.10.0 (2022-03-08)
 

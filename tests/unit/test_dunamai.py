@@ -19,7 +19,7 @@ from dunamai import (
     Style,
     Vcs,
     _run_cmd,
-    _VERSION_PATTERN,
+    VERSION_SOURCE_PATTERN,
 )
 
 
@@ -720,7 +720,7 @@ def test__default_version_pattern() -> None:
         tagged_metadata: Optional[str] = None,
         epoch: Optional[str] = None,
     ) -> None:
-        result = re.search(_VERSION_PATTERN, tag)
+        result = re.search(VERSION_SOURCE_PATTERN, tag)
         if result is None:
             if any(x is not None for x in [base, stage, revision]):
                 raise ValueError("Pattern did not match, {tag}".format(tag=tag))

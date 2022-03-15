@@ -34,12 +34,15 @@ from typing import (
 )
 from xml.etree import ElementTree
 
-_VERSION_PATTERN = r"""
+VERSION_SOURCE_PATTERN = r"""
     (?x)                                                        (?# ignore whitespace)
     ^v((?P<epoch>\d+)!)?(?P<base>\d+(\.\d+)*)                   (?# v1.2.3 or v1!2000.1.2)
     ([-._]?((?P<stage>[a-zA-Z]+)[-._]?(?P<revision>\d+)?))?     (?# b0)
     (\+(?P<tagged_metadata>.+))?$                               (?# +linux)
 """.strip()
+
+# Preserve old/private name for now in case it exists in the wild
+_VERSION_PATTERN = VERSION_SOURCE_PATTERN
 
 _VALID_PEP440 = r"""
     (?x)
@@ -597,7 +600,7 @@ class Version:
         return out
 
     @classmethod
-    def parse(cls, version: str, pattern: str = _VERSION_PATTERN) -> "Version":
+    def parse(cls, version: str, pattern: str = VERSION_SOURCE_PATTERN) -> "Version":
         """
         Attempt to parse a string into a Version instance.
 
@@ -694,7 +697,7 @@ class Version:
         return bumped
 
     @classmethod
-    def from_git(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+    def from_git(cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False) -> "Version":
         r"""
         Determine a version based on Git tags.
 
@@ -783,7 +786,9 @@ class Version:
         return version
 
     @classmethod
-    def from_mercurial(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+    def from_mercurial(
+        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+    ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
 
@@ -851,7 +856,9 @@ class Version:
         return version
 
     @classmethod
-    def from_darcs(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+    def from_darcs(
+        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+    ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
 
@@ -908,7 +915,7 @@ class Version:
 
     @classmethod
     def from_subversion(
-        cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
+        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -985,7 +992,9 @@ class Version:
         return version
 
     @classmethod
-    def from_bazaar(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+    def from_bazaar(
+        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+    ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
 
@@ -1059,7 +1068,9 @@ class Version:
         return version
 
     @classmethod
-    def from_fossil(cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False) -> "Version":
+    def from_fossil(
+        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+    ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
 
@@ -1162,7 +1173,7 @@ class Version:
 
     @classmethod
     def from_any_vcs(
-        cls, pattern: str = _VERSION_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
+        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1188,7 +1199,7 @@ class Version:
     def from_vcs(
         cls,
         vcs: Vcs,
-        pattern: str = _VERSION_PATTERN,
+        pattern: str = VERSION_SOURCE_PATTERN,
         latest_tag: bool = False,
         tag_dir: str = "tags",
     ) -> "Version":
