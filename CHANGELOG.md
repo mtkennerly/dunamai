@@ -1,4 +1,4 @@
-## Unreleased
+## v1.11.1 (2022-04-05)
 
 * Fixed the `--bump` CLI option and the `bump` argument of `Version.serialize`
   bumping even on a commit with a version tag. Now, no bumping occurs on such
