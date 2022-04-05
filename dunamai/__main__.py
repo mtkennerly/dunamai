@@ -88,6 +88,7 @@ common_sub_args = [
             "Increment the last part of the version `base` by 1,"
             " unless the `stage` is set, in which case increment the `revision`"
             " by 1 or set it to a default of 2 if there was no `revision`"
+            " Does nothing when on a commit with a version tag."
         ),
     },
 ]

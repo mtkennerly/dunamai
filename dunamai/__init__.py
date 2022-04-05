@@ -500,13 +500,14 @@ class Version:
         :param bump: If true, increment the last part of the `base` by 1,
             unless `stage` is set, in which case either increment `revision`
             by 1 or set it to a default of 2 if there was no revision.
+            Does nothing when on a commit with a version tag.
         :param tagged_metadata: If true, insert the `tagged_metadata` in the
             version as the first part of the metadata segment.
             This is ignored when `format` is used.
         """
         base = self.base
         revision = self.revision
-        if bump:
+        if bump and self.distance > 0:
             bumped = self.bump()
             base = bumped.base
             revision = bumped.revision

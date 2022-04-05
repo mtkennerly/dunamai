@@ -1,3 +1,9 @@
+## Unreleased
+
+* Fixed the `--bump` CLI option and the `bump` argument of `Version.serialize`
+  bumping even on a commit with a version tag. Now, no bumping occurs on such
+  a commit.
+
 ## v1.11.0 (2022-03-15)
 
 * Explicitly specified `Optional[...]` typing on arguments with a default of `None`.
