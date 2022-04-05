@@ -1345,13 +1345,7 @@ def serialize_pep440(
     out.append(base)
 
     if stage is not None:
-        alternative_stages = {
-            "alpha": "a",
-            "beta": "b",
-            "c": "rc",
-            "pre": "rc",
-            "preview": "rc",
-        }
+        alternative_stages = {"alpha": "a", "beta": "b", "c": "rc", "pre": "rc", "preview": "rc"}
         out.append(alternative_stages.get(stage.lower(), stage.lower()))
         if revision is None:
             # PEP 440 does not allow omitting the revision, so assume 0.

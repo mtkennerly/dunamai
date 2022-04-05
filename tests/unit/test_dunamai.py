@@ -540,83 +540,62 @@ def test__get_version__fallback() -> None:
 
 
 def test__get_version__from_name__ignore() -> None:
-    assert (
-        get_version(
-            "dunamai",
-            ignore=[Version(pkg_resources.get_distribution("dunamai").version)],
-            fallback=Version("2"),
-        )
-        == Version("2")
-    )
+    assert get_version(
+        "dunamai",
+        ignore=[Version(pkg_resources.get_distribution("dunamai").version)],
+        fallback=Version("2"),
+    ) == Version("2")
 
 
 def test__get_version__first_choice__ignore() -> None:
-    assert (
-        get_version(
-            "dunamai_nonexistent_test",
-            first_choice=lambda: Version("1"),
-            ignore=[Version("1")],
-            fallback=Version("2"),
-        )
-        == Version("2")
-    )
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1"),
+        ignore=[Version("1")],
+        fallback=Version("2"),
+    ) == Version("2")
 
 
 def test__get_version__first_choice__ignore_with_distance() -> None:
-    assert (
-        get_version(
-            "dunamai_nonexistent_test",
-            first_choice=lambda: Version("1", distance=2),
-            ignore=[Version("1")],
-            fallback=Version("2"),
-        )
-        == Version("2")
-    )
-    assert (
-        get_version(
-            "dunamai_nonexistent_test",
-            first_choice=lambda: Version("1"),
-            ignore=[Version("1", distance=2)],
-            fallback=Version("2"),
-        )
-        != Version("2")
-    )
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1", distance=2),
+        ignore=[Version("1")],
+        fallback=Version("2"),
+    ) == Version("2")
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1"),
+        ignore=[Version("1", distance=2)],
+        fallback=Version("2"),
+    ) != Version("2")
 
 
 def test__get_version__first_choice__ignore__with_commit() -> None:
-    assert (
-        get_version(
-            "dunamai_nonexistent_test",
-            first_choice=lambda: Version("1", commit="aaaa"),
-            ignore=[Version("1")],
-            fallback=Version("2"),
-        )
-        == Version("2")
-    )
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1", commit="aaaa"),
+        ignore=[Version("1")],
+        fallback=Version("2"),
+    ) == Version("2")
 
 
 def test__get_version__first_choice__ignore__without_commit() -> None:
-    assert (
-        get_version(
-            "dunamai_nonexistent_test",
-            first_choice=lambda: Version("1"),
-            ignore=[Version("1", commit="aaaa")],
-            fallback=Version("2"),
-        )
-        == Version("1")
-    )
+    assert get_version(
+        "dunamai_nonexistent_test",
+        first_choice=lambda: Version("1"),
+        ignore=[Version("1", commit="aaaa")],
+        fallback=Version("2"),
+    ) == Version("1")
 
 
 def test__get_version__third_choice__ignore() -> None:
-    assert (
-        get_version(
-            "dunamai_nonexistent_test",
-            third_choice=lambda: Version("3"),
-            ignore=[Version("3")],
-            fallback=Version("2"),
-        )
-        == Version("2")
-    )
+    assert get_version(
+        "dunamai_nonexistent_test",
+        third_choice=lambda: Version("3"),
+        ignore=[Version("3")],
+        fallback=Version("2"),
+    ) == Version("2")
 
 
 def test__version__from_any_vcs(tmp_path) -> None:
