@@ -120,7 +120,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert run("dunamai from any --latest-tag") == "0.1.0"
         assert from_explicit_vcs(Vcs.Any) == Version("0.1.0", dirty=False, branch=b)
         assert from_explicit_vcs(Vcs.Git) == Version("0.1.0", dirty=False, branch=b)
-        assert run("dunamai from any --bump") == "0.1.1"
+        assert run("dunamai from any --bump") == "0.1.0"
 
         # Verify tags with '/' work
         run("git tag test/v0.1.0")
@@ -159,11 +159,14 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False)
 
         # Additional one-off check not in other VCS integration tests:
-        # tag with pre-release segment.
         run("git checkout master")
         (vcs / "foo.txt").write_text("third")
         run("git add .")
         run('git commit --no-gpg-sign -m "Third"')
+        # bumping:
+        commit = run('dunamai from any --format "{commit}"')
+        assert run("dunamai from any --bump") == "0.2.1.dev1+{}".format(commit)
+        # tag with pre-release segment.
         run("git tag v0.2.1b3 -m Annotated")
         assert from_vcs() == Version("0.2.1", stage=("b", 3), dirty=False, branch=b)
 
