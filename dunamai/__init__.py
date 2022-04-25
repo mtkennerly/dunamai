@@ -36,7 +36,7 @@ from xml.etree import ElementTree
 
 VERSION_SOURCE_PATTERN = r"""
     (?x)                                                        (?# ignore whitespace)
-    ^v((?P<epoch>\d+)!)?(?P<base>\d+(\.\d+)*)                   (?# v1.2.3 or v1!2000.1.2)
+    ^v?((?P<epoch>\d+)!)?(?P<base>\d+(\.\d+)*)                   (?# v1.2.3 or v1!2000.1.2)
     ([-._]?((?P<stage>[a-zA-Z]+)[-._]?(?P<revision>\d+)?))?     (?# b0)
     (\+(?P<tagged_metadata>.+))?$                               (?# +linux)
 """.strip()
