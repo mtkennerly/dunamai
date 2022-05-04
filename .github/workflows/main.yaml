@@ -55,7 +55,7 @@ jobs:
 
           # fossil-linux-x64-2.13.tar.gz, rehosted because the official site deletes older artifacts:
           pip install gdown
-          gdown --id 1_gBUGKhs_bponRcgpLlukggWPCR25blF -O ~/fossil.tgz
+          gdown 1_gBUGKhs_bponRcgpLlukggWPCR25blF -O ~/fossil.tgz
           tar -xvf ~/fossil.tgz -C /opt
 
           git config --global user.name "foo"
