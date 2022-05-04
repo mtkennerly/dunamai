@@ -2,7 +2,7 @@ import argparse
 import sys
 from typing import Mapping, Optional
 
-from dunamai import check_version, Version, Style, Vcs, VERSION_SOURCE_PATTERN
+from dunamai import check_version, Version, Pattern, Style, Vcs, VERSION_SOURCE_PATTERN
 
 
 common_sub_args = [
@@ -45,7 +45,9 @@ common_sub_args = [
             " It may also contain a group named `tagged_metadata` corresponding to extra"
             " metadata after the main part of the version (typically after a plus sign)."
             " There may also be a group named `epoch` for the PEP 440 concept."
-        ),
+            " If the `base` group is not present, then instead this will be interpreted"
+            " as a named preset, which may be one of the following: {}"
+        ).format(", ".join(["`{}`".format(x.value) for x in Pattern])),
     },
     {
         "triggers": ["--format"],

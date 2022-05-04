@@ -1,3 +1,15 @@
+## Unreleased
+
+* Added `Pattern` type for named pattern presets. Currently, this includes:
+  * `Pattern.Default` (`--pattern default`) for the existing default.
+  * `Pattern.DefaultUnprefixed` (`--pattern default-unprefixed`)
+    for the existing default, but without requiring the `v` prefix.
+* Fixed `Version.parse` so that it better handles versions without the `v`
+  prefix when the pattern does not (or may not) require it.
+* Fixed error reporting when a custom pattern is an invalid regular expression.
+  It was fine when Dunamai was used as a library, but the error message lacked
+  context on the CLI.
+
 ## v1.11.1 (2022-04-05)
 
 * Fixed the `--bump` CLI option and the `bump` argument of `Version.serialize`

@@ -16,6 +16,7 @@ from dunamai import (
     serialize_pep440,
     serialize_pvp,
     serialize_semver,
+    Pattern,
     Style,
     Vcs,
     _run_cmd,
@@ -54,6 +55,19 @@ def make_from_callback(function: Callable, mock_commit: Optional[str] = "abc") -
 from_any_vcs = make_from_callback(Version.from_any_vcs)
 from_any_vcs_unmocked = make_from_callback(Version.from_any_vcs, mock_commit=None)
 from_explicit_vcs = make_from_callback(Version.from_vcs)
+
+
+def test__pattern__regex() -> None:
+    assert Pattern.Default.regex() == VERSION_SOURCE_PATTERN
+    assert Pattern.DefaultUnprefixed.regex() != VERSION_SOURCE_PATTERN
+
+
+def test__pattern__parse() -> None:
+    assert Pattern.parse(r"(?P<base>\d+)") == r"(?P<base>\d+)"
+    assert Pattern.parse("default") == Pattern.Default.regex()
+    assert Pattern.parse("default-unprefixed") == Pattern.DefaultUnprefixed.regex()
+    with pytest.raises(ValueError):
+        Pattern.parse(r"foo")
 
 
 def test__version__init() -> None:

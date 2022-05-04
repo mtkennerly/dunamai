@@ -28,12 +28,14 @@ Dunamai is also available as a [GitHub Action](https://github.com/marketplace/ac
   For Python, this means you do not need a setup.py.
 
 ## Usage
-Install with `pip install dunamai`, and then use as either a CLI:
+### Installation
+```
+pip install dunamai
+```
 
+### CLI
 ```console
 # Suppose you are on commit g29045e8, 7 commits after the v0.2.0 tag.
-# Note that the "v" prefix on the tag is required, unless you specify
-# a different tag style using "--pattern".
 
 # Auto-detect the version control system and generate a version:
 $ dunamai from any
@@ -66,7 +68,7 @@ $ dunamai from --help
 $ dunamai from git --help
 ```
 
-Or as a library:
+### Library
 
 ```python
 from dunamai import Version, Style
@@ -99,6 +101,32 @@ assert version.dirty is True
 
 # Available if the latest tag includes metadata, like v0.1.0+linux:
 assert version.tagged_metadata == "linux"
+```
+
+### Tips
+By default, the "v" prefix on the tag is required, unless you specify
+a custom tag pattern. You can either write a regular expression:
+
+```console
+$ dunamai from any --pattern "(?P<base>\d+\.\d+\.\d+)"
+```
+
+```python
+from dunamai import Version
+
+version = Version.from_any_vcs(pattern=r"(?P<base>\d+\.\d+\.\d+)")
+```
+
+...or use a named preset:
+
+```console
+$ dunamai from any --pattern default-unprefixed
+```
+
+```python
+from dunamai import Version, Pattern
+
+version = Version.from_any_vcs(pattern=Pattern.DefaultUnprefixed)
 ```
 
 ## Comparison to Versioneer

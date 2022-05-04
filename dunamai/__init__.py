@@ -80,6 +80,44 @@ class Vcs(Enum):
     Fossil = "fossil"
 
 
+class Pattern(Enum):
+    Default = "default"
+    DefaultUnprefixed = "default-unprefixed"
+
+    def regex(self) -> str:
+        """
+        Get the regular expression for this preset pattern.
+        """
+        variants = {
+            Pattern.Default: VERSION_SOURCE_PATTERN,
+            Pattern.DefaultUnprefixed: VERSION_SOURCE_PATTERN.replace("^v", "^v?", 1),
+        }
+        return variants[self]
+
+    @staticmethod
+    def parse(pattern: Union[str, "Pattern"]) -> str:
+        """
+        Parse a pattern string into a regular expression.
+
+        If the pattern contains the capture group `?P<base>`, then it is
+        returned as-is. Otherwise, it is interpreted as a variant of the
+        `Pattern` enum.
+        """
+        if isinstance(pattern, str) and "?P<base>" in pattern:
+            return pattern
+
+        try:
+            pattern = Pattern(pattern)
+        except ValueError:
+            raise ValueError(
+                (
+                    "The pattern '{}' does not contain the capture group '?P<base>'"
+                    " and is not a known preset like '{}'"
+                ).format(pattern, Pattern.Default.value)
+            )
+        return pattern.regex()
+
+
 def _run_cmd(
     command: str,
     codes: Sequence[int] = (0,),
@@ -119,7 +157,7 @@ _MatchedVersionPattern = NamedTuple(
 
 
 def _match_version_pattern(
-    pattern: str, sources: Sequence[str], latest_source: bool
+    pattern: Union[str, Pattern], sources: Sequence[str], latest_source: bool
 ) -> _MatchedVersionPattern:
     """
     :return: Tuple of:
@@ -138,8 +176,19 @@ def _match_version_pattern(
     tagged_metadata = None
     epoch = None  # type: Optional[Union[str, int]]
 
+    pattern = Pattern.parse(pattern)
+
     for source in sources[:1] if latest_source else sources:
-        pattern_match = re.search(pattern, source)
+        try:
+            pattern_match = re.search(pattern, source)
+        except re.error as e:
+            raise re.error(
+                "Pattern '{}' is an invalid regular expression: {}".format(
+                    pattern, e.msg  # type: ignore
+                ),
+                e.pattern,  # type: ignore
+                e.pos,  # type: ignore
+            )
         if pattern_match is None:
             newer_unmatched_tags.append(source)
             continue
@@ -601,7 +650,7 @@ class Version:
         return out
 
     @classmethod
-    def parse(cls, version: str, pattern: str = VERSION_SOURCE_PATTERN) -> "Version":
+    def parse(cls, version: str, pattern: Union[str, Pattern] = Pattern.Default) -> "Version":
         """
         Attempt to parse a string into a Version instance.
 
@@ -613,8 +662,10 @@ class Version:
             Refer to `from_any_vcs` for more info.
         """
         try:
-            prefixed = version if version.startswith("v") else "v{}".format(version)
-            matched_pattern = _match_version_pattern(pattern, [prefixed], True)
+            normalized = version
+            if not version.startswith("v") and pattern in [VERSION_SOURCE_PATTERN, Pattern.Default]:
+                normalized = "v{}".format(version)
+            matched_pattern = _match_version_pattern(pattern, [normalized], True)
         except ValueError:
             return cls(version)
 
@@ -698,7 +749,9 @@ class Version:
         return bumped
 
     @classmethod
-    def from_git(cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False) -> "Version":
+    def from_git(
+        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+    ) -> "Version":
         r"""
         Determine a version based on Git tags.
 
@@ -788,7 +841,7 @@ class Version:
 
     @classmethod
     def from_mercurial(
-        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -858,7 +911,7 @@ class Version:
 
     @classmethod
     def from_darcs(
-        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
     ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
@@ -916,7 +969,10 @@ class Version:
 
     @classmethod
     def from_subversion(
-        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        tag_dir: str = "tags",
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -994,7 +1050,7 @@ class Version:
 
     @classmethod
     def from_bazaar(
-        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
     ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
@@ -1070,7 +1126,7 @@ class Version:
 
     @classmethod
     def from_fossil(
-        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False
+        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
     ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
@@ -1174,7 +1230,10 @@ class Version:
 
     @classmethod
     def from_any_vcs(
-        cls, pattern: str = VERSION_SOURCE_PATTERN, latest_tag: bool = False, tag_dir: str = "tags"
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        tag_dir: str = "tags",
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1187,6 +1246,10 @@ class Version:
             It may also contain a group named `tagged_metadata` corresponding to extra
             metadata after the main part of the version (typically after a plus sign).
             There may also be a group named `epoch` for the PEP 440 concept.
+
+            If the `base` group is not included, then this will be interpreted
+            as the name of a variant of the `Pattern` enum. For example, passing
+            `"default"` is the same as passing `Pattern.Default`.
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
@@ -1200,7 +1263,7 @@ class Version:
     def from_vcs(
         cls,
         vcs: Vcs,
-        pattern: str = VERSION_SOURCE_PATTERN,
+        pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         tag_dir: str = "tags",
     ) -> "Version":
@@ -1222,7 +1285,9 @@ class Version:
         return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
 
     @classmethod
-    def _do_vcs_callback(cls, vcs: Vcs, pattern: str, latest_tag: bool, tag_dir: str) -> "Version":
+    def _do_vcs_callback(
+        cls, vcs: Vcs, pattern: Union[str, Pattern], latest_tag: bool, tag_dir: str
+    ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
             Vcs.Git: cls.from_git,
