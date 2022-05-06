@@ -295,6 +295,60 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git__gitflow(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-gitflow"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_git)
+    b = "master"
+    b2 = "develop"
+
+    with chdir(vcs):
+        run("git init")
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Initial")
+        run("git tag v0.1.0 -m Release")
+
+        run("git checkout -b develop")
+        (vcs / "foo.txt").write_text("second")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Second")
+
+        run("git checkout -b release/v0.2.0")
+        (vcs / "foo.txt").write_text("bugfix")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Bugfix")
+
+        run("git checkout develop")
+        run("git merge --no-gpg-sign --no-ff release/v0.2.0")
+
+        run("git checkout master")
+        run("git merge --no-gpg-sign --no-ff release/v0.2.0")
+
+        run("git tag v0.2.0 -m Release")
+        assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
+
+        run("git checkout develop")
+        assert from_vcs() == Version("0.1.0", distance=3, dirty=False, branch=b2)
+        assert run('dunamai from any --format "{base}+{distance}"') == "0.1.0+3"
+        assert from_vcs(tag_branch="master") == Version("0.2.0", distance=1, dirty=False, branch=b2)
+        assert run('dunamai from any --tag-branch master --format "{base}+{distance}"') == "0.2.0+1"
+        assert run('dunamai from git --tag-branch master --format "{base}+{distance}"') == "0.2.0+1"
+
+        (vcs / "foo.txt").write_text("feature")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Feature")
+        assert from_vcs() == Version("0.1.0", distance=4, dirty=False, branch=b2)
+        assert from_vcs(tag_branch="master") == Version("0.2.0", distance=2, dirty=False, branch=b2)
+
+        run("git checkout master")
+        assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
+        assert from_vcs(tag_branch="master") == Version("0.2.0", dirty=False, branch=b)
+        assert from_vcs(tag_branch="develop") == Version("0.1.0", distance=3, dirty=False, branch=b)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__not_a_repository(tmp_path) -> None:
     vcs = tmp_path / "dunamai-not-a-repo"
     vcs.mkdir()

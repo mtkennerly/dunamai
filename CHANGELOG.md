@@ -4,6 +4,10 @@
   * `Pattern.Default` (`--pattern default`) for the existing default.
   * `Pattern.DefaultUnprefixed` (`--pattern default-unprefixed`)
     for the existing default, but without requiring the `v` prefix.
+* Added `tag_branch` option (CLI: `--tag-branch`) for Git repositories.
+  This is particularly useful for Gitflow without fast forward, where
+  `develop` does not contain the tag history, so you can specify
+  `--tag-branch master`.
 * Fixed `Version.parse` so that it better handles versions without the `v`
   prefix when the pattern does not (or may not) require it.
 * Fixed error reporting when a custom pattern is an invalid regular expression.

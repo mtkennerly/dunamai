@@ -111,11 +111,26 @@ cli_spec = {
                             "default": "tags",
                             "help": "Location of tags relative to the root (Subversion)",
                         },
+                        {
+                            "triggers": ["--tag-branch"],
+                            "help": (
+                                "Branch on which to find tags, if different than the current branch"
+                                " (Git)"
+                            ),
+                        },
                     ],
                 },
                 Vcs.Git.value: {
                     "description": "Generate version from Git",
-                    "args": common_sub_args,
+                    "args": [
+                        *common_sub_args,
+                        {
+                            "triggers": ["--tag-branch"],
+                            "help": (
+                                "Branch on which to find tags, if different than the current branch"
+                            ),
+                        },
+                    ],
                 },
                 Vcs.Mercurial.value: {
                     "description": "Generate version from Mercurial",
@@ -219,8 +234,9 @@ def from_vcs(
     debug: bool,
     bump: bool,
     tagged_metadata: bool,
+    tag_branch: Optional[str],
 ) -> None:
-    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir)
+    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch)
     print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
@@ -232,6 +248,7 @@ def main() -> None:
     try:
         if args.command == "from":
             tag_dir = getattr(args, "tag_dir", "tags")
+            tag_branch = getattr(args, "tag_branch", None)
             from_vcs(
                 Vcs(args.vcs),
                 args.pattern,
@@ -244,6 +261,7 @@ def main() -> None:
                 args.debug,
                 args.bump,
                 args.tagged_metadata,
+                tag_branch,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

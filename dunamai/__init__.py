@@ -341,9 +341,10 @@ class _GitRefInfo:
             return "refs/tags/{}".format(ref)
 
     @staticmethod
-    def from_git_tag_topo_order() -> Mapping[str, int]:
+    def from_git_tag_topo_order(tag_branch: str) -> Mapping[str, int]:
         code, logmsg = _run_cmd(
-            'git log --simplify-by-decoration --topo-order --decorate=full HEAD "--format=%H%d"'
+            "git log --simplify-by-decoration --topo-order --decorate=full"
+            ' {} "--format=%H%d"'.format(tag_branch)
         )
         tag_lookup = {}
 
@@ -750,7 +751,10 @@ class Version:
 
     @classmethod
     def from_git(
-        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        tag_branch: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -760,8 +764,12 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
+        :param tag_branch: Branch on which to find tags, if different than the
+            current branch.
         """
         _detect_vcs(Vcs.Git)
+        if tag_branch is None:
+            tag_branch = "HEAD"
 
         code, msg = _run_cmd("git symbolic-ref --short HEAD", codes=[0, 128])
         if code == 128:
@@ -786,8 +794,8 @@ class Version:
                 dirty = True
 
         code, msg = _run_cmd(
-            'git for-each-ref "refs/tags/**" --merged HEAD'
-            ' --format "%(refname)'
+            'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
+            + ' --format "%(refname)'
             "@{%(objectname)"
             "@{%(creatordate:iso-strict)"
             "@{%(*committerdate:iso-strict)"
@@ -810,7 +818,7 @@ class Version:
             )
 
         detailed_tags = []  # type: List[_GitRefInfo]
-        tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order()
+        tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch)
 
         for line in msg.strip().splitlines():
             parts = line.split("@{")
@@ -1234,6 +1242,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         tag_dir: str = "tags",
+        tag_branch: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1255,9 +1264,11 @@ class Version:
             until there is a match.
         :param tag_dir: Location of tags relative to the root.
             This is only used for Subversion.
+        :param tag_branch: Branch on which to find tags, if different than the
+            current branch. This is only used for Git currently.
         """
         vcs = _detect_vcs()
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch)
 
     @classmethod
     def from_vcs(
@@ -1266,6 +1277,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         tag_dir: str = "tags",
+        tag_branch: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -1281,12 +1293,19 @@ class Version:
             until there is a match.
         :param tag_dir: Location of tags relative to the root.
             This is only used for Subversion.
+        :param tag_branch: Branch on which to find tags, if different than the
+            current branch. This is only used for Git currently.
         """
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir)
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch)
 
     @classmethod
     def _do_vcs_callback(
-        cls, vcs: Vcs, pattern: Union[str, Pattern], latest_tag: bool, tag_dir: str
+        cls,
+        vcs: Vcs,
+        pattern: Union[str, Pattern],
+        latest_tag: bool,
+        tag_dir: str,
+        tag_branch: Optional[str],
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -1297,7 +1316,9 @@ class Version:
             Vcs.Bazaar: cls.from_bazaar,
             Vcs.Fossil: cls.from_fossil,
         }  # type: Mapping[Vcs, Callable[..., "Version"]]
-        kwargs = {"pattern": pattern, "latest_tag": latest_tag}
+        kwargs = {"pattern": pattern, "latest_tag": latest_tag}  # type: dict
+        if vcs in [Vcs.Any, Vcs.Git]:
+            kwargs["tag_branch"] = tag_branch
         if vcs == Vcs.Subversion:
             kwargs["tag_dir"] = tag_dir
         return mapping[vcs](**kwargs)
