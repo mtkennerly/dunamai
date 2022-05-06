@@ -93,26 +93,25 @@ common_sub_args = [
             " Does nothing when on a commit with a version tag."
         ),
     },
-]
-git_sub_args = [
     {
-        "triggers": ["--tag-branch"],
-        "help": "Branch on which to find tags, if different than the current branch (only: Git)",
-    },
-    {
+        "vcs": [Vcs.Git],
         "triggers": ["--full-commit"],
         "action": "store_true",
         "dest": "full_commit",
         "default": False,
-        "help": "Get the full commit hash instead of the short form (only: Git)",
+        "help": "Get the full commit hash instead of the short form",
     },
-]
-subversion_sub_args = [
     {
+        "vcs": [Vcs.Git],
+        "triggers": ["--tag-branch"],
+        "help": "Branch on which to find tags, if different than the current branch",
+    },
+    {
+        "vcs": [Vcs.Subversion],
         "triggers": ["--tag-dir"],
         "default": "tags",
-        "help": "Location of tags relative to the root (only: Subversion)",
-    }
+        "help": "Location of tags relative to the root",
+    },
 ]
 cli_spec = {
     "description": "Generate dynamic versions",
@@ -124,11 +123,11 @@ cli_spec = {
             "sub": {
                 Vcs.Any.value: {
                     "description": "Generate version from any detected VCS",
-                    "args": [*common_sub_args, *git_sub_args, *subversion_sub_args],
+                    "args": common_sub_args,
                 },
                 Vcs.Git.value: {
                     "description": "Generate version from Git",
-                    "args": [*common_sub_args, *git_sub_args],
+                    "args": common_sub_args,
                 },
                 Vcs.Mercurial.value: {
                     "description": "Generate version from Mercurial",
@@ -140,7 +139,7 @@ cli_spec = {
                 },
                 Vcs.Subversion.value: {
                     "description": "Generate version from Subversion",
-                    "args": [*common_sub_args, *subversion_sub_args],
+                    "args": common_sub_args,
                 },
                 Vcs.Bazaar.value: {
                     "description": "Generate version from Bazaar",
@@ -174,7 +173,7 @@ cli_spec = {
 
 
 def build_parser(
-    spec: Mapping, parser: Optional[argparse.ArgumentParser] = None
+    spec: Mapping, parser: Optional[argparse.ArgumentParser] = None, vcs: Optional[Vcs] = None
 ) -> argparse.ArgumentParser:
     if parser is None:
         parser = argparse.ArgumentParser(
@@ -182,8 +181,17 @@ def build_parser(
         )
     if "args" in spec:
         for arg in spec["args"]:
+            help = arg["help"]
+            if "vcs" in arg:
+                if vcs not in [*arg["vcs"], Vcs.Any]:
+                    continue
+                help += " (only: {})".format(", ".join([x.name for x in arg["vcs"]]))
             triggers = arg["triggers"]
-            parser.add_argument(*triggers, **{k: v for k, v in arg.items() if k != "triggers"})
+            parser.add_argument(
+                *triggers,
+                help=help,
+                **{k: v for k, v in arg.items() if k not in ["triggers", "help", "vcs"]}
+            )
     if "sub" in spec:
         subparsers = parser.add_subparsers(dest=spec["sub_dest"])
         subparsers.required = True
@@ -194,7 +202,7 @@ def build_parser(
                 help=sub_spec.get("description"),
                 formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             )
-            build_parser(sub_spec, subparser)
+            build_parser(sub_spec, subparser, Vcs(name) if spec["sub_dest"] == "vcs" else None)
 
     return parser
 
