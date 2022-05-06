@@ -12,7 +12,8 @@
   to obtain the full commit hash instead of the short form.
 * Fixed `Version.parse` so that it better handles versions without the `v`
   prefix when the pattern does not (or may not) require it.
-* Fixed error reporting when a custom pattern is an invalid regular expression.
+* Fixed error reporting when a custom pattern is an invalid regular expression,
+  as well as when a custom format is malformed.
   It was fine when Dunamai was used as a library, but the error message lacked
   context on the CLI.
 * Fixed `from any` not passing the `--tag-dir` option along for Subversion

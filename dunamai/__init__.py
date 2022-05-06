@@ -570,19 +570,24 @@ class Version:
                 new_version.revision = revision
                 out = format(new_version)
             else:
-                out = format.format(
-                    base=base,
-                    stage=_blank(self.stage, ""),
-                    revision=_blank(revision, ""),
-                    distance=_blank(self.distance, ""),
-                    commit=_blank(self.commit, ""),
-                    tagged_metadata=_blank(self.tagged_metadata, ""),
-                    dirty="dirty" if self.dirty else "clean",
-                    epoch=_blank(self.epoch, ""),
-                    branch=_blank(self.branch, ""),
-                    branch_escaped=_escape_branch(_blank(self.branch, "")),
-                    timestamp=self.timestamp.strftime("%Y%m%d%H%M%S") if self.timestamp else "",
-                )
+                try:
+                    out = format.format(
+                        base=base,
+                        stage=_blank(self.stage, ""),
+                        revision=_blank(revision, ""),
+                        distance=_blank(self.distance, ""),
+                        commit=_blank(self.commit, ""),
+                        tagged_metadata=_blank(self.tagged_metadata, ""),
+                        dirty="dirty" if self.dirty else "clean",
+                        epoch=_blank(self.epoch, ""),
+                        branch=_blank(self.branch, ""),
+                        branch_escaped=_escape_branch(_blank(self.branch, "")),
+                        timestamp=self.timestamp.strftime("%Y%m%d%H%M%S") if self.timestamp else "",
+                    )
+                except KeyError as e:
+                    raise KeyError("Format contains invalid placeholder: {}".format(e))
+                except ValueError as e:
+                    raise ValueError("Format is invalid: {}".format(e))
             if style is not None:
                 check_version(out, style)
             return out
