@@ -27,6 +27,7 @@ def test__parse_args__from():
     assert parse_args(["from", "git", "--tag-branch", "foo"]).tag_branch == "foo"
     assert parse_args(["from", "git", "--full-commit"]).full_commit is True
     assert parse_args(["from", "mercurial"]).vcs == "mercurial"
+    assert parse_args(["from", "mercurial", "--full-commit"]).full_commit is True
     assert parse_args(["from", "darcs"]).vcs == "darcs"
     assert parse_args(["from", "subversion"]).vcs == "subversion"
     assert parse_args(["from", "subversion"]).tag_dir == "tags"

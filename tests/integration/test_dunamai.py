@@ -382,6 +382,12 @@ def test__version__from_mercurial(tmp_path) -> None:
         run("hg add .")
         run('hg commit -m "Initial commit"')
         assert from_vcs() == Version("0.0.0", distance=1, dirty=False, branch=b)
+        assert run('dunamai from mercurial --format "{commit}"') != run(
+            'dunamai from mercurial --format "{commit}" --full-commit'
+        )
+        assert run('dunamai from any --format "{commit}"') != run(
+            'dunamai from any --format "{commit}" --full-commit'
+        )
 
         run("hg tag v0.1.0")
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
