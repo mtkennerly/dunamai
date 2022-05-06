@@ -4,7 +4,7 @@
   * `Pattern.Default` (`--pattern default`) for the existing default.
   * `Pattern.DefaultUnprefixed` (`--pattern default-unprefixed`)
     for the existing default, but without requiring the `v` prefix.
-* Added `tag_branch` option (CLI: `--tag-branch`) for Git repositories.
+* Added `tag_branch` option (CLI: `--tag-branch`) for Git and Mercurial repositories.
   This is particularly useful for Gitflow without fast forward, where
   `develop` does not contain the tag history, so you can specify
   `--tag-branch master`.

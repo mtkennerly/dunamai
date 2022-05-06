@@ -94,7 +94,7 @@ common_sub_args = [
         ),
     },
     {
-        "vcs": [Vcs.Git],
+        "vcs": [Vcs.Git, Vcs.Mercurial],
         "triggers": ["--full-commit"],
         "action": "store_true",
         "dest": "full_commit",

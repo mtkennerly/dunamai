@@ -12,6 +12,7 @@ __all__ = [
 
 import copy
 import datetime as dt
+import inspect
 import re
 import shlex
 import shutil
@@ -854,7 +855,10 @@ class Version:
 
     @classmethod
     def from_mercurial(
-        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        full_commit: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -864,6 +868,7 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
+        :param full_commit: Get the full commit hash instead of the short form.
         """
         _detect_vcs(Vcs.Mercurial)
 
@@ -873,7 +878,9 @@ class Version:
         code, msg = _run_cmd("hg branch")
         branch = msg
 
-        code, msg = _run_cmd('hg id --template "{id|short}"')
+        code, msg = _run_cmd(
+            'hg id --template "{}"'.format("{id}" if full_commit else "{id|short}")
+        )
         commit = msg if set(msg) != {"0"} else None
 
         code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"')
@@ -1329,12 +1336,15 @@ class Version:
             Vcs.Fossil: cls.from_fossil,
         }  # type: Mapping[Vcs, Callable[..., "Version"]]
         kwargs = {"pattern": pattern, "latest_tag": latest_tag}  # type: dict
-        if vcs in [Vcs.Any, Vcs.Git]:
-            kwargs["tag_branch"] = tag_branch
-            kwargs["full_commit"] = full_commit
-        if vcs in [Vcs.Any, Vcs.Subversion]:
-            kwargs["tag_dir"] = tag_dir
-        return mapping[vcs](**kwargs)
+        callback = mapping[vcs]
+        for kwarg, value in [
+            ("tag_branch", tag_branch),
+            ("full_commit", full_commit),
+            ("tag_dir", tag_dir),
+        ]:
+            if kwarg in inspect.getfullargspec(callback).args:
+                kwargs[kwarg] = value
+        return callback(**kwargs)
 
 
 def check_version(version: str, style: Style = Style.Pep440) -> None:
