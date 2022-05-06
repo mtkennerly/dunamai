@@ -121,6 +121,12 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert from_explicit_vcs(Vcs.Any) == Version("0.1.0", dirty=False, branch=b)
         assert from_explicit_vcs(Vcs.Git) == Version("0.1.0", dirty=False, branch=b)
         assert run("dunamai from any --bump") == "0.1.0"
+        assert run('dunamai from git --format "{commit}"') != run(
+            'dunamai from git --format "{commit}" --full-commit'
+        )
+        assert run('dunamai from any --format "{commit}"') != run(
+            'dunamai from any --format "{commit}" --full-commit'
+        )
 
         # Verify tags with '/' work
         run("git tag test/v0.1.0")

@@ -755,6 +755,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         tag_branch: Optional[str] = None,
+        full_commit: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -766,6 +767,7 @@ class Version:
             until there is a match.
         :param tag_branch: Branch on which to find tags, if different than the
             current branch.
+        :param full_commit: Get the full commit hash instead of the short form.
         """
         _detect_vcs(Vcs.Git)
         if tag_branch is None:
@@ -777,7 +779,10 @@ class Version:
         else:
             branch = msg
 
-        code, msg = _run_cmd('git log -n 1 --format="format:%h"', codes=[0, 128])
+        code, msg = _run_cmd(
+            'git log -n 1 --format="format:{}"'.format("%H" if full_commit else "%h"),
+            codes=[0, 128],
+        )
         if code == 128:
             return cls("0.0.0", distance=0, dirty=True, branch=branch)
         commit = msg
@@ -1243,6 +1248,7 @@ class Version:
         latest_tag: bool = False,
         tag_dir: str = "tags",
         tag_branch: Optional[str] = None,
+        full_commit: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1266,9 +1272,11 @@ class Version:
             This is only used for Subversion.
         :param tag_branch: Branch on which to find tags, if different than the
             current branch. This is only used for Git currently.
+        :param full_commit: Get the full commit hash instead of the short form.
+            This is only used for Git currently.
         """
         vcs = _detect_vcs()
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch)
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
 
     @classmethod
     def from_vcs(
@@ -1278,6 +1286,7 @@ class Version:
         latest_tag: bool = False,
         tag_dir: str = "tags",
         tag_branch: Optional[str] = None,
+        full_commit: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -1295,8 +1304,10 @@ class Version:
             This is only used for Subversion.
         :param tag_branch: Branch on which to find tags, if different than the
             current branch. This is only used for Git currently.
+        :param full_commit: Get the full commit hash instead of the short form.
+            This is only used for Git currently.
         """
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch)
+        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
 
     @classmethod
     def _do_vcs_callback(
@@ -1306,6 +1317,7 @@ class Version:
         latest_tag: bool,
         tag_dir: str,
         tag_branch: Optional[str],
+        full_commit: bool,
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -1319,6 +1331,7 @@ class Version:
         kwargs = {"pattern": pattern, "latest_tag": latest_tag}  # type: dict
         if vcs in [Vcs.Any, Vcs.Git]:
             kwargs["tag_branch"] = tag_branch
+            kwargs["full_commit"] = full_commit
         if vcs in [Vcs.Any, Vcs.Subversion]:
             kwargs["tag_dir"] = tag_dir
         return mapping[vcs](**kwargs)

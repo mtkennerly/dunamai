@@ -94,6 +94,26 @@ common_sub_args = [
         ),
     },
 ]
+git_sub_args = [
+    {
+        "triggers": ["--tag-branch"],
+        "help": "Branch on which to find tags, if different than the current branch (only: Git)",
+    },
+    {
+        "triggers": ["--full-commit"],
+        "action": "store_true",
+        "dest": "full_commit",
+        "default": False,
+        "help": "Get the full commit hash instead of the short form (only: Git)",
+    },
+]
+subversion_sub_args = [
+    {
+        "triggers": ["--tag-dir"],
+        "default": "tags",
+        "help": "Location of tags relative to the root (only: Subversion)",
+    }
+]
 cli_spec = {
     "description": "Generate dynamic versions",
     "sub_dest": "command",
@@ -104,33 +124,11 @@ cli_spec = {
             "sub": {
                 Vcs.Any.value: {
                     "description": "Generate version from any detected VCS",
-                    "args": [
-                        *common_sub_args,
-                        {
-                            "triggers": ["--tag-dir"],
-                            "default": "tags",
-                            "help": "Location of tags relative to the root (Subversion)",
-                        },
-                        {
-                            "triggers": ["--tag-branch"],
-                            "help": (
-                                "Branch on which to find tags, if different than the current branch"
-                                " (Git)"
-                            ),
-                        },
-                    ],
+                    "args": [*common_sub_args, *git_sub_args, *subversion_sub_args],
                 },
                 Vcs.Git.value: {
                     "description": "Generate version from Git",
-                    "args": [
-                        *common_sub_args,
-                        {
-                            "triggers": ["--tag-branch"],
-                            "help": (
-                                "Branch on which to find tags, if different than the current branch"
-                            ),
-                        },
-                    ],
+                    "args": [*common_sub_args, *git_sub_args],
                 },
                 Vcs.Mercurial.value: {
                     "description": "Generate version from Mercurial",
@@ -142,14 +140,7 @@ cli_spec = {
                 },
                 Vcs.Subversion.value: {
                     "description": "Generate version from Subversion",
-                    "args": [
-                        *common_sub_args,
-                        {
-                            "triggers": ["--tag-dir"],
-                            "default": "tags",
-                            "help": "Location of tags relative to the root",
-                        },
-                    ],
+                    "args": [*common_sub_args, *subversion_sub_args],
                 },
                 Vcs.Bazaar.value: {
                     "description": "Generate version from Bazaar",
@@ -235,8 +226,9 @@ def from_vcs(
     bump: bool,
     tagged_metadata: bool,
     tag_branch: Optional[str],
+    full_commit: bool,
 ) -> None:
-    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch)
+    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
     print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
@@ -249,6 +241,7 @@ def main() -> None:
         if args.command == "from":
             tag_dir = getattr(args, "tag_dir", "tags")
             tag_branch = getattr(args, "tag_branch", None)
+            full_commit = getattr(args, "full_commit", False)
             from_vcs(
                 Vcs(args.vcs),
                 args.pattern,
@@ -262,6 +255,7 @@ def main() -> None:
                 args.bump,
                 args.tagged_metadata,
                 tag_branch,
+                full_commit,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

@@ -8,6 +8,8 @@
   This is particularly useful for Gitflow without fast forward, where
   `develop` does not contain the tag history, so you can specify
   `--tag-branch master`.
+* Added `full_commit` option (CLI: `--full-commit`) for Git repositories
+  to obtain the full commit hash instead of the short form.
 * Fixed `Version.parse` so that it better handles versions without the `v`
   prefix when the pattern does not (or may not) require it.
 * Fixed error reporting when a custom pattern is an invalid regular expression.

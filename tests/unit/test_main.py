@@ -21,9 +21,11 @@ def test__parse_args__from():
         bump=False,
         tagged_metadata=False,
         tag_branch=None,
+        full_commit=False,
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "git", "--tag-branch", "foo"]).tag_branch == "foo"
+    assert parse_args(["from", "git", "--full-commit"]).full_commit is True
     assert parse_args(["from", "mercurial"]).vcs == "mercurial"
     assert parse_args(["from", "darcs"]).vcs == "darcs"
     assert parse_args(["from", "subversion"]).vcs == "subversion"
@@ -40,6 +42,7 @@ def test__parse_args__from():
     assert parse_args(["from", "any", "--latest-tag"]).latest_tag is True
     assert parse_args(["from", "any", "--tag-dir", "foo"]).tag_dir == "foo"
     assert parse_args(["from", "any", "--tag-branch", "foo"]).tag_branch == "foo"
+    assert parse_args(["from", "any", "--full-commit"]).full_commit is True
     assert parse_args(["from", "any", "--debug"]).debug is True
     assert parse_args(["from", "any", "--tagged-metadata"]).tagged_metadata is True
     assert parse_args(["from", "subversion", "--tag-dir", "foo"]).tag_dir == "foo"
