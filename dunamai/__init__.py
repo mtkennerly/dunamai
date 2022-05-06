@@ -1319,7 +1319,7 @@ class Version:
         kwargs = {"pattern": pattern, "latest_tag": latest_tag}  # type: dict
         if vcs in [Vcs.Any, Vcs.Git]:
             kwargs["tag_branch"] = tag_branch
-        if vcs == Vcs.Subversion:
+        if vcs in [Vcs.Any, Vcs.Subversion]:
             kwargs["tag_dir"] = tag_dir
         return mapping[vcs](**kwargs)
 
