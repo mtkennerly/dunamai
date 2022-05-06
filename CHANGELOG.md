@@ -1,8 +1,8 @@
 ## v1.12.0 (2022-05-07)
 
 * Added `Pattern` type for named pattern presets. Currently, this includes:
-  * `Pattern.Default` (`--pattern default`) for the existing default.
-  * `Pattern.DefaultUnprefixed` (`--pattern default-unprefixed`)
+  * `Pattern.Default` (CLI: `--pattern default`) for the existing default.
+  * `Pattern.DefaultUnprefixed` (CLI: `--pattern default-unprefixed`)
     for the existing default, but without requiring the `v` prefix.
 * Added `tag_branch` option (CLI: `--tag-branch`) for Git repositories.
   This is particularly useful for Gitflow without fast forward, where
