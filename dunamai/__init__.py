@@ -1285,7 +1285,7 @@ class Version:
         :param tag_branch: Branch on which to find tags, if different than the
             current branch. This is only used for Git currently.
         :param full_commit: Get the full commit hash instead of the short form.
-            This is only used for Git currently.
+            This is only used for Git and Mercurial.
         """
         vcs = _detect_vcs()
         return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
@@ -1317,7 +1317,7 @@ class Version:
         :param tag_branch: Branch on which to find tags, if different than the
             current branch. This is only used for Git currently.
         :param full_commit: Get the full commit hash instead of the short form.
-            This is only used for Git currently.
+            This is only used for Git and Mercurial.
         """
         return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
 

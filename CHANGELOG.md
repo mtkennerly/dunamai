@@ -1,4 +1,4 @@
-## Unreleased
+## v1.12.0 (2022-05-07)
 
 * Added `Pattern` type for named pattern presets. Currently, this includes:
   * `Pattern.Default` (`--pattern default`) for the existing default.
