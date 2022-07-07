@@ -1,8 +1,5 @@
 
 # Dunamai
-[![Version](https://img.shields.io/pypi/v/dunamai)](https://pypi.org/project/dunamai)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 Dunamai is a Python 3.5+ library and command line tool for producing dynamic,
 standards-compliant version strings, derived from tags in your version
 control system. This facilitates uniquely identifying nightly or per-commit
