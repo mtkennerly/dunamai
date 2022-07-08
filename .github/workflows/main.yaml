@@ -40,6 +40,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - if: ${{ matrix.git-version != 'default' }}
         run: |
+          sudo apt-get update
           sudo apt-get install dh-autoreconf libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev
           curl -o git.tar.gz https://mirrors.edge.kernel.org/pub/software/scm/git/git-${{ matrix.git-version }}.tar.gz
           tar -zxf git.tar.gz
