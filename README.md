@@ -126,6 +126,34 @@ from dunamai import Version, Pattern
 version = Version.from_any_vcs(pattern=Pattern.DefaultUnprefixed)
 ```
 
+### Custom formats
+Here are the available substitutions for custom formats. If you have a tag like
+`v9!0.1.2-beta.3+other`, then:
+
+* `{base}` = `0.1.2`
+* `{stage}` = `beta`
+* `{revision}` = `3`
+* `{distance}` is the number of commits since the last
+* `{commit}` is the commit hash (defaults to short form, unless you use `--full-commit`)
+* `{dirty}` expands to either "dirty" or "clean" if you have uncommitted modified files
+* `{tagged_metadata}` = `other`
+* `{epoch}` = `9`
+* `{branch}` = `feature/foo`
+* `{branch_escaped}` = `featurefoo`
+* `{timestamp}` is in the format `YYYYmmddHHMMSS` as UTC
+
+If you specify a substitution, its value will always be included in the output.
+For conditional formatting, you can do something like this (Bash):
+
+```bash
+distance=$(dunamai from any --format "{distance}")
+if [ "$distance" = "0" ]; then
+    dunamai from any --format "v{base}"
+else
+    dunamai from any --format "v{base}+{distance}.{dirty}"
+fi
+```
+
 ## Comparison to Versioneer
 [Versioneer](https://github.com/warner/python-versioneer) is another great
 library for dynamic versions, but there are some design decisions that
