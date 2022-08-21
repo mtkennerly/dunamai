@@ -55,11 +55,6 @@ jobs:
           sudo make install
           which git
           git --version
-      - uses: actions-rs/cargo@v1
-        with:
-          command: install
-          # Same as default features, but without openssl:
-          args: pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
       - run: |
           export PATH="$PATH:/opt"
           sudo apt-get update
@@ -70,6 +65,11 @@ jobs:
           # rehosted because the official site deletes older artifacts:
           curl -L -o ~/fossil.tgz https://github.com/mtkennerly/storage/raw/06e29a4005b24a65bc7d639c0aa1fc152a85d0b7/software/fossil-linux-x64-2.13.tar.gz
           tar -xvf ~/fossil.tgz -C /opt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          # Same as default features, but without openssl:
+          args: pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
       - name: Prepare Pijul
         run: |
           expect -c 'spawn pijul key generate test ; expect "Password for the new key (press enter to leave it unencrypted):" ; send -- "\r" ; expect eof'
