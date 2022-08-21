@@ -16,6 +16,7 @@ Dunamai is also available as a [GitHub Action](https://github.com/marketplace/ac
   * [Subversion](https://subversion.apache.org)
   * [Bazaar](https://bazaar.canonical.com/en)
   * [Fossil](https://www.fossil-scm.org/home/doc/trunk/www/index.wiki)
+  * [Pijul](https://pijul.org)
 * Version styles:
   * [PEP 440](https://www.python.org/dev/peps/pep-0440)
   * [Semantic Versioning](https://semver.org)

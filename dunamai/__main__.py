@@ -149,6 +149,10 @@ cli_spec = {
                     "description": "Generate version from Fossil",
                     "args": common_sub_args,
                 },
+                Vcs.Pijul.value: {
+                    "description": "Generate version from Pijul",
+                    "args": common_sub_args,
+                },
             },
         },
         "check": {

@@ -13,6 +13,7 @@ __all__ = [
 import copy
 import datetime as dt
 import inspect
+import json
 import re
 import shlex
 import shutil
@@ -79,6 +80,7 @@ class Vcs(Enum):
     Subversion = "subversion"
     Bazaar = "bazaar"
     Fossil = "fossil"
+    Pijul = "pijul"
 
 
 class Pattern(Enum):
@@ -254,6 +256,7 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
             (Vcs.Subversion, "svn log"),
             (Vcs.Bazaar, "bzr status"),
             (Vcs.Fossil, "fossil status"),
+            (Vcs.Pijul, "pijul log"),
         ]
     )
 
@@ -1028,8 +1031,7 @@ class Version:
         timestamp = None
         if commit:
             code, msg = _run_cmd("svn info --show-item last-changed-date")
-            # Normalize "Z" for pre-3.7 compatibility:
-            timestamp = dt.datetime.strptime(re.sub(r"Z$", "+0000", msg), "%Y-%m-%dT%H:%M:%S.%f%z")
+            timestamp = _parse_timestamp(msg)
 
         if not commit:
             return cls("0.0.0", distance=0, commit=commit, dirty=dirty, timestamp=timestamp)
@@ -1254,6 +1256,133 @@ class Version:
         return version
 
     @classmethod
+    def from_pijul(
+        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+    ) -> "Version":
+        r"""
+        Determine a version based on Pijul tags.
+
+        :param pattern: Regular expression matched against the version source.
+            Refer to `from_any_vcs` for more info.
+        :param latest_tag: If true, only inspect the latest tag on the latest
+            tagged commit for a pattern match. If false, keep looking at tags
+            until there is a match.
+        """
+        _detect_vcs(Vcs.Pijul)
+
+        code, msg = _run_cmd("pijul diff --short")
+        dirty = msg.strip() != ""
+
+        code, msg = _run_cmd("pijul channel")
+        branch = "main"
+        for line in msg.splitlines():
+            if line.startswith("* "):
+                branch = line.split("* ", 1)[1]
+                break
+
+        code, msg = _run_cmd("pijul log --limit 1 --output-format json")
+        limited_commits = json.loads(msg)
+        if len(limited_commits) == 0:
+            return cls("0.0.0", dirty=dirty, branch=branch)
+
+        commit = limited_commits[0]["hash"]
+        timestamp = _parse_timestamp(limited_commits[0]["timestamp"])
+
+        code, msg = _run_cmd("pijul log --output-format json")
+        channel_commits = json.loads(msg)
+
+        code, msg = _run_cmd("pijul tag")
+        if not msg:
+            # The channel creation is in the list, so offset by 1.
+            distance = len(channel_commits) - 1
+            return cls(
+                "0.0.0",
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+            )
+
+        tag_meta = []  # type: List[dict]
+        tag_state = ""
+        tag_timestamp = dt.datetime.now()
+        tag_message = ""
+        tag_after_header = False
+        for line in msg.splitlines():
+            if not tag_after_header:
+                if line.startswith("State "):
+                    tag_state = line.split("State ", 1)[1]
+                elif line.startswith("Date:"):
+                    tag_timestamp = _parse_timestamp(
+                        line.split("Date: ", 1)[1].replace(" UTC", "Z"), space=True
+                    )
+                elif line.startswith("    "):
+                    tag_message += line[4:]
+                    tag_after_header = True
+            else:
+                if line.startswith("State "):
+                    tag_meta.append(
+                        {
+                            "state": tag_state,
+                            "timestamp": tag_timestamp,
+                            "message": tag_message.strip(),
+                        }
+                    )
+
+                    tag_state = line.split("State ", 1)[1]
+                    tag_timestamp = dt.datetime.now()
+                    tag_message = ""
+                    tag_after_header = False
+                else:
+                    tag_message += line
+        if tag_after_header:
+            tag_meta.append(
+                {"state": tag_state, "timestamp": tag_timestamp, "message": tag_message.strip()}
+            )
+
+        tag_meta_by_msg = {}  # type: dict
+        for meta in tag_meta:
+            if (
+                meta["message"] not in tag_meta_by_msg
+                or meta["timestamp"] > tag_meta_by_msg[meta["message"]]["timestamp"]
+            ):
+                tag_meta_by_msg[meta["message"]] = meta
+
+        tags = [
+            t["message"]
+            for t in sorted(tag_meta_by_msg.values(), key=lambda x: x["timestamp"], reverse=True)
+        ]
+        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
+            pattern, tags, latest_tag
+        )
+
+        tag_id = tag_meta_by_msg[tag]["state"]
+        _run_cmd("pijul tag checkout {}".format(tag_id), codes=[0, 1])
+        code, msg = _run_cmd("pijul log --output-format json --channel {}".format(tag_id))
+        if msg.strip() == "":
+            tag_commits = []  # type: list
+        else:
+            tag_commits = json.loads(msg)
+
+        distance = len(channel_commits) - len(tag_commits)
+
+        version = cls(
+            base,
+            stage=stage,
+            distance=distance,
+            commit=commit,
+            dirty=dirty,
+            tagged_metadata=tagged_metadata,
+            epoch=epoch,
+            branch=branch,
+            timestamp=timestamp,
+        )
+        version._matched_tag = tag
+        version._newer_unmatched_tags = unmatched
+        return version
+
+    @classmethod
     def from_any_vcs(
         cls,
         pattern: Union[str, Pattern] = Pattern.Default,
@@ -1339,6 +1468,7 @@ class Version:
             Vcs.Subversion: cls.from_subversion,
             Vcs.Bazaar: cls.from_bazaar,
             Vcs.Fossil: cls.from_fossil,
+            Vcs.Pijul: cls.from_pijul,
         }  # type: Mapping[Vcs, Callable[..., "Version"]]
         kwargs = {"pattern": pattern, "latest_tag": latest_tag}  # type: dict
         callback = mapping[vcs]
@@ -1557,6 +1687,20 @@ def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
     return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
+
+
+def _parse_timestamp(raw: str, space: bool = False) -> dt.datetime:
+    if space:
+        format = "%Y-%m-%d %H:%M:%S.%f%z"
+    else:
+        format = "%Y-%m-%dT%H:%M:%S.%f%z"
+
+    # Normalize "Z" for pre-3.7 compatibility:
+    normalized = re.sub(r"Z$", "+0000", raw)
+    # Truncate %f to six digits:
+    normalized = re.sub(r"\.(\d{6})\d+\+0000", r".\g<1>+0000", normalized)
+
+    return dt.datetime.strptime(normalized, format)
 
 
 __version__ = get_version("dunamai").serialize()

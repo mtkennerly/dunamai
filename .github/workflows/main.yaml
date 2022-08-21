@@ -38,6 +38,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - if: ${{ matrix.git-version != 'default' }}
         run: |
           sudo apt-get update
@@ -50,13 +55,26 @@ jobs:
           sudo make install
           which git
           git --version
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          # Same as default features, but without openssl:
+          args: pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
       - run: |
           export PATH="$PATH:/opt"
+          sudo apt-get update
           sudo apt-get install -y darcs bzr
+          # For Pijul:
+          sudo apt-get install -y libxxhash-dev libzstd-dev expect
 
           # rehosted because the official site deletes older artifacts:
           curl -L -o ~/fossil.tgz https://github.com/mtkennerly/storage/raw/06e29a4005b24a65bc7d639c0aa1fc152a85d0b7/software/fossil-linux-x64-2.13.tar.gz
           tar -xvf ~/fossil.tgz -C /opt
+      - name: Prepare Pijul
+        run: |
+          expect -c 'spawn pijul key generate test ; expect "Password for the new key (press enter to leave it unencrypted):" ; send -- "\r" ; expect eof'
+      - run: |
+          export PATH="$PATH:/opt"
 
           git config --global user.name "foo"
           git config --global user.email "foo@example.com"

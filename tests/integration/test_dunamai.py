@@ -674,3 +674,42 @@ def test__version__from_fossil(tmp_path) -> None:
         run("fossil checkout v0.1.0")
         assert from_vcs() == Version("0.1.1", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False, branch=b)
+
+
+@pytest.mark.skipif(shutil.which("pijul") is None, reason="Requires Pijul")
+def test__version__from_pijul(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-pijul"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_pijul)
+    b = "main"
+
+    with chdir(vcs):
+        run("pijul init")
+        assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
+
+        (vcs / "foo.txt").write_text("hi")
+        assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
+
+        run("pijul add foo.txt")
+        assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
+        run('pijul record . -am "Initial commit"')
+        assert from_vcs() == Version("0.0.0", distance=1, dirty=False, branch=b)
+
+        run("pijul tag create -m v0.1.0")
+        assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
+        assert from_vcs(latest_tag=True) == Version("0.1.0", dirty=False, branch=b)
+        assert run("dunamai from pijul") == "0.1.0"
+        assert run("dunamai from any") == "0.1.0"
+
+        (vcs / "foo.txt").write_text("bye")
+        assert from_vcs() == Version("0.1.0", dirty=True, branch=b)
+
+        run('pijul record . -am "Second"')
+        assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
+        assert from_any_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
+
+        run("pijul tag create -m unmatched")
+        assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
+        with pytest.raises(ValueError):
+            from_vcs(latest_tag=True)
