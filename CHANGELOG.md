@@ -1,4 +1,4 @@
-## Unreleased
+## v1.13.0 (2022-08-21)
 
 * Added support for [Pijul](https://pijul.org).
 
