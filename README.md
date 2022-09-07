@@ -216,26 +216,10 @@ prompted the creation of Dunamai as an alternative:
   Or you can use the [poetry-dynamic-versioning](https://github.com/mtkennerly/poetry-dynamic-versioning) plugin.
 
 ## Other notes
+* When using Git, remember that lightweight tags do not store their creation time.
+  Therefore, if a commit has multiple lightweight tags,
+  we cannot reliably determine which one should be considered the newest.
+  The solution is to use annotated tags instead.
 * When using Git, the initial commit must **not** be both tagged and empty
   (i.e., created with `--allow-empty`). This is related to a reporting issue
   in Git. For more info, [click here](https://github.com/mtkennerly/dunamai/issues/14).
-
-## Development
-This project is managed using [Poetry](https://poetry.eustace.io).
-Development requires Python 3.6+ because of [Black](https://github.com/ambv/black).
-
-* If you want to take advantage of the default VSCode integration, then first
-  configure Poetry to make its virtual environment in the repository:
-  ```
-  poetry config virtualenvs.in-project true
-  ```
-* After cloning the repository, activate the tooling:
-  ```
-  poetry install
-  poetry run pre-commit install
-  ```
-* Run unit tests:
-  ```
-  poetry run pytest --cov
-  poetry run tox
-  ```
