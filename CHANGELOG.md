@@ -1,4 +1,4 @@
-## Unreleased
+## v1.13.1 (2022-09-25)
 
 * Made pattern-related error messages more readable by moving the pattern after
   the primary message instead of mixing them.
