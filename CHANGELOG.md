@@ -1,3 +1,8 @@
+## Unreleased
+
+* Made pattern-related error messages more readable by moving the pattern after
+  the primary message instead of mixing them.
+
 ## v1.13.0 (2022-08-21)
 
 * Added support for [Pijul](https://pijul.org).

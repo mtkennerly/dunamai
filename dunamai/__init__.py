@@ -113,12 +113,26 @@ class Pattern(Enum):
             pattern = Pattern(pattern)
         except ValueError:
             raise ValueError(
-                (
-                    "The pattern '{}' does not contain the capture group '?P<base>'"
-                    " and is not a known preset like '{}'"
-                ).format(pattern, Pattern.Default.value)
+                _pattern_error(
+                    (
+                        "The pattern does not contain the capture group '?P<base>'"
+                        " and is not a known preset like '{}'".format(Pattern.Default.value)
+                    ),
+                    pattern,
+                )
             )
         return pattern.regex()
+
+
+def _pattern_error(
+    primary: str, pattern: Union[str, Pattern], tags: Optional[Sequence[str]] = None
+) -> str:
+    parts = [primary, "Pattern:\n{}".format(pattern)]
+
+    if tags is not None:
+        parts.append("Tags:\n{}".format(tags))
+
+    return "\n\n".join(parts)
 
 
 def _run_cmd(
@@ -186,8 +200,11 @@ def _match_version_pattern(
             pattern_match = re.search(pattern, source)
         except re.error as e:
             raise re.error(
-                "Pattern '{}' is an invalid regular expression: {}".format(
-                    pattern, e.msg  # type: ignore
+                _pattern_error(
+                    "The pattern is an invalid regular expression: {}".format(
+                        e.msg  # type: ignore
+                    ),
+                    pattern,
                 ),
                 e.pattern,  # type: ignore
                 e.pos,  # type: ignore
@@ -201,17 +218,19 @@ def _match_version_pattern(
                 break
         except IndexError:
             raise ValueError(
-                "Pattern '{}' did not include required capture group 'base'".format(pattern)
+                _pattern_error("The pattern did not include required capture group 'base'", pattern)
             )
     if pattern_match is None or base is None:
         if latest_source:
             raise ValueError(
-                "Pattern '{}' did not match the latest tag '{}' from {}".format(
-                    pattern, sources[0], sources
+                _pattern_error(
+                    "The pattern did not match the latest tag '{}'".format(sources[0]),
+                    pattern,
+                    sources,
                 )
             )
         else:
-            raise ValueError("Pattern '{}' did not match any tags from {}".format(pattern, sources))
+            raise ValueError(_pattern_error("The pattern did not match any tags", pattern, sources))
 
     stage = pattern_match.groupdict().get("stage")
     revision = pattern_match.groupdict().get("revision")
