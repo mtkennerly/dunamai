@@ -1,3 +1,8 @@
+## v1.13.2 (2022-10-14)
+
+* Fixed an error when parsing Git output with `showSignature = true` configured.
+  ([Contributed by riton](https://github.com/mtkennerly/dunamai/pull/51))
+
 ## v1.13.1 (2022-09-25)
 
 * Made pattern-related error messages more readable by moving the pattern after
