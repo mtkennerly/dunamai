@@ -8,8 +8,8 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.7'
       - run: |
@@ -34,15 +34,11 @@ jobs:
     env:
       DARCS_EMAIL: foo <foo@example.com>
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: dtolnay/rust-toolchain@stable
       - if: ${{ matrix.git-version != 'default' }}
         run: |
           sudo apt-get update
@@ -65,13 +61,10 @@ jobs:
           # rehosted because the official site deletes older artifacts:
           curl -L -o ~/fossil.tgz https://github.com/mtkennerly/storage/raw/06e29a4005b24a65bc7d639c0aa1fc152a85d0b7/software/fossil-linux-x64-2.13.tar.gz
           tar -xvf ~/fossil.tgz -C /opt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: install
-          # Same as default features, but without openssl:
-          args: pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
       - name: Prepare Pijul
         run: |
+          # Same as default features, but without openssl:
+          cargo install pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
           expect -c 'spawn pijul key generate test ; expect "Password for the new key (press enter to leave it unencrypted):" ; send -- "\r" ; expect eof'
       - run: |
           export PATH="$PATH:/opt"
