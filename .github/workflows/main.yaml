@@ -27,9 +27,14 @@ jobs:
           - '3.6'
           - '3.7'
           - '3.8'
+          - '3.9'
+          - '3.10'
+          - '3.11'
         git-version:
           - default  # 2.28.0 or newer
-          - '2.21.0'  # https://lore.kernel.org/git/CAKqNo6RJqp94uLMf8Biuo=ZvMZB9Mq6RRMrUgsLW4u1ks+mnOA@mail.gmail.com/T/#u
+        include:
+          - python-version: '3.7'
+            git-version: '2.21.0'  # https://lore.kernel.org/git/CAKqNo6RJqp94uLMf8Biuo=ZvMZB9Mq6RRMrUgsLW4u1ks+mnOA@mail.gmail.com/T/#u
     name: test (python = ${{ matrix.python-version }}, git = ${{ matrix.git-version }})
     env:
       DARCS_EMAIL: foo <foo@example.com>
@@ -39,6 +44,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - if: ${{ matrix.git-version != 'default' }}
         run: |
           sudo apt-get update
@@ -72,7 +78,10 @@ jobs:
           git config --global user.name "foo"
           git config --global user.email "foo@example.com"
           bzr whoami 'foo <foo@example.com>'
-
+      - if: ${{ matrix.python-version == '3.5' || matrix.python-version == '3.6' }}
+        run: |
+          cp poetry.legacy.lock poetry.lock
+      - run: |
           pip install poetry
           poetry install
           poetry run pytest --verbose --cov --cov-report term-missing

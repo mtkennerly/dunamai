@@ -22,15 +22,19 @@ packaging = ">=20.9"  # 20.9 is the last with Python 3.5 compat
 importlib-metadata = {version = ">=1.6.0", python = "<3.8"}  # 2.1.1 is the last with Python 3.5 compat
 
 [tool.poetry.dev-dependencies]
-pytest = "^3.0"
-pre-commit = "^1.14"
-pytest-cov = "^2.6"
-tox = "^3.7"
-black = { version = "^18.3-alpha.0", allow-prereleases = true, python = "^3.6" }
-flake8 = "^3.7"
-mypy = "^0.740"
-tox-venv = "^0.4.0"
-pep8-naming = "^0.8.2"
+pytest = [
+    { version = "^7.2", python = "^3.7" },
+    { version = "^3.0", python = ">=3.5,<3.7" },
+]
+pre-commit = { version = "^2.20", python = "^3.7" }
+pytest-cov = [
+    { version = "^4.0", python = "^3.7" },
+    { version = "^2.6", python = ">=3.5,<3.7" },
+]
+black = { version = "22.1.0", python = "^3.7" }
+flake8 = { version = "^5.0", python = "^3.7" }
+mypy = { version = "^0.982", python = "^3.7" }
+pep8-naming = { version = "^0.12.1", python = "^3.7" }
 
 [tool.poetry.scripts]
 dunamai = 'dunamai.__main__:main'
