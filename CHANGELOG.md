@@ -1,6 +1,7 @@
 ## Unreleased
 
 * Added a `strict` option to prevent falling back to `0.0.0` when there are no tags.
+* Added support for `.hg_archival.txt` files (created by `hg archive`).
 
 ## v1.13.2 (2022-10-14)
 

@@ -299,6 +299,23 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
         raise RuntimeError("Unable to detect version control system.")
 
 
+def _find_higher_file(name: str, limit: Optional[str] = None, start: Path = None) -> Optional[Path]:
+    """
+    :param name: Bare name of a file we'd like to find.
+    :param limit: Give up if we find a file/folder with this name.
+    :param start: Begin recursing from this folder (default: `.`).
+    """
+
+    if start is None:
+        start = Path.cwd()
+    for level in [start, *start.parents]:
+        if (level / name).is_file():
+            return level / name
+        if limit is not None and (level / limit).exists():
+            return None
+    return None
+
+
 class _GitRefInfo:
     def __init__(
         self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str
@@ -933,6 +950,53 @@ class Version:
         :param full_commit: Get the full commit hash instead of the short form.
         :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
+        archival = _find_higher_file(".hg_archival.txt", ".hg")
+        if archival is not None:
+            content = archival.read_text("utf8")
+            data = {}
+            for line in content.splitlines():
+                parts = line.split(":", 1)
+                if len(parts) != 2:
+                    continue
+                data[parts[0].strip()] = parts[1].strip()
+
+            tag = data.get("latesttag")
+            # The distance is 1 on a new repo or on a tagged commit.
+            distance = int(data.get("latesttagdistance", 1)) - 1
+            commit = data.get("node")
+            branch = data.get("branch")
+
+            if tag is None or tag == "null":
+                return cls._fallback(strict, distance=distance, commit=commit, branch=branch)
+
+            all_tags_file = _find_higher_file(".hgtags", ".hg")
+            if all_tags_file is None:
+                all_tags = [tag]
+            else:
+                all_tags = []
+                all_tags_content = all_tags_file.read_text("utf8")
+                for line in reversed(all_tags_content.splitlines()):
+                    parts = line.split(" ", 1)
+                    if len(parts) != 2:
+                        continue
+                    all_tags.append(parts[1])
+
+            tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
+                pattern, all_tags, latest_tag
+            )
+            version = cls(
+                base,
+                stage=stage,
+                distance=distance,
+                commit=commit,
+                tagged_metadata=tagged_metadata,
+                epoch=epoch,
+                branch=branch,
+            )
+            version._matched_tag = tag
+            version._newer_unmatched_tags = unmatched
+            return version
+
         _detect_vcs(Vcs.Mercurial)
 
         code, msg = _run_cmd("hg summary")

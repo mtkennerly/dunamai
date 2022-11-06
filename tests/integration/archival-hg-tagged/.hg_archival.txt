@@ -1,0 +1,6 @@
+repo: 25e474af1332ed4fff9351c70ef8f36352c013f2
+node: cf36273384e558411364a3a973aaa0cc08e48aea
+branch: default
+latesttag: foo bar
+latesttagdistance: 1
+changessincelatesttag: 1

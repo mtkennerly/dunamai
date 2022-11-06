@@ -15,6 +15,9 @@ def avoid_identical_ref_timestamps() -> None:
     time.sleep(1.2)
 
 
+REPO = Path(__file__).parent.parent.parent
+
+
 @contextmanager
 def chdir(where: Path) -> Iterator[None]:
     start = Path.cwd()
@@ -424,6 +427,33 @@ def test__version__from_mercurial(tmp_path) -> None:
         run("hg checkout v0.1.0")
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.0", dirty=False, branch=b)
+
+
+def test__version__from_mercurial__archival_untagged() -> None:
+    with chdir(REPO / "tests" / "integration" / "archival-hg-untagged"):
+        detected = Version.from_mercurial()
+        assert detected == Version(
+            "0.0.0",
+            branch="default",
+            commit="25e474af1332ed4fff9351c70ef8f36352c013f2",
+        )
+        assert detected._matched_tag is None
+        assert detected._newer_unmatched_tags is None
+
+        with pytest.raises(RuntimeError):
+            Version.from_mercurial(strict=True)
+
+
+def test__version__from_mercurial__archival_tagged() -> None:
+    with chdir(REPO / "tests" / "integration" / "archival-hg-tagged"):
+        detected = Version.from_mercurial()
+        assert detected == Version(
+            "0.1.1",
+            branch="default",
+            commit="cf36273384e558411364a3a973aaa0cc08e48aea",
+        )
+        assert detected._matched_tag == "v0.1.1"
+        assert detected._newer_unmatched_tags == ["foo bar"]
 
 
 @pytest.mark.skipif(shutil.which("darcs") is None, reason="Requires Darcs")
