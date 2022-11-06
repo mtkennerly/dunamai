@@ -75,6 +75,13 @@ common_sub_args = [
         "help": "Only inspect the latest tag on the latest tagged commit for a pattern match",
     },
     {
+        "triggers": ["--strict"],
+        "action": "store_true",
+        "dest": "strict",
+        "default": False,
+        "help": "When there are no tags, fail instead of falling back to 0.0.0",
+    },
+    {
         "triggers": ["--debug"],
         "action": "store_true",
         "dest": "debug",
@@ -194,7 +201,7 @@ def build_parser(
             parser.add_argument(
                 *triggers,
                 help=help,
-                **{k: v for k, v in arg.items() if k not in ["triggers", "help", "vcs"]}
+                **{k: v for k, v in arg.items() if k not in ["triggers", "help", "vcs"]},
             )
     if "sub" in spec:
         subparsers = parser.add_subparsers(dest=spec["sub_dest"])
@@ -239,8 +246,9 @@ def from_vcs(
     tagged_metadata: bool,
     tag_branch: Optional[str],
     full_commit: bool,
+    strict: bool,
 ) -> None:
-    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
+    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict)
     print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
@@ -268,6 +276,7 @@ def main() -> None:
                 args.tagged_metadata,
                 tag_branch,
                 full_commit,
+                args.strict,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

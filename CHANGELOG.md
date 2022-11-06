@@ -1,3 +1,7 @@
+## Unreleased
+
+* Added a `strict` option to prevent falling back to `0.0.0` when there are no tags.
+
 ## v1.13.2 (2022-10-14)
 
 * Fixed an error when parsing Git output with `showSignature = true` configured.

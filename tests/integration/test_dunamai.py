@@ -80,6 +80,11 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             pass
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
 
+        # Additional one-off check not in other VCS integration tests:
+        # strict mode requires there to be a tag
+        with pytest.raises(RuntimeError):
+            from_vcs(strict=True)
+
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
 

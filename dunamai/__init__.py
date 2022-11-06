@@ -407,7 +407,9 @@ class Version:
         tagged_metadata: Optional[str] = None,
         epoch: Optional[int] = None,
         branch: Optional[str] = None,
+        # fmt: off
         timestamp: Optional[dt.datetime] = None
+        # fmt: on
     ) -> None:
         """
         :param base: Release segment, such as 0.1.0.
@@ -778,12 +780,43 @@ class Version:
         return bumped
 
     @classmethod
+    def _fallback(
+        cls,
+        strict: bool,
+        *,
+        stage: Optional[Tuple[str, Optional[int]]] = None,
+        distance: int = 0,
+        commit: Optional[str] = None,
+        dirty: Optional[bool] = None,
+        tagged_metadata: Optional[str] = None,
+        epoch: Optional[int] = None,
+        branch: Optional[str] = None,
+        # fmt: off
+        timestamp: Optional[dt.datetime] = None
+        # fmt: on
+    ):
+        if strict:
+            raise RuntimeError("No tags available and fallbacks disabled by strict mode")
+        return cls(
+            "0.0.0",
+            stage=stage,
+            distance=distance,
+            commit=commit,
+            dirty=dirty,
+            tagged_metadata=tagged_metadata,
+            epoch=epoch,
+            branch=branch,
+            timestamp=timestamp,
+        )
+
+    @classmethod
     def from_git(
         cls,
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         tag_branch: Optional[str] = None,
         full_commit: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -796,6 +829,7 @@ class Version:
         :param tag_branch: Branch on which to find tags, if different than the
             current branch.
         :param full_commit: Get the full commit hash instead of the short form.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Git)
         if tag_branch is None:
@@ -812,7 +846,7 @@ class Version:
             codes=[0, 128],
         )
         if code == 128:
-            return cls("0.0.0", distance=0, dirty=True, branch=branch)
+            return cls._fallback(strict, distance=0, dirty=True, branch=branch)
         commit = msg
 
         code, msg = _run_cmd('git log --no-show-signature -n 1 --pretty=format:"%cI"')
@@ -841,8 +875,8 @@ class Version:
                 distance = int(msg)
             except Exception:
                 distance = 0
-            return cls(
-                "0.0.0",
+            return cls._fallback(
+                strict,
                 distance=distance,
                 commit=commit,
                 dirty=dirty,
@@ -886,6 +920,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         full_commit: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -896,6 +931,7 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         :param full_commit: Get the full commit hash instead of the short form.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Mercurial)
 
@@ -924,8 +960,8 @@ class Version:
                 distance = int(msg) + 1
             except Exception:
                 distance = 0
-            return cls(
-                "0.0.0",
+            return cls._fallback(
+                strict,
                 distance=distance,
                 commit=commit,
                 dirty=dirty,
@@ -958,7 +994,10 @@ class Version:
 
     @classmethod
     def from_darcs(
-        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
@@ -968,6 +1007,7 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Darcs)
 
@@ -990,7 +1030,9 @@ class Version:
                 distance = int(msg)
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty, timestamp=timestamp)
+            return cls._fallback(
+                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp
+            )
         tags = msg.splitlines()
         tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
             pattern, tags, latest_tag
@@ -1020,6 +1062,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         tag_dir: str = "tags",
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -1030,6 +1073,7 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         :param tag_dir: Location of tags relative to the root.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Subversion)
 
@@ -1053,7 +1097,9 @@ class Version:
             timestamp = _parse_timestamp(msg)
 
         if not commit:
-            return cls("0.0.0", distance=0, commit=commit, dirty=dirty, timestamp=timestamp)
+            return cls._fallback(
+                strict, distance=0, commit=commit, dirty=dirty, timestamp=timestamp
+            )
         code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
@@ -1062,7 +1108,9 @@ class Version:
                 distance = int(commit)
             except Exception:
                 distance = 0
-            return cls("0.0.0", distance=distance, commit=commit, dirty=dirty, timestamp=timestamp)
+            return cls._fallback(
+                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp
+            )
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
             code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
@@ -1096,7 +1144,10 @@ class Version:
 
     @classmethod
     def from_bazaar(
-        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
@@ -1106,6 +1157,7 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Bazaar)
 
@@ -1135,8 +1187,8 @@ class Version:
                 distance = int(commit) if commit is not None else 0
             except Exception:
                 distance = 0
-            return cls(
-                "0.0.0",
+            return cls._fallback(
+                strict,
                 distance=distance,
                 commit=commit,
                 dirty=dirty,
@@ -1172,7 +1224,10 @@ class Version:
 
     @classmethod
     def from_fossil(
-        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
@@ -1181,6 +1236,7 @@ class Version:
             Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Fossil)
 
@@ -1206,8 +1262,8 @@ class Version:
         # The repository creation itself counts as a commit.
         total_commits = int(msg) - 1
         if total_commits <= 0:
-            return cls(
-                "0.0.0", distance=0, commit=commit, dirty=dirty, branch=branch, timestamp=timestamp
+            return cls._fallback(
+                strict, distance=0, commit=commit, dirty=dirty, branch=branch, timestamp=timestamp
             )
 
         # Based on `compute_direct_ancestors` from descendants.c in the
@@ -1241,8 +1297,8 @@ class Version:
                 distance = int(total_commits)
             except Exception:
                 distance = 0
-            return cls(
-                "0.0.0",
+            return cls._fallback(
+                strict,
                 distance=distance,
                 commit=commit,
                 dirty=dirty,
@@ -1276,7 +1332,10 @@ class Version:
 
     @classmethod
     def from_pijul(
-        cls, pattern: Union[str, Pattern] = Pattern.Default, latest_tag: bool = False
+        cls,
+        pattern: Union[str, Pattern] = Pattern.Default,
+        latest_tag: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Pijul tags.
@@ -1286,6 +1345,7 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Pijul)
 
@@ -1302,7 +1362,7 @@ class Version:
         code, msg = _run_cmd("pijul log --limit 1 --output-format json")
         limited_commits = json.loads(msg)
         if len(limited_commits) == 0:
-            return cls("0.0.0", dirty=dirty, branch=branch)
+            return cls._fallback(strict, dirty=dirty, branch=branch)
 
         commit = limited_commits[0]["hash"]
         timestamp = _parse_timestamp(limited_commits[0]["timestamp"])
@@ -1314,8 +1374,8 @@ class Version:
         if not msg:
             # The channel creation is in the list, so offset by 1.
             distance = len(channel_commits) - 1
-            return cls(
-                "0.0.0",
+            return cls._fallback(
+                strict,
                 distance=distance,
                 commit=commit,
                 dirty=dirty,
@@ -1409,6 +1469,7 @@ class Version:
         tag_dir: str = "tags",
         tag_branch: Optional[str] = None,
         full_commit: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1434,9 +1495,12 @@ class Version:
             current branch. This is only used for Git currently.
         :param full_commit: Get the full commit hash instead of the short form.
             This is only used for Git and Mercurial.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
         vcs = _detect_vcs()
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
+        return cls._do_vcs_callback(
+            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict
+        )
 
     @classmethod
     def from_vcs(
@@ -1447,6 +1511,7 @@ class Version:
         tag_dir: str = "tags",
         tag_branch: Optional[str] = None,
         full_commit: bool = False,
+        strict: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -1466,8 +1531,11 @@ class Version:
             current branch. This is only used for Git currently.
         :param full_commit: Get the full commit hash instead of the short form.
             This is only used for Git and Mercurial.
+        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
-        return cls._do_vcs_callback(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit)
+        return cls._do_vcs_callback(
+            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict
+        )
 
     @classmethod
     def _do_vcs_callback(
@@ -1478,6 +1546,7 @@ class Version:
         tag_dir: str,
         tag_branch: Optional[str],
         full_commit: bool,
+        strict: bool,
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -1489,7 +1558,7 @@ class Version:
             Vcs.Fossil: cls.from_fossil,
             Vcs.Pijul: cls.from_pijul,
         }  # type: Mapping[Vcs, Callable[..., "Version"]]
-        kwargs = {"pattern": pattern, "latest_tag": latest_tag}  # type: dict
+        kwargs = {"pattern": pattern, "latest_tag": latest_tag, "strict": strict}  # type: dict
         callback = mapping[vcs]
         for kwarg, value in [
             ("tag_branch", tag_branch),
