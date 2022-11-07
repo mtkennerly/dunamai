@@ -374,6 +374,8 @@ def test__version__from_git__archival_untagged() -> None:
         assert detected._matched_tag is None
         assert detected._newer_unmatched_tags is None
 
+        assert Version.from_any_vcs() == detected
+
         assert (
             Version.from_git(full_commit=True).commit == "8fe614dbf9e767e70442ab8f56e99bd08d7e782d"
         )
@@ -489,6 +491,8 @@ def test__version__from_mercurial__archival_untagged() -> None:
         )
         assert detected._matched_tag is None
         assert detected._newer_unmatched_tags is None
+
+        assert Version.from_any_vcs() == detected
 
         with pytest.raises(RuntimeError):
             Version.from_mercurial(strict=True)

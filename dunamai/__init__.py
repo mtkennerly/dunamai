@@ -299,6 +299,20 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
         raise RuntimeError("Unable to detect version control system.")
 
 
+def _detect_vcs_from_archival() -> Optional[Vcs]:
+    archival = _find_higher_file(".git_archival.json", ".git")
+    if archival is not None:
+        content = archival.read_text("utf8")
+        if "$Format:" not in content:
+            return Vcs.Git
+
+    archival = _find_higher_file(".hg_archival.txt", ".hg")
+    if archival is not None:
+        return Vcs.Mercurial
+
+    return None
+
+
 def _find_higher_file(name: str, limit: Optional[str] = None, start: Path = None) -> Optional[Path]:
     """
     :param name: Bare name of a file we'd like to find.
@@ -1627,7 +1641,9 @@ class Version:
             This is only used for Git and Mercurial.
         :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
-        vcs = _detect_vcs()
+        vcs = _detect_vcs_from_archival()
+        if vcs is None:
+            vcs = _detect_vcs()
         return cls._do_vcs_callback(
             vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict
         )
