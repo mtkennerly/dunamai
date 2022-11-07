@@ -1,4 +1,4 @@
-## Unreleased
+## v1.14.0 (2022-11-07)
 
 * Added a `strict` option to prevent falling back to `0.0.0` when there are no tags.
 * Added support for `.git_archival.json` files created by `git archive`.
