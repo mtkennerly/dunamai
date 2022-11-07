@@ -848,6 +848,72 @@ class Version:
         :param full_commit: Get the full commit hash instead of the short form.
         :param strict: When there are no tags, fail instead of falling back to 0.0.0.
         """
+        archival = _find_higher_file(".git_archival.json", ".git")
+        if archival is not None:
+            content = archival.read_text("utf8")
+            if "$Format:" not in content:
+                data = json.loads(content)
+
+                if full_commit:
+                    commit = data.get("hash-full")
+                else:
+                    commit = data.get("hash-short")
+
+                timestamp = None
+                raw_timestamp = data.get("timestamp")
+                if raw_timestamp:
+                    timestamp = _parse_git_timestamp_iso_strict(raw_timestamp)
+
+                branch = None
+                refs = data.get("refs")
+                if refs:
+                    parts = refs.split(" -> ")
+                    if len(parts) == 2:
+                        branch = parts[1].split(", ")[0]
+
+                tag = None
+                distance = 0
+                dirty = None
+                describe = data.get("describe")
+                if describe:
+                    if describe.endswith("-dirty"):
+                        dirty = True
+                        describe = describe[:-6]
+                    else:
+                        dirty = False
+                    parts = describe.rsplit("-", 2)
+                    tag = parts[0]
+                    if len(parts) > 1:
+                        distance = int(parts[1])
+
+                if tag is None:
+                    return cls._fallback(
+                        strict,
+                        distance=distance,
+                        commit=commit,
+                        dirty=dirty,
+                        branch=branch,
+                        timestamp=timestamp,
+                    )
+
+                tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
+                    pattern, [tag], latest_tag
+                )
+                version = cls(
+                    base,
+                    stage=stage,
+                    distance=distance,
+                    commit=commit,
+                    dirty=dirty,
+                    tagged_metadata=tagged_metadata,
+                    epoch=epoch,
+                    branch=branch,
+                    timestamp=timestamp,
+                )
+                version._matched_tag = tag
+                version._newer_unmatched_tags = unmatched
+                return version
+
         _detect_vcs(Vcs.Git)
         if tag_branch is None:
             tag_branch = "HEAD"

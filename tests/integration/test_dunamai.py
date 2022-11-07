@@ -362,6 +362,56 @@ def test__version__from_git__gitflow(tmp_path) -> None:
         assert from_vcs(tag_branch="develop") == Version("0.1.0", distance=3, dirty=False, branch=b)
 
 
+def test__version__from_git__archival_untagged() -> None:
+    with chdir(REPO / "tests" / "archival" / "git-untagged"):
+        detected = Version.from_git()
+        assert detected == Version(
+            "0.0.0",
+            branch="master",
+            commit="8fe614d",
+            timestamp=dt.datetime(2022, 11, 6, 23, 7, 50, tzinfo=dt.timezone.utc),
+        )
+        assert detected._matched_tag is None
+        assert detected._newer_unmatched_tags is None
+
+        assert (
+            Version.from_git(full_commit=True).commit == "8fe614dbf9e767e70442ab8f56e99bd08d7e782d"
+        )
+
+        with pytest.raises(RuntimeError):
+            Version.from_git(strict=True)
+
+
+def test__version__from_git__archival_tagged() -> None:
+    with chdir(REPO / "tests" / "archival" / "git-tagged"):
+        detected = Version.from_git()
+        assert detected == Version(
+            "0.1.0",
+            branch="master",
+            dirty=False,
+            distance=0,
+            commit="8fe614d",
+            timestamp=dt.datetime(2022, 11, 6, 23, 7, 50, tzinfo=dt.timezone.utc),
+        )
+        assert detected._matched_tag == "v0.1.0"
+        assert detected._newer_unmatched_tags == []
+
+
+def test__version__from_git__archival_tagged_post() -> None:
+    with chdir(REPO / "tests" / "archival" / "git-tagged-post"):
+        detected = Version.from_git()
+        assert detected == Version(
+            "0.1.0",
+            branch="master",
+            dirty=False,
+            distance=1,
+            commit="1b57ff7",
+            timestamp=dt.datetime(2022, 11, 6, 23, 16, 59, tzinfo=dt.timezone.utc),
+        )
+        assert detected._matched_tag == "v0.1.0"
+        assert detected._newer_unmatched_tags == []
+
+
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__not_a_repository(tmp_path) -> None:
     vcs = tmp_path / "dunamai-not-a-repo"
@@ -430,7 +480,7 @@ def test__version__from_mercurial(tmp_path) -> None:
 
 
 def test__version__from_mercurial__archival_untagged() -> None:
-    with chdir(REPO / "tests" / "integration" / "archival-hg-untagged"):
+    with chdir(REPO / "tests" / "archival" / "hg-untagged"):
         detected = Version.from_mercurial()
         assert detected == Version(
             "0.0.0",
@@ -445,7 +495,7 @@ def test__version__from_mercurial__archival_untagged() -> None:
 
 
 def test__version__from_mercurial__archival_tagged() -> None:
-    with chdir(REPO / "tests" / "integration" / "archival-hg-tagged"):
+    with chdir(REPO / "tests" / "archival" / "hg-tagged"):
         detected = Version.from_mercurial()
         assert detected == Version(
             "0.1.1",

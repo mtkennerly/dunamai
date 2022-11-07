@@ -127,6 +127,32 @@ from dunamai import Version, Pattern
 version = Version.from_any_vcs(pattern=Pattern.DefaultUnprefixed)
 ```
 
+### VCS archives
+Sometimes, you may only have access to an archive of a repository (e.g., a zip file) without the full history.
+Dunamai can still detect a version in some of these cases:
+
+* For Git, you can configure `git archive` to produce a file with some metadata for Dunamai.
+
+  Add a `.git_archival.json` file to the root of your repository with this content:
+  ```
+  {
+    "hash-full": "$Format:%H$",
+    "hash-short": "$Format:%h$",
+    "timestamp": "$Format:%cI$",
+    "refs": "$Format:%D$",
+    "describe": "$Format:%(describe:tags=true,match=v[0-9]*)$"
+  }
+  ```
+
+  Add this line to your `.gitattributes` file.
+  If you don't already have this file, add it to the root of your repository:
+  ```
+  .git_archival.json  export-subst
+  ```
+
+* For Mercurial, Dunamai will detect and use an `.hg_archival.txt` file created by `hg archive`.
+  It will also recognize `.hgtags` if present.
+
 ### Custom formats
 Here are the available substitutions for custom formats. If you have a tag like
 `v9!0.1.2-beta.3+other`, then:
