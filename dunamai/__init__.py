@@ -946,7 +946,7 @@ class Version:
             return cls._fallback(strict, distance=0, dirty=True, branch=branch)
         commit = msg
 
-        code, msg = _run_cmd('git log --no-show-signature -n 1 --pretty=format:"%cI"')
+        code, msg = _run_cmd('git -c log.showsignature=false log -n 1 --pretty=format:"%cI"')
         timestamp = _parse_git_timestamp_iso_strict(msg)
 
         code, msg = _run_cmd("git describe --always --dirty")
