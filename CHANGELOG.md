@@ -1,4 +1,4 @@
-## Unreleased
+## v1.14.1 (2022-11-15)
 
 * Fixed Git 2.7.0 compatibility by changing `git log --no-show-signature` to `git -c log.showsignature=false log`.
 
