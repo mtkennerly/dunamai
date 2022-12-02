@@ -1,4 +1,4 @@
-## Unreleased
+## v1.15.0 (2022-12-02)
 
 * Added compatibility with Git versions as old as 1.8.2.3.
 
