@@ -10,7 +10,7 @@ Dunamai is also available as a [GitHub Action](https://github.com/marketplace/ac
 
 ## Features
 * Version control system support:
-  * [Git](https://git-scm.com) (minimum version: 2.7.0)
+  * [Git](https://git-scm.com) (2.7.0+ is recommended, but versions as old as 1.8.2.3 will work with some reduced functionality)
   * [Mercurial](https://www.mercurial-scm.org)
   * [Darcs](http://darcs.net)
   * [Subversion](https://subversion.apache.org)

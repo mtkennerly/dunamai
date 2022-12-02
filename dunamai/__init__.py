@@ -266,6 +266,15 @@ def _equal_if_set(x: _T, y: Optional[_T], unset: Sequence[Any] = (None,)) -> boo
     return x == y
 
 
+def _get_git_version() -> List[int]:
+    _, msg = _run_cmd("git version")
+    result = re.search(r"git version (\d+(\.\d+)*)", msg.strip())
+    if result is not None:
+        parts = result.group(1).split(".")
+        return [int(x) for x in parts]
+    return []
+
+
 def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
     checks = OrderedDict(
         [
@@ -932,6 +941,8 @@ class Version:
         if tag_branch is None:
             tag_branch = "HEAD"
 
+        git_version = _get_git_version()
+
         code, msg = _run_cmd("git symbolic-ref --short HEAD", codes=[0, 128])
         if code == 128:
             branch = None
@@ -946,8 +957,13 @@ class Version:
             return cls._fallback(strict, distance=0, dirty=True, branch=branch)
         commit = msg
 
-        code, msg = _run_cmd('git -c log.showsignature=false log -n 1 --pretty=format:"%cI"')
-        timestamp = _parse_git_timestamp_iso_strict(msg)
+        timestamp = None
+        if git_version < [2, 2]:
+            code, msg = _run_cmd('git log -n 1 --pretty=format:"%ci"')
+            timestamp = _parse_git_timestamp_iso(msg)
+        else:
+            code, msg = _run_cmd('git -c log.showsignature=false log -n 1 --pretty=format:"%cI"')
+            timestamp = _parse_git_timestamp_iso_strict(msg)
 
         code, msg = _run_cmd("git describe --always --dirty")
         dirty = msg.endswith("-dirty")
@@ -957,41 +973,64 @@ class Version:
             if msg.strip() != "":
                 dirty = True
 
-        code, msg = _run_cmd(
-            'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
-            + ' --format "%(refname)'
-            "@{%(objectname)"
-            "@{%(creatordate:iso-strict)"
-            "@{%(*committerdate:iso-strict)"
-            "@{%(taggerdate:iso-strict)"
-            '"'
-        )
-        if not msg:
-            try:
-                code, msg = _run_cmd("git rev-list --count HEAD")
-                distance = int(msg)
-            except Exception:
-                distance = 0
-            return cls._fallback(
-                strict,
-                distance=distance,
-                commit=commit,
-                dirty=dirty,
-                branch=branch,
-                timestamp=timestamp,
+        if git_version < [2, 7]:
+            code, msg = _run_cmd(
+                'git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate'
             )
+            if not msg:
+                try:
+                    code, msg = _run_cmd("git rev-list --count HEAD")
+                    distance = int(msg)
+                except Exception:
+                    distance = 0
+                return cls._fallback(
+                    strict,
+                    distance=distance,
+                    commit=commit,
+                    dirty=dirty,
+                    branch=branch,
+                    timestamp=timestamp,
+                )
+            tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
+            tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
+                pattern, tags, latest_tag
+            )
+        else:
+            code, msg = _run_cmd(
+                'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
+                + ' --format "%(refname)'
+                "@{%(objectname)"
+                "@{%(creatordate:iso-strict)"
+                "@{%(*committerdate:iso-strict)"
+                "@{%(taggerdate:iso-strict)"
+                '"'
+            )
+            if not msg:
+                try:
+                    code, msg = _run_cmd("git rev-list --count HEAD")
+                    distance = int(msg)
+                except Exception:
+                    distance = 0
+                return cls._fallback(
+                    strict,
+                    distance=distance,
+                    commit=commit,
+                    dirty=dirty,
+                    branch=branch,
+                    timestamp=timestamp,
+                )
 
-        detailed_tags = []  # type: List[_GitRefInfo]
-        tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch)
+            detailed_tags = []  # type: List[_GitRefInfo]
+            tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch)
 
-        for line in msg.strip().splitlines():
-            parts = line.split("@{")
-            detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
+            for line in msg.strip().splitlines():
+                parts = line.split("@{")
+                detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
-        tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, tags, latest_tag
-        )
+            tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
+            tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
+                pattern, tags, latest_tag
+            )
 
         code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag))
         distance = int(msg)
@@ -1921,6 +1960,12 @@ def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
     return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
+
+
+def _parse_git_timestamp_iso(raw: str) -> dt.datetime:
+    # Remove colon from timezone offset for pre-3.7 Python:
+    compat = re.sub(r"(.* .* [-+]\d+):(\d+)", r"\1\2", raw)
+    return dt.datetime.strptime(compat, "%Y-%m-%d %H:%M:%S %z")
 
 
 def _parse_timestamp(raw: str, space: bool = False) -> dt.datetime:

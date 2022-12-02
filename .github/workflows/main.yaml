@@ -18,7 +18,7 @@ jobs:
           poetry run pre-commit run --all-files --show-diff-on-failure
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -35,6 +35,12 @@ jobs:
         include:
           - python-version: '3.7'
             git-version: '2.21.0'  # https://lore.kernel.org/git/CAKqNo6RJqp94uLMf8Biuo=ZvMZB9Mq6RRMrUgsLW4u1ks+mnOA@mail.gmail.com/T/#u
+          - python-version: '3.7'
+            git-version: '2.7.0'
+          - python-version: '3.7'
+            git-version: '2.2.0'
+          - python-version: '3.7'
+            git-version: '1.8.2.3'
     name: test (python = ${{ matrix.python-version }}, git = ${{ matrix.git-version }})
     env:
       DARCS_EMAIL: foo <foo@example.com>
@@ -46,6 +52,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - if: ${{ matrix.git-version != 'default' }}
+        env:
+          NO_OPENSSL: 'yes'
         run: |
           sudo apt-get update
           sudo apt-get install dh-autoreconf libcurl4-gnutls-dev libexpat1-dev gettext libz-dev libssl-dev

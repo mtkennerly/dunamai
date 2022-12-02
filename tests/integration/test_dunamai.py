@@ -8,7 +8,7 @@ from typing import Callable, Iterator, Optional
 
 import pytest
 
-from dunamai import Version, Vcs, _run_cmd
+from dunamai import Version, Vcs, _get_git_version, _run_cmd
 
 
 def avoid_identical_ref_timestamps() -> None:
@@ -26,6 +26,11 @@ def chdir(where: Path) -> Iterator[None]:
         yield
     finally:
         os.chdir(str(start))
+
+
+def is_git_legacy() -> bool:
+    version = _get_git_version()
+    return version < [2, 7]
 
 
 def make_run_callback(where: Path) -> Callable:
@@ -73,6 +78,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
     run = make_run_callback(vcs)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
+    legacy = is_git_legacy()
 
     with chdir(vcs):
         run("git init")
@@ -136,9 +142,10 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             'dunamai from any --format "{commit}" --full-commit'
         )
 
-        # Verify tags with '/' work
-        run("git tag test/v0.1.0")
-        assert run(r'dunamai from any --pattern "^test/v(?P<base>\d\.\d\.\d)"') == "0.1.0"
+        if not legacy:
+            # Verify tags with '/' work
+            run("git tag test/v0.1.0")
+            assert run(r'dunamai from any --pattern "^test/v(?P<base>\d\.\d\.\d)"') == "0.1.0"
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True, branch=b)
@@ -154,12 +161,16 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             from_vcs(latest_tag=True)
 
         # check that we find the expected tag that has the most recent tag creation time
-        avoid_identical_ref_timestamps()
-        run("git tag v0.2.0b1 -m Annotated")
-        avoid_identical_ref_timestamps()
-        run("git tag v0.2.0 -m Annotated")
-        avoid_identical_ref_timestamps()
-        run("git tag v0.1.1 HEAD~1 -m Annotated")
+        if legacy:
+            run("git tag -d unmatched")
+            run("git tag v0.2.0 -m Annotated")
+        if not legacy:
+            avoid_identical_ref_timestamps()
+            run("git tag v0.2.0b1 -m Annotated")
+            avoid_identical_ref_timestamps()
+            run("git tag v0.2.0 -m Annotated")
+            avoid_identical_ref_timestamps()
+            run("git tag v0.1.1 HEAD~1 -m Annotated")
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
@@ -168,9 +179,10 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert from_vcs() == Version("0.2.0", dirty=False, branch="heads/v0.2.0")
         assert from_vcs(latest_tag=True) == Version("0.2.0", dirty=False, branch="heads/v0.2.0")
 
-        run("git checkout v0.1.0")
-        assert from_vcs() == Version("0.1.1", dirty=False)
-        assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False)
+        if not legacy:
+            run("git checkout v0.1.0")
+            assert from_vcs() == Version("0.1.1", dirty=False)
+            assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False)
 
         # Additional one-off check not in other VCS integration tests:
         run("git checkout master")
@@ -180,16 +192,18 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         # bumping:
         commit = run('dunamai from any --format "{commit}"')
         assert run("dunamai from any --bump") == "0.2.1.dev1+{}".format(commit)
-        # tag with pre-release segment.
-        run("git tag v0.2.1b3 -m Annotated")
-        assert from_vcs() == Version("0.2.1", stage=("b", 3), dirty=False, branch=b)
+        if not legacy:
+            # tag with pre-release segment.
+            run("git tag v0.2.1b3 -m Annotated")
+            assert from_vcs() == Version("0.2.1", stage=("b", 3), dirty=False, branch=b)
 
-        # Additional one-off check: tag containing comma.
-        (vcs / "foo.txt").write_text("fourth")
-        run("git add .")
-        run('git commit --no-gpg-sign -m "Fourth"')
-        run("git tag v0.3.0+a,b -m Annotated")
-        assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
+        if not legacy:
+            # Additional one-off check: tag containing comma.
+            (vcs / "foo.txt").write_text("fourth")
+            run("git add .")
+            run('git commit --no-gpg-sign -m "Fourth"')
+            run("git tag v0.3.0+a,b -m Annotated")
+            assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
@@ -199,6 +213,7 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
     run = make_run_callback(vcs)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
+    legacy = is_git_legacy()
 
     with chdir(vcs):
         run("git init")
@@ -231,9 +246,10 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
-        run("git checkout v0.1.1")
-        assert from_vcs() == Version("0.1.1", dirty=False)
-        assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False)
+        if not legacy:
+            run("git checkout v0.1.1")
+            assert from_vcs() == Version("0.1.1", dirty=False)
+            assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
@@ -277,6 +293,7 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
     run = make_run_callback(vcs)
     from_vcs = make_from_callback(Version.from_git, chronological=False)
     b = "master"
+    legacy = is_git_legacy()
 
     with chdir(vcs):
         run("git init")
@@ -305,10 +322,14 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
         )
 
         run("git tag v0.2.0")
-        assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
+        if legacy:
+            assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
+        else:
+            assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+@pytest.mark.skipif(is_git_legacy(), reason="Requires non-legacy Git")
 def test__version__from_git__gitflow(tmp_path) -> None:
     vcs = tmp_path / "dunamai-git-gitflow"
     vcs.mkdir()
