@@ -1942,9 +1942,10 @@ def bump_version(base: str, index: int = -1, bump: int = 1) -> str:
         This follows Python indexing rules, so positive numbers start from
         the left side and count up from 0, while negative numbers start from
         the right side and count down from -1.
-    :param bump: By how much the index needs to increment. Default: 1.
+    :param bump: By how much the `index` needs to increment. Default: 1.
     :return: Bumped version.
     """
+    bump = int(bump) if isinstance(bump, str) else bump
     bases = [int(x) for x in base.split(".")]
     bases[index] += bump
 
