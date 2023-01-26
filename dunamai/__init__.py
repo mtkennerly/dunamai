@@ -406,7 +406,7 @@ class _GitRefInfo:
     @staticmethod
     def from_git_tag_topo_order(tag_branch: str) -> Mapping[str, int]:
         code, logmsg = _run_cmd(
-            "git log --simplify-by-decoration --topo-order --decorate=full"
+            "git log --simplify-by-decoration --topo-order --decorate=full --tags"
             ' {} "--format=%H%d"'.format(tag_branch)
         )
         tag_lookup = {}
@@ -997,7 +997,7 @@ class Version:
             )
         else:
             code, msg = _run_cmd(
-                'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
+                'git for-each-ref "refs/tags/**" {}'.format(tag_branch)
                 + ' --format "%(refname)'
                 "@{%(objectname)"
                 "@{%(creatordate:iso-strict)"
