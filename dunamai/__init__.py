@@ -732,12 +732,22 @@ class Version:
         :param pattern: Regular expression matched against the version.
             Refer to `from_any_vcs` for more info.
         """
+        normalized = version
+        if not version.startswith("v") and pattern in [VERSION_SOURCE_PATTERN, Pattern.Default]:
+            normalized = "v{}".format(version)
+
         try:
-            normalized = version
-            if not version.startswith("v") and pattern in [VERSION_SOURCE_PATTERN, Pattern.Default]:
-                normalized = "v{}".format(version)
             matched_pattern = _match_version_pattern(pattern, [normalized], True)
         except ValueError:
+            replaced = re.sub(r"(\.post(\d+)\.dev\d+)", r".dev\2", version, 1)
+            if replaced != version:
+                try:
+                    alt = Version.parse(replaced, pattern)
+                    if alt.base != replaced:
+                        return alt
+                except ValueError:
+                    pass
+
             return cls(version)
 
         base = matched_pattern.base
@@ -784,6 +794,10 @@ class Version:
             distance = 0
         if tagged_metadata is not None and tagged_metadata.strip() == "":
             tagged_metadata = None
+
+        if stage is not None and stage[0] == "dev" and stage[1] is not None:
+            distance += stage[1]
+            stage = None
 
         return cls(
             base,

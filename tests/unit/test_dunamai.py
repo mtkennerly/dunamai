@@ -534,6 +534,13 @@ def test__version__parse():
 
     assert Version.parse("foo") == Version("foo")
 
+    assert Version.parse("1.2.3.dev5") == Version("1.2.3", distance=5)
+    assert Version.parse("1.2.3.post4") == Version("1.2.3", stage=("post", 4))
+    assert Version.parse("1.2.3.post4+d6") == Version("1.2.3", stage=("post", 4), distance=6)
+    assert Version.parse("1.2.3.post4.dev5") == Version("1.2.3", distance=4)
+    assert Version.parse("1.2.3.post4.dev5+d6") == Version("1.2.3", distance=10)
+    assert Version.parse("1.2.3.post4.dev5.blah6") == Version("1.2.3.post4.dev5.blah6")
+
 
 def test__get_version__from_name() -> None:
     assert get_version("dunamai") == Version(pkg_resources.get_distribution("dunamai").version)

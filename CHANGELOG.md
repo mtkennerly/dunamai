@@ -1,3 +1,9 @@
+## Unreleased
+
+* Updated `Version.parse` to better handle PEP 440 versions produced by Dunamai itself.
+  Specifically, in `1.2.3.post4.dev5`, the post number becomes the distance and the dev number is ignored.
+  In `1.2.3.dev5`, the dev number becomes the distance.
+
 ## v1.15.0 (2022-12-02)
 
 * Added compatibility with Git versions as old as 1.8.2.3.
