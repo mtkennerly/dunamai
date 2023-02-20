@@ -741,12 +741,9 @@ class Version:
         except ValueError:
             replaced = re.sub(r"(\.post(\d+)\.dev\d+)", r".dev\2", version, 1)
             if replaced != version:
-                try:
-                    alt = Version.parse(replaced, pattern)
-                    if alt.base != replaced:
-                        return alt
-                except ValueError:
-                    pass
+                alt = Version.parse(replaced, pattern)
+                if alt.base != replaced:
+                    return alt
 
             return cls(version)
 
