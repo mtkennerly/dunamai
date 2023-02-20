@@ -1943,7 +1943,7 @@ def serialize_pvp(base: str, metadata: Optional[Sequence[Union[str, int]]] = Non
     return serialized
 
 
-def bump_version(base: str, index: int = -1) -> str:
+def bump_version(base: str, index: int = -1, bump: int = 1) -> str:
     """
     Increment one of the numerical positions of a version.
 
@@ -1953,10 +1953,12 @@ def bump_version(base: str, index: int = -1) -> str:
         This follows Python indexing rules, so positive numbers start from
         the left side and count up from 0, while negative numbers start from
         the right side and count down from -1.
+    :param bump: By how much the `index` needs to increment. Default: 1.
     :return: Bumped version.
     """
+    bump = int(bump) if isinstance(bump, str) else bump
     bases = [int(x) for x in base.split(".")]
-    bases[index] += 1
+    bases[index] += bump
 
     limit = 0 if index < 0 else len(bases)
     i = index + 1

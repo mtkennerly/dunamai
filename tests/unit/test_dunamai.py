@@ -823,6 +823,7 @@ def test__serialize_pvp():
 
 
 def test__bump_version():
+    # default bump=1
     assert bump_version("1.2.3") == "1.2.4"
 
     assert bump_version("1.2.3", 0) == "2.0.0"
@@ -833,6 +834,18 @@ def test__bump_version():
     assert bump_version("1.2.3", -2) == "1.3.0"
     assert bump_version("1.2.3", -3) == "2.0.0"
 
+    # expicit bump increment
+    assert bump_version("1.2.3", bump=3) == "1.2.6"
+
+    assert bump_version("1.2.3", 0, bump=3) == "4.0.0"
+    assert bump_version("1.2.3", 1, bump=3) == "1.5.0"
+    assert bump_version("1.2.3", 2, bump=3) == "1.2.6"
+
+    assert bump_version("1.2.3", -1, bump=3) == "1.2.6"
+    assert bump_version("1.2.3", -2, bump=3) == "1.5.0"
+    assert bump_version("1.2.3", -3, bump=3) == "4.0.0"
+
+    # check if incorrect index raises issues
     with pytest.raises(IndexError):
         bump_version("1.2.3", 3)
 
