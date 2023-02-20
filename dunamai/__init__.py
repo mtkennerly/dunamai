@@ -806,7 +806,7 @@ class Version:
             epoch=epoch,
         )
 
-    def bump(self, index: int = -1) -> "Version":
+    def bump(self, index: int = -1, increment: int = 1) -> "Version":
         """
         Increment the version.
 
@@ -818,16 +818,17 @@ class Version:
             the left side and count up from 0, while negative numbers start from
             the right side and count down from -1.
             Only has an effect when the base is bumped.
+        :param increment: By how much to increment the relevant position. Default: 1.
         :return: Bumped version.
         """
         bumped = copy.deepcopy(self)
         if bumped.stage is None:
-            bumped.base = bump_version(bumped.base, index)
+            bumped.base = bump_version(bumped.base, index, increment)
         else:
             if bumped.revision is None:
                 bumped.revision = 2
             else:
-                bumped.revision = bumped.revision + 1
+                bumped.revision += increment
         return bumped
 
     @classmethod
@@ -1943,7 +1944,7 @@ def serialize_pvp(base: str, metadata: Optional[Sequence[Union[str, int]]] = Non
     return serialized
 
 
-def bump_version(base: str, index: int = -1, bump: int = 1) -> str:
+def bump_version(base: str, index: int = -1, increment: int = 1) -> str:
     """
     Increment one of the numerical positions of a version.
 
@@ -1953,12 +1954,11 @@ def bump_version(base: str, index: int = -1, bump: int = 1) -> str:
         This follows Python indexing rules, so positive numbers start from
         the left side and count up from 0, while negative numbers start from
         the right side and count down from -1.
-    :param bump: By how much the `index` needs to increment. Default: 1.
+    :param increment: By how much the `index` needs to increment. Default: 1.
     :return: Bumped version.
     """
-    bump = int(bump) if isinstance(bump, str) else bump
     bases = [int(x) for x in base.split(".")]
-    bases[index] += bump
+    bases[index] += increment
 
     limit = 0 if index < 0 else len(bases)
     i = index + 1

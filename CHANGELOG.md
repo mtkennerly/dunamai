@@ -3,6 +3,8 @@
 * Updated `Version.parse` to better handle PEP 440 versions produced by Dunamai itself.
   Specifically, in `1.2.3.post4.dev5`, the post number becomes the distance and the dev number is ignored.
   In `1.2.3.dev5`, the dev number becomes the distance.
+* Added `increment` argument to `bump_version` and `Version.bump`.
+  ([Contributed by legendof-selda](https://github.com/mtkennerly/dunamai/pull/54))
 
 ## v1.15.0 (2022-12-02)
 
