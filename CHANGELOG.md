@@ -5,6 +5,10 @@
   In `1.2.3.dev5`, the dev number becomes the distance.
 * Added `increment` argument to `bump_version` and `Version.bump`.
   ([Contributed by legendof-selda](https://github.com/mtkennerly/dunamai/pull/54))
+* Fixed Git detection when there is a "dubious ownership" error.
+  Previously, `from git` would report that it was not a Git project,
+  and `from any` would report that it could not detect a VCS.
+  Now, both commands report that there is dubious ownership.
 
 ## v1.15.0 (2022-12-02)
 

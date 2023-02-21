@@ -288,13 +288,18 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
         ]
     )
 
+    dubious_ownership_flag = "detected dubious ownership"
+    dubious_ownership_error = "Detected Git repository, but failed because of dubious ownership"
+
     if expected_vcs:
         command = checks[expected_vcs]
         program = command.split()[0]
         if not shutil.which(program):
             raise RuntimeError("Unable to find '{}' program".format(program))
-        code, _ = _run_cmd(command, codes=[])
+        code, msg = _run_cmd(command, codes=[])
         if code != 0:
+            if expected_vcs == Vcs.Git and dubious_ownership_flag in msg:
+                raise RuntimeError(dubious_ownership_error)
             raise RuntimeError(
                 "This does not appear to be a {} project".format(expected_vcs.value.title())
             )
@@ -302,9 +307,11 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
     else:
         for vcs, command in checks.items():
             if shutil.which(command.split()[0]):
-                code, _ = _run_cmd(command, codes=[])
+                code, msg = _run_cmd(command, codes=[])
                 if code == 0:
                     return vcs
+                elif vcs == Vcs.Git and dubious_ownership_flag in msg:
+                    raise RuntimeError(dubious_ownership_error)
         raise RuntimeError("Unable to detect version control system.")
 
 
