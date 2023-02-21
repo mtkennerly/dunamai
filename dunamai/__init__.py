@@ -305,6 +305,8 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
             )
         return expected_vcs
     else:
+        disproven = []
+        unavailable = []
         for vcs, command in checks.items():
             if shutil.which(command.split()[0]):
                 code, msg = _run_cmd(command, codes=[])
@@ -312,7 +314,16 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
                     return vcs
                 elif vcs == Vcs.Git and dubious_ownership_flag in msg:
                     raise RuntimeError(dubious_ownership_error)
-        raise RuntimeError("Unable to detect version control system.")
+                disproven.append(vcs.name)
+            else:
+                unavailable.append(vcs.name)
+
+        error_parts = ["Unable to detect version control system."]
+        if disproven:
+            error_parts.append("Checked: {}.".format(", ".join(disproven)))
+        if unavailable:
+            error_parts.append("Not installed: {}.".format(", ".join(unavailable)))
+        raise RuntimeError(" ".join(error_parts))
 
 
 def _detect_vcs_from_archival() -> Optional[Vcs]:

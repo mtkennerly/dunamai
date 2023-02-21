@@ -9,6 +9,8 @@
   Previously, `from git` would report that it was not a Git project,
   and `from any` would report that it could not detect a VCS.
   Now, both commands report that there is dubious ownership.
+* Improved error reporting for `from any` VCS detection.
+  The error now specifies which VCSes were checked and which were not found to be installed.
 
 ## v1.15.0 (2022-12-02)
 
