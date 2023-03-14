@@ -1815,7 +1815,7 @@ def get_version(
     parser: Callable[[str], Version] = Version,
 ) -> Version:
     """
-    Check pkg_resources info or a fallback function to determine the version.
+    Check importlib-metadata info or a fallback function to determine the version.
     This is intended as a convenient default for setting your `__version__` if
     you do not want to include a generated version statically during packaging.
 

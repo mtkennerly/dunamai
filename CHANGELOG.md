@@ -1,3 +1,7 @@
+## Unreleased
+
+* Fixed outdated reference to `pkg_resources` in the docstring for `get_version`.
+
 ## v1.16.0 (2023-02-21)
 
 * Updated `Version.parse` to better handle PEP 440 versions produced by Dunamai itself.

@@ -1,10 +1,14 @@
 import datetime as dt
 import os
-import pkg_resources
 import re
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Iterator, Optional
+
+try:
+    import importlib.metadata as ilm
+except ImportError:
+    import importlib_metadata as ilm  # type: ignore
 
 import pytest
 
@@ -543,7 +547,7 @@ def test__version__parse():
 
 
 def test__get_version__from_name() -> None:
-    assert get_version("dunamai") == Version(pkg_resources.get_distribution("dunamai").version)
+    assert get_version("dunamai") == Version(ilm.version("dunamai"))
 
 
 def test__get_version__first_choice() -> None:
@@ -563,7 +567,7 @@ def test__get_version__fallback() -> None:
 def test__get_version__from_name__ignore() -> None:
     assert get_version(
         "dunamai",
-        ignore=[Version(pkg_resources.get_distribution("dunamai").version)],
+        ignore=[Version(ilm.version("dunamai"))],
         fallback=Version("2"),
     ) == Version("2")
 
