@@ -50,7 +50,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: dtolnay/rust-toolchain@1.65.0
-      - uses: Swatinem/rust-cache@v2
+      # - uses: Swatinem/rust-cache@v2
       - if: ${{ matrix.git-version != 'default' }}
         env:
           NO_OPENSSL: 'yes'
@@ -70,16 +70,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y darcs bzr
           # For Pijul:
-          sudo apt-get install -y libxxhash-dev libzstd-dev expect
+          # sudo apt-get install -y libxxhash-dev libzstd-dev expect
 
           # rehosted because the official site deletes older artifacts:
           curl -L -o ~/fossil.tgz https://github.com/mtkennerly/storage/raw/06e29a4005b24a65bc7d639c0aa1fc152a85d0b7/software/fossil-linux-x64-2.13.tar.gz
           tar -xvf ~/fossil.tgz -C /opt
-      - name: Prepare Pijul
-        run: |
-          # Same as default features, but without openssl:
-          cargo install pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
-          expect -c 'spawn pijul key generate test ; expect "Password for the new key (press enter to leave it unencrypted):" ; send -- "\r" ; expect eof'
+      # TODO: Re-enable Pijul tests once this is fixed: https://nest.pijul.com/pijul/pijul/discussions/777
+      # - name: Prepare Pijul
+      #   run: |
+      #     # Same as default features, but without openssl:
+      #     cargo install pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
+      #     expect -c 'spawn pijul key generate test ; expect "Password for the new key (press enter to leave it unencrypted):" ; send -- "\r" ; expect eof'
       - run: |
           export PATH="$PATH:/opt"
 
