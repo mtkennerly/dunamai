@@ -1,6 +1,7 @@
 ## Unreleased
 
 * Fixed outdated reference to `pkg_resources` in the docstring for `get_version`.
+* `CHANGELOG.md` and `tests` are now included in sdists.
 
 ## v1.16.0 (2023-02-21)
 

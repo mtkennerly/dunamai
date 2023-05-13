@@ -15,6 +15,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
+include = [
+    { path = "CHANGELOG.md", format = "sdist" },
+    { path = "tests", format = "sdist" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.5"
