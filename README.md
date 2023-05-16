@@ -242,6 +242,10 @@ prompted the creation of Dunamai as an alternative:
   Or you can use the [poetry-dynamic-versioning](https://github.com/mtkennerly/poetry-dynamic-versioning) plugin.
 
 ## Other notes
+* Dunamai needs access to the full version history to find tags and compute distance.
+  Be careful if your CI system does a shallow clone by default.
+  * For GitHub workflows, invoke `actions/checkout@v3` with `fetch-depth: 0`.
+  * For GitLab pipelines, set the `GIT_DEPTH` variable to 0.
 * When using Git, remember that lightweight tags do not store their creation time.
   Therefore, if a commit has multiple lightweight tags,
   we cannot reliably determine which one should be considered the newest.
