@@ -8,7 +8,7 @@ from typing import Callable, Iterator, Optional
 
 import pytest
 
-from dunamai import Version, Vcs, _get_git_version, _run_cmd
+from dunamai import Version, Vcs, Concern, _get_git_version, _run_cmd
 
 
 def avoid_identical_ref_timestamps() -> None:
@@ -96,6 +96,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
 
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
+        assert from_vcs(fresh=True).concerns == set()
 
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
@@ -433,6 +434,20 @@ def test__version__from_git__archival_tagged_post() -> None:
         )
         assert detected._matched_tag == "v0.1.0"
         assert detected._newer_unmatched_tags == []
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git__shallow(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-shallow"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+
+    with chdir(vcs):
+        run("git clone --depth 1 https://github.com/mtkennerly/dunamai.git .")
+        assert Version.from_git().concerns == {Concern.ShallowRepository}
+
+        with pytest.raises(RuntimeError):
+            Version.from_git(strict=True)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")

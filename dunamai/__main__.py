@@ -79,7 +79,10 @@ common_sub_args = [
         "action": "store_true",
         "dest": "strict",
         "default": False,
-        "help": "When there are no tags, fail instead of falling back to 0.0.0",
+        "help": (
+            "Elevate warnings to errors."
+            "When there are no tags, fail instead of falling back to 0.0.0"
+        ),
     },
     {
         "triggers": ["--debug"],
@@ -249,7 +252,12 @@ def from_vcs(
     strict: bool,
 ) -> None:
     version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict)
+
+    for concern in version.concerns:
+        print("Warning: {}".format(concern.message()), file=sys.stderr)
+
     print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
+
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
         print("# Newer unmatched tags: {}".format(version._newer_unmatched_tags), file=sys.stderr)

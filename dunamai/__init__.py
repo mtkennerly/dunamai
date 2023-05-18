@@ -30,6 +30,7 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -122,6 +123,16 @@ class Pattern(Enum):
                 )
             )
         return pattern.regex()
+
+
+class Concern(Enum):
+    ShallowRepository = "shallow-repository"
+
+    def message(self) -> str:
+        if self == Concern.ShallowRepository:
+            return "This is a shallow repository, so Dunamai may not produce the correct version."
+        else:
+            return ""
 
 
 def _pattern_error(
@@ -465,8 +476,9 @@ class Version:
         tagged_metadata: Optional[str] = None,
         epoch: Optional[int] = None,
         branch: Optional[str] = None,
+        timestamp: Optional[dt.datetime] = None,
         # fmt: off
-        timestamp: Optional[dt.datetime] = None
+        concerns: Optional[Set[Concern]] = None
         # fmt: on
     ) -> None:
         """
@@ -479,6 +491,7 @@ class Version:
         :param epoch: Optional PEP 440 epoch.
         :param branch: Name of the current branch.
         :param timestamp: Timestamp of the current commit.
+        :param concerns: Any concerns regarding the version.
         """
         #: Release segment.
         self.base = base
@@ -506,6 +519,8 @@ class Version:
         except ValueError:
             # Will fail for naive timestamps before Python 3.6.
             self.timestamp = timestamp
+        #: Any concerns regarding the version.
+        self.concerns = concerns or set()
 
         self._matched_tag = None  # type: Optional[str]
         self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
@@ -861,8 +876,9 @@ class Version:
         tagged_metadata: Optional[str] = None,
         epoch: Optional[int] = None,
         branch: Optional[str] = None,
+        timestamp: Optional[dt.datetime] = None,
         # fmt: off
-        timestamp: Optional[dt.datetime] = None
+        concerns: Optional[Set[Concern]] = None
         # fmt: on
     ):
         if strict:
@@ -877,6 +893,7 @@ class Version:
             epoch=epoch,
             branch=branch,
             timestamp=timestamp,
+            concerns=concerns,
         )
 
     @classmethod
@@ -899,7 +916,8 @@ class Version:
         :param tag_branch: Branch on which to find tags, if different than the
             current branch.
         :param full_commit: Get the full commit hash instead of the short form.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         archival = _find_higher_file(".git_archival.json", ".git")
         if archival is not None:
@@ -968,10 +986,23 @@ class Version:
                 return version
 
         _detect_vcs(Vcs.Git)
+        concerns = set()  # type: Set[Concern]
         if tag_branch is None:
             tag_branch = "HEAD"
 
         git_version = _get_git_version()
+
+        if git_version < [2, 15]:
+            flag_file = _find_higher_file(".git/shallow")
+            if flag_file:
+                concerns.add(Concern.ShallowRepository)
+        else:
+            code, msg = _run_cmd("git rev-parse --is-shallow-repository")
+            if msg.strip() == "true":
+                concerns.add(Concern.ShallowRepository)
+
+        if strict and concerns:
+            raise RuntimeError("\n".join(x.message() for x in concerns))
 
         code, msg = _run_cmd("git symbolic-ref --short HEAD", codes=[0, 128])
         if code == 128:
@@ -984,7 +1015,7 @@ class Version:
             codes=[0, 128],
         )
         if code == 128:
-            return cls._fallback(strict, distance=0, dirty=True, branch=branch)
+            return cls._fallback(strict, distance=0, dirty=True, branch=branch, concerns=concerns)
         commit = msg
 
         timestamp = None
@@ -1020,6 +1051,7 @@ class Version:
                     dirty=dirty,
                     branch=branch,
                     timestamp=timestamp,
+                    concerns=concerns,
                 )
             tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
             tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
@@ -1048,6 +1080,7 @@ class Version:
                     dirty=dirty,
                     branch=branch,
                     timestamp=timestamp,
+                    concerns=concerns,
                 )
 
             detailed_tags = []  # type: List[_GitRefInfo]
@@ -1075,6 +1108,7 @@ class Version:
             epoch=epoch,
             branch=branch,
             timestamp=timestamp,
+            concerns=concerns,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1097,7 +1131,8 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         :param full_commit: Get the full commit hash instead of the short form.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         archival = _find_higher_file(".hg_archival.txt", ".hg")
         if archival is not None:
@@ -1220,7 +1255,8 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Darcs)
 
@@ -1286,7 +1322,8 @@ class Version:
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
         :param tag_dir: Location of tags relative to the root.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Subversion)
 
@@ -1370,7 +1407,8 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Bazaar)
 
@@ -1449,7 +1487,8 @@ class Version:
             Refer to `from_any_vcs` for more info.
         :param latest_tag: If true, only inspect the latest tag for a pattern
             match. If false, keep looking at tags until there is a match.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Fossil)
 
@@ -1558,7 +1597,8 @@ class Version:
         :param latest_tag: If true, only inspect the latest tag on the latest
             tagged commit for a pattern match. If false, keep looking at tags
             until there is a match.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         _detect_vcs(Vcs.Pijul)
 
@@ -1708,7 +1748,8 @@ class Version:
             current branch. This is only used for Git currently.
         :param full_commit: Get the full commit hash instead of the short form.
             This is only used for Git and Mercurial.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         vcs = _detect_vcs_from_archival()
         if vcs is None:
@@ -1746,7 +1787,8 @@ class Version:
             current branch. This is only used for Git currently.
         :param full_commit: Get the full commit hash instead of the short form.
             This is only used for Git and Mercurial.
-        :param strict: When there are no tags, fail instead of falling back to 0.0.0.
+        :param strict: Elevate warnings to errors.
+            When there are no tags, fail instead of falling back to 0.0.0.
         """
         return cls._do_vcs_callback(
             vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict

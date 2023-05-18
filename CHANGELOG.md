@@ -1,3 +1,10 @@
+## Unreleased
+
+* The `from` command will print a warning for shallow Git repositories.
+  This becomes an error with `--strict`.
+* The `Version` class has a new `concerns` field to indicate warnings with the version.
+  Right now, the only possibility is `Concern.ShallowRepository`.
+
 ## v1.16.1 (2023-05-13)
 
 * Fixed outdated reference to `pkg_resources` in the docstring for `get_version`.
