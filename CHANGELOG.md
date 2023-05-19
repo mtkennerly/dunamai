@@ -1,4 +1,4 @@
-## Unreleased
+## v1.17.0 (2023-05-19)
 
 * The `from` command will print a warning for shallow Git repositories.
   This becomes an error with `--strict`.

@@ -81,7 +81,7 @@ common_sub_args = [
         "default": False,
         "help": (
             "Elevate warnings to errors."
-            "When there are no tags, fail instead of falling back to 0.0.0"
+            " When there are no tags, fail instead of falling back to 0.0.0"
         ),
     },
     {
