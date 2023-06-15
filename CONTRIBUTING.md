@@ -16,3 +16,9 @@ Development requires Python 3.7+.
   ```
   poetry run pytest --cov
   ```
+* Render documentation:
+  ```
+  pipx install mkdocs
+  pipx runpip mkdocs install -r docs/requirements.txt
+  mkdocs serve
+  ```

@@ -68,29 +68,56 @@ _T = TypeVar("_T")
 
 
 class Style(Enum):
+    """
+    Standard styles for serializing a version.
+    """
+
     Pep440 = "pep440"
+    """PEP 440"""
     SemVer = "semver"
+    """Semantic Versioning"""
     Pvp = "pvp"
+    """Haskell Package Versioning Policy"""
 
 
 class Vcs(Enum):
+    """
+    Version control systems.
+    """
+
     Any = "any"
+    """Automatically determine the VCS."""
     Git = "git"
+    """Git"""
     Mercurial = "mercurial"
+    """Mercurial"""
     Darcs = "darcs"
+    """Darcs"""
     Subversion = "subversion"
+    """Subversion"""
     Bazaar = "bazaar"
+    """Bazaar"""
     Fossil = "fossil"
+    """Fossil"""
     Pijul = "pijul"
+    """Pijul"""
 
 
 class Pattern(Enum):
+    """
+    Regular expressions used to parse tags as versions.
+    """
+
     Default = "default"
+    """Default pattern, including `v` prefix."""
     DefaultUnprefixed = "default-unprefixed"
+    """Default pattern, but without `v` prefix."""
 
     def regex(self) -> str:
         """
         Get the regular expression for this preset pattern.
+
+        :returns: Regular expression.
         """
         variants = {
             Pattern.Default: VERSION_SOURCE_PATTERN,
@@ -106,6 +133,9 @@ class Pattern(Enum):
         If the pattern contains the capture group `?P<base>`, then it is
         returned as-is. Otherwise, it is interpreted as a variant of the
         `Pattern` enum.
+
+        :param pattern: Pattern to parse.
+        :returns: Regular expression.
         """
         if isinstance(pattern, str) and "?P<base>" in pattern:
             return pattern
@@ -126,9 +156,20 @@ class Pattern(Enum):
 
 
 class Concern(Enum):
+    """
+    A concern/warning discovered while producing the version.
+    """
+
     ShallowRepository = "shallow-repository"
+    """Repository does not contain full history"""
 
     def message(self) -> str:
+        """
+        Produce a human-readable description of the concern.
+
+        :returns: Concern description.
+        """
+
         if self == Concern.ShallowRepository:
             return "This is a shallow repository, so Dunamai may not produce the correct version."
         else:
@@ -188,7 +229,7 @@ def _match_version_pattern(
     pattern: Union[str, Pattern], sources: Sequence[str], latest_source: bool
 ) -> _MatchedVersionPattern:
     """
-    :return: Tuple of:
+    :returns: Tuple of:
         * matched tag
         * base segment
         * tuple of:
@@ -465,6 +506,33 @@ class _GitRefInfo:
 
 @total_ordering
 class Version:
+    """
+    A dynamic version.
+
+    :ivar base: Release segment.
+    :vartype base: str
+    :ivar stage: Alphabetical part of prerelease segment.
+    :vartype stage: Optional[str]
+    :ivar revision: Numerical part of prerelease segment.
+    :vartype revision: Optional[int]
+    :ivar distance: Number of commits since the last tag.
+    :vartype distance: int
+    :ivar commit: Commit ID.
+    :vartype commit: Optional[str]
+    :ivar dirty: Whether there are uncommitted changes.
+    :vartype dirty: Optional[bool]
+    :ivar tagged_metadata: Any metadata segment from the tag itself.
+    :vartype tagged_metadata: Optional[str]
+    :ivar epoch: Optional PEP 440 epoch.
+    :vartype epoch: Optional[int]
+    :ivar branch: Name of the current branch.
+    :vartype branch: Optional[str]
+    :ivar timestamp: Timestamp of the current commit.
+    :vartype timestamp: Optional[dt.datetime]
+    :ivar concerns: Any concerns regarding the version.
+    :vartype concerns: Optional[Set[Concern]]
+    """
+
     def __init__(
         self,
         base: str,
@@ -493,33 +561,22 @@ class Version:
         :param timestamp: Timestamp of the current commit.
         :param concerns: Any concerns regarding the version.
         """
-        #: Release segment.
         self.base = base
-        #: Alphabetical part of prerelease segment.
         self.stage = None
-        #: Numerical part of prerelease segment.
         self.revision = None
         if stage is not None:
             self.stage, self.revision = stage
-        #: Number of commits since the last tag.
         self.distance = distance
-        #: Commit ID.
         self.commit = commit
-        #: Whether there are uncommitted changes.
         self.dirty = dirty
-        #: Any metadata segment from the tag itself.
         self.tagged_metadata = tagged_metadata
-        #: Optional PEP 440 epoch.
         self.epoch = epoch
-        #: Name of the current branch.
         self.branch = branch
-        #: Timestamp of the current commit.
         try:
             self.timestamp = timestamp.astimezone(dt.timezone.utc) if timestamp else None
         except ValueError:
             # Will fail for naive timestamps before Python 3.6.
             self.timestamp = timestamp
-        #: Any concerns regarding the version.
         self.concerns = concerns or set()
 
         self._matched_tag = None  # type: Optional[str]
@@ -569,7 +626,7 @@ class Version:
         Distance is also ignored when `other.distance == 0`.
 
         :param other: The version to compare to.
-        :return: True if this version equals the other version.
+        :returns: True if this version equals the other version.
         """
         return (
             _equal_if_set(self.base, other.base)
@@ -652,6 +709,7 @@ class Version:
         :param tagged_metadata: If true, insert the `tagged_metadata` in the
             version as the first part of the metadata segment.
             This is ignored when `format` is used.
+        :returns: Serialized version.
         """
         base = self.base
         revision = self.revision
@@ -764,6 +822,7 @@ class Version:
         :param version: Full version, such as 0.3.0a3+d7.gb6a9020.dirty.
         :param pattern: Regular expression matched against the version.
             Refer to `from_any_vcs` for more info.
+        :returns: Parsed version.
         """
         normalized = version
         if not version.startswith("v") and pattern in [VERSION_SOURCE_PATTERN, Pattern.Default]:
@@ -846,13 +905,13 @@ class Version:
         The base is bumped unless there is a stage defined, in which case,
         the revision is bumped instead.
 
-        :param index: Numerical position to increment in the base. Default: -1.
+        :param index: Numerical position to increment in the base.
             This follows Python indexing rules, so positive numbers start from
             the left side and count up from 0, while negative numbers start from
             the right side and count down from -1.
             Only has an effect when the base is bumped.
-        :param increment: By how much to increment the relevant position. Default: 1.
-        :return: Bumped version.
+        :param increment: By how much to increment the relevant position.
+        :returns: Bumped version.
         """
         bumped = copy.deepcopy(self)
         if bumped.stage is None:
@@ -918,6 +977,7 @@ class Version:
         :param full_commit: Get the full commit hash instead of the short form.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         archival = _find_higher_file(".git_archival.json", ".git")
         if archival is not None:
@@ -1133,6 +1193,7 @@ class Version:
         :param full_commit: Get the full commit hash instead of the short form.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         archival = _find_higher_file(".hg_archival.txt", ".hg")
         if archival is not None:
@@ -1257,6 +1318,7 @@ class Version:
             until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         _detect_vcs(Vcs.Darcs)
 
@@ -1324,6 +1386,7 @@ class Version:
         :param tag_dir: Location of tags relative to the root.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         _detect_vcs(Vcs.Subversion)
 
@@ -1409,6 +1472,7 @@ class Version:
             until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         _detect_vcs(Vcs.Bazaar)
 
@@ -1489,6 +1553,7 @@ class Version:
             match. If false, keep looking at tags until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         _detect_vcs(Vcs.Fossil)
 
@@ -1599,6 +1664,7 @@ class Version:
             until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         _detect_vcs(Vcs.Pijul)
 
@@ -1750,6 +1816,7 @@ class Version:
             This is only used for Git and Mercurial.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         vcs = _detect_vcs_from_archival()
         if vcs is None:
@@ -1789,6 +1856,7 @@ class Version:
             This is only used for Git and Mercurial.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :returns: Detected version.
         """
         return cls._do_vcs_callback(
             vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict
@@ -1833,6 +1901,7 @@ def check_version(version: str, style: Style = Style.Pep440) -> None:
 
     :param version: Version to check.
     :param style: Style against which to check.
+    :raises ValueError: If the version is invalid.
     """
     name, pattern = {
         Style.Pep440: ("PEP 440", _VALID_PEP440),
@@ -1874,6 +1943,7 @@ def get_version(
     :param parser: Callback to convert a string into a Version instance.
         This will be used for the second choice.
         For example, you can pass `Version.parse` here.
+    :returns: First available version.
     """
     if ignore is None:
         ignore = []
@@ -1924,7 +1994,7 @@ def serialize_pep440(
     :param dev: Developmental release number.
     :param epoch: Epoch number.
     :param metadata: Any local version label segments.
-    :return: Serialized version.
+    :returns: Serialized version.
     """
     out = []  # type: list
 
@@ -1969,7 +2039,7 @@ def serialize_semver(
     :param base: Version core, such as 0.1.0.
     :param pre: Pre-release identifiers.
     :param metadata: Build metadata identifiers.
-    :return: Serialized version.
+    :returns: Serialized version.
     """
     out = [base]
 
@@ -1992,7 +2062,7 @@ def serialize_pvp(base: str, metadata: Optional[Sequence[Union[str, int]]] = Non
 
     :param base: Version core, such as 0.1.0.
     :param metadata: Version tag metadata.
-    :return: Serialized version.
+    :returns: Serialized version.
     """
     out = [base]
 
@@ -2010,12 +2080,12 @@ def bump_version(base: str, index: int = -1, increment: int = 1) -> str:
 
     :param base: Version core, such as 0.1.0.
         Do not include pre-release identifiers.
-    :param index: Numerical position to increment. Default: -1.
+    :param index: Numerical position to increment.
         This follows Python indexing rules, so positive numbers start from
         the left side and count up from 0, while negative numbers start from
         the right side and count down from -1.
-    :param increment: By how much the `index` needs to increment. Default: 1.
-    :return: Bumped version.
+    :param increment: By how much the `index` needs to increment.
+    :returns: Bumped version.
     """
     bases = [int(x) for x in base.split(".")]
     bases[index] += increment

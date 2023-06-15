@@ -1,0 +1,13 @@
+site_name: Dunamai Docs
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_toc_entry: false
+            docstring_style: sphinx
