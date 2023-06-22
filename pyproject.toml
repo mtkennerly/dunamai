@@ -36,15 +36,18 @@ pytest-cov = [
     { version = "^2.6", python = ">=3.5,<3.7" },
 ]
 black = { version = "22.1.0", python = "^3.7" }
-flake8 = { version = "^5.0", python = "^3.7" }
 mypy = { version = "^0.982", python = "^3.7" }
-pep8-naming = { version = "^0.12.1", python = "^3.7" }
+ruff = {version = "^0.0.272", python = "^3.7"}
 
 [tool.poetry.scripts]
 dunamai = 'dunamai.__main__:main'
 
 [tool.black]
 line-length = 100
+
+[tool.ruff]
+line-length = 100
+extend-select = ["W605", "N"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
