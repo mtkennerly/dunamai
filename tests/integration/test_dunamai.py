@@ -88,6 +88,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         except Exception:
             pass
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
+        assert from_vcs(fresh=True).vcs == Vcs.Git
 
         # Additional one-off check not in other VCS integration tests:
         # strict mode requires there to be a tag
@@ -471,6 +472,7 @@ def test__version__from_mercurial(tmp_path) -> None:
     with chdir(vcs):
         run("hg init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
+        assert from_vcs(fresh=True).vcs == Vcs.Mercurial
 
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
@@ -556,6 +558,7 @@ def test__version__from_darcs(tmp_path) -> None:
     with chdir(vcs):
         run("darcs init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False)
+        assert from_vcs(fresh=True).vcs == Vcs.Darcs
 
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True)
@@ -609,6 +612,7 @@ def test__version__from_subversion(tmp_path) -> None:
     with chdir(vcs):
         run('svn checkout "{}" .'.format(vcs_srv_uri))
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False)
+        assert from_vcs(fresh=True).vcs == Vcs.Subversion
 
         run("svn mkdir trunk tags")
 
@@ -695,6 +699,7 @@ def test__version__from_bazaar(tmp_path) -> None:
     with chdir(vcs):
         run("bzr init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False)
+        assert from_vcs(fresh=True).vcs == Vcs.Bazaar
 
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True)
@@ -759,6 +764,7 @@ def test__version__from_fossil(tmp_path) -> None:
         run("fossil init repo")
         run("fossil open repo --force")
         assert from_vcs() == Version("0.0.0", distance=0, dirty=False, branch=b)
+        assert from_vcs().vcs == Vcs.Fossil
 
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs() == Version("0.0.0", distance=0, dirty=True, branch=b)
@@ -812,6 +818,7 @@ def test__version__from_pijul(tmp_path) -> None:
     with chdir(vcs):
         run("pijul init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
+        assert from_vcs(fresh=True).vcs == Vcs.Pijul
 
         (vcs / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)

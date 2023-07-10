@@ -531,6 +531,8 @@ class Version:
     :vartype timestamp: Optional[dt.datetime]
     :ivar concerns: Any concerns regarding the version.
     :vartype concerns: Optional[Set[Concern]]
+    :ivar vcs: Version control system from which the version was detected.
+    :vartype vcs: Vcs
     """
 
     def __init__(
@@ -545,8 +547,9 @@ class Version:
         epoch: Optional[int] = None,
         branch: Optional[str] = None,
         timestamp: Optional[dt.datetime] = None,
+        concerns: Optional[Set[Concern]] = None,
         # fmt: off
-        concerns: Optional[Set[Concern]] = None
+        vcs: Vcs = Vcs.Any,
         # fmt: on
     ) -> None:
         """
@@ -578,6 +581,7 @@ class Version:
             # Will fail for naive timestamps before Python 3.6.
             self.timestamp = timestamp
         self.concerns = concerns or set()
+        self.vcs = vcs
 
         self._matched_tag = None  # type: Optional[str]
         self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
@@ -936,8 +940,9 @@ class Version:
         epoch: Optional[int] = None,
         branch: Optional[str] = None,
         timestamp: Optional[dt.datetime] = None,
+        concerns: Optional[Set[Concern]] = None,
         # fmt: off
-        concerns: Optional[Set[Concern]] = None
+        vcs: Vcs = Vcs.Any,
         # fmt: on
     ):
         if strict:
@@ -953,6 +958,7 @@ class Version:
             branch=branch,
             timestamp=timestamp,
             concerns=concerns,
+            vcs=vcs,
         )
 
     @classmethod
@@ -979,6 +985,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
+        vcs = Vcs.Git
+
         archival = _find_higher_file(".git_archival.json", ".git")
         if archival is not None:
             content = archival.read_text("utf8")
@@ -1025,6 +1033,7 @@ class Version:
                         dirty=dirty,
                         branch=branch,
                         timestamp=timestamp,
+                        vcs=vcs,
                     )
 
                 tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
@@ -1040,12 +1049,13 @@ class Version:
                     epoch=epoch,
                     branch=branch,
                     timestamp=timestamp,
+                    vcs=vcs,
                 )
                 version._matched_tag = tag
                 version._newer_unmatched_tags = unmatched
                 return version
 
-        _detect_vcs(Vcs.Git)
+        _detect_vcs(vcs)
         concerns = set()  # type: Set[Concern]
         if tag_branch is None:
             tag_branch = "HEAD"
@@ -1075,7 +1085,9 @@ class Version:
             codes=[0, 128],
         )
         if code == 128:
-            return cls._fallback(strict, distance=0, dirty=True, branch=branch, concerns=concerns)
+            return cls._fallback(
+                strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs
+            )
         commit = msg
 
         timestamp = None
@@ -1112,6 +1124,7 @@ class Version:
                     branch=branch,
                     timestamp=timestamp,
                     concerns=concerns,
+                    vcs=vcs,
                 )
             tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
             tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
@@ -1141,6 +1154,7 @@ class Version:
                     branch=branch,
                     timestamp=timestamp,
                     concerns=concerns,
+                    vcs=vcs,
                 )
 
             detailed_tags = []  # type: List[_GitRefInfo]
@@ -1169,6 +1183,7 @@ class Version:
             branch=branch,
             timestamp=timestamp,
             concerns=concerns,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1195,6 +1210,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
+        vcs = Vcs.Mercurial
+
         archival = _find_higher_file(".hg_archival.txt", ".hg")
         if archival is not None:
             content = archival.read_text("utf8")
@@ -1212,7 +1229,9 @@ class Version:
             branch = data.get("branch")
 
             if tag is None or tag == "null":
-                return cls._fallback(strict, distance=distance, commit=commit, branch=branch)
+                return cls._fallback(
+                    strict, distance=distance, commit=commit, branch=branch, vcs=vcs
+                )
 
             all_tags_file = _find_higher_file(".hgtags", ".hg")
             if all_tags_file is None:
@@ -1237,12 +1256,13 @@ class Version:
                 tagged_metadata=tagged_metadata,
                 epoch=epoch,
                 branch=branch,
+                vcs=vcs,
             )
             version._matched_tag = tag
             version._newer_unmatched_tags = unmatched
             return version
 
-        _detect_vcs(Vcs.Mercurial)
+        _detect_vcs(vcs)
 
         code, msg = _run_cmd("hg summary")
         dirty = "commit: (clean)" not in msg.splitlines()
@@ -1276,6 +1296,7 @@ class Version:
                 dirty=dirty,
                 branch=branch,
                 timestamp=timestamp,
+                vcs=vcs,
             )
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
         tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
@@ -1296,6 +1317,7 @@ class Version:
             epoch=epoch,
             branch=branch,
             timestamp=timestamp,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1320,7 +1342,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
-        _detect_vcs(Vcs.Darcs)
+        vcs = Vcs.Darcs
+        _detect_vcs(vcs)
 
         code, msg = _run_cmd("darcs status", codes=[0, 1])
         dirty = msg != "No changes!"
@@ -1342,7 +1365,7 @@ class Version:
             except Exception:
                 distance = 0
             return cls._fallback(
-                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp
+                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
             )
         tags = msg.splitlines()
         tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
@@ -1362,6 +1385,7 @@ class Version:
             tagged_metadata=tagged_metadata,
             epoch=epoch,
             timestamp=timestamp,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1388,7 +1412,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
-        _detect_vcs(Vcs.Subversion)
+        vcs = Vcs.Subversion
+        _detect_vcs(vcs)
 
         tag_dir = tag_dir.strip("/")
 
@@ -1411,7 +1436,7 @@ class Version:
 
         if not commit:
             return cls._fallback(
-                strict, distance=0, commit=commit, dirty=dirty, timestamp=timestamp
+                strict, distance=0, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
             )
         code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
@@ -1422,7 +1447,7 @@ class Version:
             except Exception:
                 distance = 0
             return cls._fallback(
-                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp
+                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
             )
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
@@ -1450,6 +1475,7 @@ class Version:
             tagged_metadata=tagged_metadata,
             epoch=epoch,
             timestamp=timestamp,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1474,7 +1500,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
-        _detect_vcs(Vcs.Bazaar)
+        vcs = Vcs.Bazaar
+        _detect_vcs(vcs)
 
         code, msg = _run_cmd("bzr status")
         dirty = msg != ""
@@ -1509,6 +1536,7 @@ class Version:
                 dirty=dirty,
                 branch=branch,
                 timestamp=timestamp,
+                vcs=vcs,
             )
         tags_to_revs = {
             line.split()[0]: int(line.split()[1])
@@ -1532,6 +1560,7 @@ class Version:
             epoch=epoch,
             branch=branch,
             timestamp=timestamp,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1555,7 +1584,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
-        _detect_vcs(Vcs.Fossil)
+        vcs = Vcs.Fossil
+        _detect_vcs(vcs)
 
         code, msg = _run_cmd("fossil changes --differ")
         dirty = bool(msg)
@@ -1580,7 +1610,13 @@ class Version:
         total_commits = int(msg) - 1
         if total_commits <= 0:
             return cls._fallback(
-                strict, distance=0, commit=commit, dirty=dirty, branch=branch, timestamp=timestamp
+                strict,
+                distance=0,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+                vcs=vcs,
             )
 
         # Based on `compute_direct_ancestors` from descendants.c in the
@@ -1621,6 +1657,7 @@ class Version:
                 dirty=dirty,
                 branch=branch,
                 timestamp=timestamp,
+                vcs=vcs,
             )
 
         tags_to_distance = [
@@ -1642,6 +1679,7 @@ class Version:
             epoch=epoch,
             branch=branch,
             timestamp=timestamp,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched
@@ -1666,7 +1704,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :returns: Detected version.
         """
-        _detect_vcs(Vcs.Pijul)
+        vcs = Vcs.Pijul
+        _detect_vcs(vcs)
 
         code, msg = _run_cmd("pijul diff --short")
         dirty = msg.strip() != ""
@@ -1681,7 +1720,7 @@ class Version:
         code, msg = _run_cmd("pijul log --limit 1 --output-format json")
         limited_commits = json.loads(msg)
         if len(limited_commits) == 0:
-            return cls._fallback(strict, dirty=dirty, branch=branch)
+            return cls._fallback(strict, dirty=dirty, branch=branch, vcs=vcs)
 
         commit = limited_commits[0]["hash"]
         timestamp = _parse_timestamp(limited_commits[0]["timestamp"])
@@ -1700,6 +1739,7 @@ class Version:
                 dirty=dirty,
                 branch=branch,
                 timestamp=timestamp,
+                vcs=vcs,
             )
 
         tag_meta = []  # type: List[dict]
@@ -1775,6 +1815,7 @@ class Version:
             epoch=epoch,
             branch=branch,
             timestamp=timestamp,
+            vcs=vcs,
         )
         version._matched_tag = tag
         version._newer_unmatched_tags = unmatched

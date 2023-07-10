@@ -1,3 +1,7 @@
+## Unreleased
+
+* Added a `vcs` attribute to `Version` to indicate which VCS was detected.
+
 ## v1.17.0 (2023-05-19)
 
 * The `from` command will print a warning for shallow Git repositories.
