@@ -942,7 +942,7 @@ class Version:
         timestamp: Optional[dt.datetime] = None,
         concerns: Optional[Set[Concern]] = None,
         # fmt: off
-        vcs: Vcs = Vcs.Any,
+        vcs: Vcs = Vcs.Any
         # fmt: on
     ):
         if strict:
