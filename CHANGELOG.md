@@ -1,4 +1,4 @@
-## Unreleased
+## v1.18.0 (2023-07-10)
 
 * Added a `vcs` attribute to `Version` to indicate which VCS was detected.
 
