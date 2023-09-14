@@ -1,3 +1,8 @@
+## Unreleased
+
+* For Git 2.16+, `--decorate-refs=refs/tags/` is now specified for `git log`
+  in case you've configured `log.excludeDecoration=refs/tags/`.
+
 ## v1.18.0 (2023-07-10)
 
 * Added a `vcs` attribute to `Version` to indicate which VCS was detected.

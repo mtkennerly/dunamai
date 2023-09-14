@@ -474,18 +474,20 @@ class _GitRefInfo:
             return "refs/tags/{}".format(ref)
 
     @staticmethod
-    def from_git_tag_topo_order(tag_branch: str) -> Mapping[str, int]:
-        code, logmsg = _run_cmd(
+    def from_git_tag_topo_order(tag_branch: str, git_version: List[int]) -> Mapping[str, int]:
+        cmd = (
             "git log --simplify-by-decoration --topo-order --decorate=full"
             ' {} "--format=%H%d"'.format(tag_branch)
         )
-        tag_lookup = {}
+        if git_version >= [2, 16]:
+            cmd += " --decorate-refs=refs/tags/"
+        code, logmsg = _run_cmd(cmd)
 
-        # Simulate "--decorate-refs=refs/tags/*" for older Git versions:
         filtered_lines = [
             x for x in logmsg.strip().splitlines(keepends=False) if " (" not in x or "tag: " in x
         ]
 
+        tag_lookup = {}
         for tag_offset, line in enumerate(filtered_lines):
             # lines have the pattern
             # <gitsha1>  (tag: refs/tags/v1.2.0b1, tag: refs/tags/v1.2.0)
@@ -1158,7 +1160,7 @@ class Version:
                 )
 
             detailed_tags = []  # type: List[_GitRefInfo]
-            tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch)
+            tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch, git_version)
 
             for line in msg.strip().splitlines():
                 parts = line.split("@{")

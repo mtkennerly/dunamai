@@ -4,7 +4,7 @@ import shutil
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, List, Optional
 
 import pytest
 
@@ -13,6 +13,12 @@ from dunamai import Version, Vcs, Concern, _get_git_version, _run_cmd
 
 def avoid_identical_ref_timestamps() -> None:
     time.sleep(1.2)
+
+
+def lacks_git_version(version: List[int]) -> bool:
+    if shutil.which("git") is None:
+        return True
+    return _get_git_version() < version
 
 
 REPO = Path(__file__).parent.parent.parent
@@ -449,6 +455,25 @@ def test__version__from_git__shallow(tmp_path) -> None:
 
         with pytest.raises(RuntimeError):
             Version.from_git(strict=True)
+
+
+@pytest.mark.skipif(lacks_git_version([2, 27]), reason="Requires Git 2.27+")
+def test__version__from_git__exclude_decoration(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-exclude-decoration"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    from_vcs = make_from_callback(Version.from_git)
+    b = "master"
+
+    with chdir(vcs):
+        run("git init")
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Initial")
+        run("git tag v0.1.0 -m Release")
+        run("git config log.excludeDecoration refs/tags/")
+
+        assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
