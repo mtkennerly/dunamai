@@ -1,4 +1,4 @@
-## Unreleased
+## v1.18.1 (2023-09-22)
 
 * For Git 2.16+, `--decorate-refs=refs/tags/` is now specified for `git log`
   in case you've configured `log.excludeDecoration=refs/tags/`.
