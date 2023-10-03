@@ -865,9 +865,7 @@ def test__bump_version():
 def test__get_version_outside_repo():
     # TODO: Test vcs other than git
     with tempfile.TemporaryDirectory() as dirname:
-        # Initialize a git repo
         Repo.init(dirname)
-        # os.chdir(dirname)
         os.chdir("/")
 
         def make_from(func):
@@ -875,5 +873,5 @@ def test__get_version_outside_repo():
                 return func(*args, path=dirname, **kwargs)
             return from_other
 
-        print(get_version('placeholder', third_choice=make_from(Version.from_git)))
-        print(get_version('placeholder', third_choice=make_from(Version.from_any_vcs)))
+        assert get_version('placeholder', third_choice=make_from(Version.from_git)) == "0.0.0"
+        assert get_version('placeholder', third_choice=make_from(Version.from_any_vcs)) == "0.0.0"
