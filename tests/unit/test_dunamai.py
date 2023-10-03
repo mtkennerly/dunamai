@@ -1,7 +1,9 @@
 import datetime as dt
 import os
 import re
+import tempfile
 from contextlib import contextmanager
+from git import Repo
 from pathlib import Path
 from typing import Callable, Iterator, Optional
 
@@ -858,3 +860,20 @@ def test__bump_version():
 
     with pytest.raises(ValueError):
         bump_version("foo", 0)
+
+
+def test__get_version_outside_repo():
+    # TODO: Test vcs other than git
+    with tempfile.TemporaryDirectory() as dirname:
+        # Initialize a git repo
+        Repo.init(dirname)
+        # os.chdir(dirname)
+        os.chdir("/")
+
+        def make_from(func):
+            def from_other(*args, **kwargs):
+                return func(*args, path=dirname, **kwargs)
+            return from_other
+
+        print(get_version('placeholder', third_choice=make_from(Version.from_git)))
+        print(get_version('placeholder', third_choice=make_from(Version.from_any_vcs)))
