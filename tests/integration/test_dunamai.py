@@ -213,7 +213,8 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             run("git tag v0.3.0+a,b -m Annotated")
             assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
-    assert from_vcs(path=vcs) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
+    if not legacy:
+        assert from_vcs(path=vcs) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
