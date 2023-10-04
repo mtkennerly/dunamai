@@ -1,5 +1,6 @@
 import argparse
 import sys
+from pathlib import Path
 from typing import Mapping, Optional
 
 from dunamai import check_version, Version, Pattern, Style, Vcs, VERSION_SOURCE_PATTERN
@@ -83,6 +84,10 @@ common_sub_args = [
             "Elevate warnings to errors."
             " When there are no tags, fail instead of falling back to 0.0.0"
         ),
+    },
+    {
+        "triggers": ["--path"],
+        "help": "Directory to inspect, if not the current working directory",
     },
     {
         "triggers": ["--debug"],
@@ -250,8 +255,11 @@ def from_vcs(
     tag_branch: Optional[str],
     full_commit: bool,
     strict: bool,
+    path: Optional[Path],
 ) -> None:
-    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict)
+    version = Version.from_vcs(
+        vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path
+    )
 
     for concern in version.concerns:
         print("Warning: {}".format(concern.message()), file=sys.stderr)
@@ -285,6 +293,7 @@ def main() -> None:
                 tag_branch,
                 full_commit,
                 args.strict,
+                Path(args.path) if args.path is not None else None,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

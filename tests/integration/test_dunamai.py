@@ -213,6 +213,8 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             run("git tag v0.3.0+a,b -m Annotated")
             assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
+    assert from_vcs(path=vcs) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
+
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
@@ -543,6 +545,8 @@ def test__version__from_mercurial(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.0", dirty=False, branch=b)
 
+    assert from_vcs(path=vcs) == Version("0.1.0", dirty=False, branch=b)
+
 
 def test__version__from_mercurial__archival_untagged() -> None:
     with chdir(REPO / "tests" / "archival" / "hg-untagged"):
@@ -615,6 +619,8 @@ def test__version__from_darcs(tmp_path) -> None:
 
         run("darcs obliterate --all --last 3")
         assert from_vcs() == Version("0.1.0", dirty=False)
+
+    assert from_vcs(path=vcs) == Version("0.1.0", dirty=False)
 
 
 @pytest.mark.skipif(
@@ -712,6 +718,8 @@ def test__version__from_subversion(tmp_path) -> None:
                 "0.1.0", distance=0, commit="3", dirty=False
             )
 
+    assert from_vcs(path=vcs) == Version("0.1.0", distance=0, commit="3", dirty=False)
+
 
 @pytest.mark.skipif(shutil.which("bzr") is None, reason="Requires Bazaar")
 def test__version__from_bazaar(tmp_path) -> None:
@@ -776,6 +784,8 @@ def test__version__from_bazaar(tmp_path) -> None:
         run("bzr tag v0.2.1")
         assert from_vcs() == Version("0.2.1", commit="3", dirty=False, branch="renamed")
 
+    assert from_vcs(path=vcs) == Version("0.2.1", commit="3", dirty=False, branch="renamed")
+
 
 @pytest.mark.skipif(shutil.which("fossil") is None, reason="Requires Fossil")
 def test__version__from_fossil(tmp_path) -> None:
@@ -831,6 +841,8 @@ def test__version__from_fossil(tmp_path) -> None:
         assert from_vcs() == Version("0.1.1", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False, branch=b)
 
+    assert from_vcs(path=vcs) == Version("0.1.1", dirty=False, branch=b)
+
 
 @pytest.mark.skipif(shutil.which("pijul") is None, reason="Requires Pijul")
 def test__version__from_pijul(tmp_path) -> None:
@@ -870,3 +882,5 @@ def test__version__from_pijul(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
+
+    assert from_vcs(path=vcs) == Version("0.1.0", distance=1, dirty=False, branch=b)

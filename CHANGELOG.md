@@ -1,3 +1,7 @@
+## Unreleased
+
+* Added a `--path` option to inspect a directory other than the current one.
+
 ## v1.18.1 (2023-09-22)
 
 * For Git 2.16+, `--decorate-refs=refs/tags/` is now specified for `git log`

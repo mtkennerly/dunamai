@@ -189,8 +189,8 @@ def _pattern_error(
 
 def _run_cmd(
     command: str,
+    where: Optional[Path],
     codes: Sequence[int] = (0,),
-    where: Optional[Path] = None,
     shell: bool = False,
     env: Optional[dict] = None,
 ) -> Tuple[int, str]:
@@ -319,7 +319,7 @@ def _equal_if_set(x: _T, y: Optional[_T], unset: Sequence[Any] = (None,)) -> boo
 
 
 def _get_git_version() -> List[int]:
-    _, msg = _run_cmd("git version")
+    _, msg = _run_cmd("git version", where=None)
     result = re.search(r"git version (\d+(\.\d+)*)", msg.strip())
     if result is not None:
         parts = result.group(1).split(".")
@@ -327,7 +327,7 @@ def _get_git_version() -> List[int]:
     return []
 
 
-def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
+def _detect_vcs(expected_vcs: Optional[Vcs], path: Optional[Path]) -> Vcs:
     checks = OrderedDict(
         [
             (Vcs.Git, "git status"),
@@ -348,7 +348,7 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
         program = command.split()[0]
         if not shutil.which(program):
             raise RuntimeError("Unable to find '{}' program".format(program))
-        code, msg = _run_cmd(command, codes=[])
+        code, msg = _run_cmd(command, path, codes=[])
         if code != 0:
             if expected_vcs == Vcs.Git and dubious_ownership_flag in msg:
                 raise RuntimeError(dubious_ownership_error)
@@ -361,7 +361,7 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
         unavailable = []
         for vcs, command in checks.items():
             if shutil.which(command.split()[0]):
-                code, msg = _run_cmd(command, codes=[])
+                code, msg = _run_cmd(command, path, codes=[])
                 if code == 0:
                     return vcs
                 elif vcs == Vcs.Git and dubious_ownership_flag in msg:
@@ -378,21 +378,23 @@ def _detect_vcs(expected_vcs: Optional[Vcs] = None) -> Vcs:
         raise RuntimeError(" ".join(error_parts))
 
 
-def _detect_vcs_from_archival() -> Optional[Vcs]:
-    archival = _find_higher_file(".git_archival.json", ".git")
+def _detect_vcs_from_archival(path: Optional[Path]) -> Optional[Vcs]:
+    archival = _find_higher_file(".git_archival.json", path, ".git")
     if archival is not None:
         content = archival.read_text("utf8")
         if "$Format:" not in content:
             return Vcs.Git
 
-    archival = _find_higher_file(".hg_archival.txt", ".hg")
+    archival = _find_higher_file(".hg_archival.txt", path, ".hg")
     if archival is not None:
         return Vcs.Mercurial
 
     return None
 
 
-def _find_higher_file(name: str, limit: Optional[str] = None, start: Path = None) -> Optional[Path]:
+def _find_higher_file(
+    name: str, start: Optional[Path], limit: Optional[str] = None
+) -> Optional[Path]:
     """
     :param name: Bare name of a file we'd like to find.
     :param limit: Give up if we find a file/folder with this name.
@@ -474,14 +476,16 @@ class _GitRefInfo:
             return "refs/tags/{}".format(ref)
 
     @staticmethod
-    def from_git_tag_topo_order(tag_branch: str, git_version: List[int]) -> Mapping[str, int]:
+    def from_git_tag_topo_order(
+        tag_branch: str, git_version: List[int], path: Optional[Path]
+    ) -> Mapping[str, int]:
         cmd = (
             "git log --simplify-by-decoration --topo-order --decorate=full"
             ' {} "--format=%H%d"'.format(tag_branch)
         )
         if git_version >= [2, 16]:
             cmd += " --decorate-refs=refs/tags/"
-        code, logmsg = _run_cmd(cmd)
+        code, logmsg = _run_cmd(cmd, path)
 
         filtered_lines = [
             x for x in logmsg.strip().splitlines(keepends=False) if " (" not in x or "tag: " in x
@@ -971,6 +975,7 @@ class Version:
         tag_branch: Optional[str] = None,
         full_commit: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -985,11 +990,12 @@ class Version:
         :param full_commit: Get the full commit hash instead of the short form.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Git
 
-        archival = _find_higher_file(".git_archival.json", ".git")
+        archival = _find_higher_file(".git_archival.json", path, ".git")
         if archival is not None:
             content = archival.read_text("utf8")
             if "$Format:" not in content:
@@ -1057,7 +1063,7 @@ class Version:
                 version._newer_unmatched_tags = unmatched
                 return version
 
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
         concerns = set()  # type: Set[Concern]
         if tag_branch is None:
             tag_branch = "HEAD"
@@ -1065,18 +1071,18 @@ class Version:
         git_version = _get_git_version()
 
         if git_version < [2, 15]:
-            flag_file = _find_higher_file(".git/shallow")
+            flag_file = _find_higher_file(".git/shallow", path)
             if flag_file:
                 concerns.add(Concern.ShallowRepository)
         else:
-            code, msg = _run_cmd("git rev-parse --is-shallow-repository")
+            code, msg = _run_cmd("git rev-parse --is-shallow-repository", path)
             if msg.strip() == "true":
                 concerns.add(Concern.ShallowRepository)
 
         if strict and concerns:
             raise RuntimeError("\n".join(x.message() for x in concerns))
 
-        code, msg = _run_cmd("git symbolic-ref --short HEAD", codes=[0, 128])
+        code, msg = _run_cmd("git symbolic-ref --short HEAD", path, codes=[0, 128])
         if code == 128:
             branch = None
         else:
@@ -1084,6 +1090,7 @@ class Version:
 
         code, msg = _run_cmd(
             'git log -n 1 --format="format:{}"'.format("%H" if full_commit else "%h"),
+            path,
             codes=[0, 128],
         )
         if code == 128:
@@ -1094,27 +1101,29 @@ class Version:
 
         timestamp = None
         if git_version < [2, 2]:
-            code, msg = _run_cmd('git log -n 1 --pretty=format:"%ci"')
+            code, msg = _run_cmd('git log -n 1 --pretty=format:"%ci"', path)
             timestamp = _parse_git_timestamp_iso(msg)
         else:
-            code, msg = _run_cmd('git -c log.showsignature=false log -n 1 --pretty=format:"%cI"')
+            code, msg = _run_cmd(
+                'git -c log.showsignature=false log -n 1 --pretty=format:"%cI"', path
+            )
             timestamp = _parse_git_timestamp_iso_strict(msg)
 
-        code, msg = _run_cmd("git describe --always --dirty")
+        code, msg = _run_cmd("git describe --always --dirty", path)
         dirty = msg.endswith("-dirty")
 
         if not dirty:
-            code, msg = _run_cmd("git status --porcelain")
+            code, msg = _run_cmd("git status --porcelain", path)
             if msg.strip() != "":
                 dirty = True
 
         if git_version < [2, 7]:
             code, msg = _run_cmd(
-                'git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate'
+                'git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate', path
             )
             if not msg:
                 try:
-                    code, msg = _run_cmd("git rev-list --count HEAD")
+                    code, msg = _run_cmd("git rev-list --count HEAD", path)
                     distance = int(msg)
                 except Exception:
                     distance = 0
@@ -1140,11 +1149,12 @@ class Version:
                 "@{%(creatordate:iso-strict)"
                 "@{%(*committerdate:iso-strict)"
                 "@{%(taggerdate:iso-strict)"
-                '"'
+                '"',
+                path,
             )
             if not msg:
                 try:
-                    code, msg = _run_cmd("git rev-list --count HEAD")
+                    code, msg = _run_cmd("git rev-list --count HEAD", path)
                     distance = int(msg)
                 except Exception:
                     distance = 0
@@ -1160,7 +1170,7 @@ class Version:
                 )
 
             detailed_tags = []  # type: List[_GitRefInfo]
-            tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch, git_version)
+            tag_topo_lookup = _GitRefInfo.from_git_tag_topo_order(tag_branch, git_version, path)
 
             for line in msg.strip().splitlines():
                 parts = line.split("@{")
@@ -1171,7 +1181,7 @@ class Version:
                 pattern, tags, latest_tag
             )
 
-        code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag))
+        code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag), path)
         distance = int(msg)
 
         version = cls(
@@ -1198,6 +1208,7 @@ class Version:
         latest_tag: bool = False,
         full_commit: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -1210,11 +1221,12 @@ class Version:
         :param full_commit: Get the full commit hash instead of the short form.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Mercurial
 
-        archival = _find_higher_file(".hg_archival.txt", ".hg")
+        archival = _find_higher_file(".hg_archival.txt", path, ".hg")
         if archival is not None:
             content = archival.read_text("utf8")
             data = {}
@@ -1235,7 +1247,7 @@ class Version:
                     strict, distance=distance, commit=commit, branch=branch, vcs=vcs
                 )
 
-            all_tags_file = _find_higher_file(".hgtags", ".hg")
+            all_tags_file = _find_higher_file(".hgtags", path, ".hg")
             if all_tags_file is None:
                 all_tags = [tag]
             else:
@@ -1264,30 +1276,31 @@ class Version:
             version._newer_unmatched_tags = unmatched
             return version
 
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
 
-        code, msg = _run_cmd("hg summary")
+        code, msg = _run_cmd("hg summary", path)
         dirty = "commit: (clean)" not in msg.splitlines()
 
-        code, msg = _run_cmd("hg branch")
+        code, msg = _run_cmd("hg branch", path)
         branch = msg
 
         code, msg = _run_cmd(
-            'hg id --template "{}"'.format("{id}" if full_commit else "{id|short}")
+            'hg id --template "{}"'.format("{id}" if full_commit else "{id|short}"), path
         )
         commit = msg if set(msg) != {"0"} else None
 
-        code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"')
+        code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"', path)
         timestamp = _parse_git_timestamp_iso_strict(msg) if msg != "" else None
 
         code, msg = _run_cmd(
             'hg log -r "sort(tag(){}, -rev)" --template "{{join(tags, \':\')}}\\n"'.format(
                 " and ancestors({})".format(commit) if commit is not None else ""
-            )
+            ),
+            path,
         )
         if not msg:
             try:
-                code, msg = _run_cmd("hg id --num --rev tip")
+                code, msg = _run_cmd("hg id --num --rev tip", path)
                 distance = int(msg) + 1
             except Exception:
                 distance = 0
@@ -1305,7 +1318,7 @@ class Version:
             pattern, tags, latest_tag
         )
 
-        code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit))
+        code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit), path)
         # The tag itself is in the list, so offset by 1.
         distance = max(len(msg) - 1, 0)
 
@@ -1331,6 +1344,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
@@ -1342,15 +1356,16 @@ class Version:
             until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Darcs
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
 
-        code, msg = _run_cmd("darcs status", codes=[0, 1])
+        code, msg = _run_cmd("darcs status", path, codes=[0, 1])
         dirty = msg != "No changes!"
 
-        code, msg = _run_cmd("darcs log --last 1 --xml-output")
+        code, msg = _run_cmd("darcs log --last 1 --xml-output", path)
         root = ElementTree.fromstring(msg)
         if len(root) == 0:
             commit = None
@@ -1359,10 +1374,10 @@ class Version:
             commit = root[0].attrib["hash"]
             timestamp = dt.datetime.strptime(root[0].attrib["date"] + "+0000", "%Y%m%d%H%M%S%z")
 
-        code, msg = _run_cmd("darcs show tags")
+        code, msg = _run_cmd("darcs show tags", path)
         if not msg:
             try:
-                code, msg = _run_cmd("darcs log --count")
+                code, msg = _run_cmd("darcs log --count", path)
                 distance = int(msg)
             except Exception:
                 distance = 0
@@ -1374,7 +1389,7 @@ class Version:
             pattern, tags, latest_tag
         )
 
-        code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag))
+        code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag), path)
         # The tag itself is in the list, so offset by 1.
         distance = int(msg) - 1
 
@@ -1400,6 +1415,7 @@ class Version:
         latest_tag: bool = False,
         tag_dir: str = "tags",
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -1412,20 +1428,21 @@ class Version:
         :param tag_dir: Location of tags relative to the root.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Subversion
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
 
         tag_dir = tag_dir.strip("/")
 
-        code, msg = _run_cmd("svn status")
+        code, msg = _run_cmd("svn status", path)
         dirty = bool(msg)
 
-        code, msg = _run_cmd("svn info --show-item repos-root-url")
+        code, msg = _run_cmd("svn info --show-item repos-root-url", path)
         url = msg.strip("/")
 
-        code, msg = _run_cmd("svn info --show-item revision")
+        code, msg = _run_cmd("svn info --show-item revision", path)
         if not msg or msg == "0":
             commit = None
         else:
@@ -1433,14 +1450,14 @@ class Version:
 
         timestamp = None
         if commit:
-            code, msg = _run_cmd("svn info --show-item last-changed-date")
+            code, msg = _run_cmd("svn info --show-item last-changed-date", path)
             timestamp = _parse_timestamp(msg)
 
         if not commit:
             return cls._fallback(
                 strict, distance=0, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
             )
-        code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir))
+        code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir), path)
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
         if not tags_to_revs:
@@ -1453,7 +1470,9 @@ class Version:
             )
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
-            code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag))
+            code, msg = _run_cmd(
+                'svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag), path
+            )
             for line in msg.splitlines():
                 match = re.search(r"A /{}/{} \(from .+?:(\d+)\)".format(tag_dir, tag), line)
                 if match:
@@ -1489,6 +1508,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
@@ -1500,15 +1520,16 @@ class Version:
             until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Bazaar
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
 
-        code, msg = _run_cmd("bzr status")
+        code, msg = _run_cmd("bzr status", path)
         dirty = msg != ""
 
-        code, msg = _run_cmd("bzr log --limit 1")
+        code, msg = _run_cmd("bzr log --limit 1", path)
         commit = None
         branch = None
         timestamp = None
@@ -1525,7 +1546,7 @@ class Version:
             if len(info) == 2:
                 timestamp = dt.datetime.strptime(info[1], "%a %Y-%m-%d %H:%M:%S %z")
 
-        code, msg = _run_cmd("bzr tags")
+        code, msg = _run_cmd("bzr tags", path)
         if not msg or not commit:
             try:
                 distance = int(commit) if commit is not None else 0
@@ -1574,6 +1595,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
@@ -1584,30 +1606,32 @@ class Version:
             match. If false, keep looking at tags until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Fossil
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
 
-        code, msg = _run_cmd("fossil changes --differ")
+        code, msg = _run_cmd("fossil changes --differ", path)
         dirty = bool(msg)
 
-        code, msg = _run_cmd("fossil branch current")
+        code, msg = _run_cmd("fossil branch current", path)
         branch = msg
 
         code, msg = _run_cmd(
-            "fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\""
+            "fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\"", path
         )
         commit = msg.strip("'")
 
         code, msg = _run_cmd(
             'fossil sql "'
             "SELECT DATETIME(mtime) FROM event JOIN blob ON event.objid=blob.rid WHERE type = 'ci'"
-            " AND uuid = (SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1) LIMIT 1\""
+            " AND uuid = (SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1) LIMIT 1\"",
+            path,
         )
         timestamp = dt.datetime.strptime(msg.strip("'") + "+0000", "%Y-%m-%d %H:%M:%S%z")
 
-        code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"")
+        code, msg = _run_cmd("fossil sql \"SELECT count() FROM event WHERE type = 'ci'\"", path)
         # The repository creation itself counts as a commit.
         total_commits = int(msg) - 1
         if total_commits <= 0:
@@ -1646,7 +1670,7 @@ class Version:
                 WHERE tagxref.tagtype = 1
                 ORDER BY event.mtime DESC, tagxref.mtime DESC;
         """
-        code, msg = _run_cmd('fossil sql "{}"'.format(" ".join(query.splitlines())))
+        code, msg = _run_cmd('fossil sql "{}"'.format(" ".join(query.splitlines())), path)
         if not msg:
             try:
                 distance = int(total_commits)
@@ -1693,6 +1717,7 @@ class Version:
         pattern: Union[str, Pattern] = Pattern.Default,
         latest_tag: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on Pijul tags.
@@ -1704,22 +1729,23 @@ class Version:
             until there is a match.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         vcs = Vcs.Pijul
-        _detect_vcs(vcs)
+        _detect_vcs(vcs, path)
 
-        code, msg = _run_cmd("pijul diff --short")
+        code, msg = _run_cmd("pijul diff --short", path)
         dirty = msg.strip() != ""
 
-        code, msg = _run_cmd("pijul channel")
+        code, msg = _run_cmd("pijul channel", path)
         branch = "main"
         for line in msg.splitlines():
             if line.startswith("* "):
                 branch = line.split("* ", 1)[1]
                 break
 
-        code, msg = _run_cmd("pijul log --limit 1 --output-format json")
+        code, msg = _run_cmd("pijul log --limit 1 --output-format json", path)
         limited_commits = json.loads(msg)
         if len(limited_commits) == 0:
             return cls._fallback(strict, dirty=dirty, branch=branch, vcs=vcs)
@@ -1727,10 +1753,10 @@ class Version:
         commit = limited_commits[0]["hash"]
         timestamp = _parse_timestamp(limited_commits[0]["timestamp"])
 
-        code, msg = _run_cmd("pijul log --output-format json")
+        code, msg = _run_cmd("pijul log --output-format json", path)
         channel_commits = json.loads(msg)
 
-        code, msg = _run_cmd("pijul tag")
+        code, msg = _run_cmd("pijul tag", path)
         if not msg:
             # The channel creation is in the list, so offset by 1.
             distance = len(channel_commits) - 1
@@ -1798,8 +1824,8 @@ class Version:
         )
 
         tag_id = tag_meta_by_msg[tag]["state"]
-        _run_cmd("pijul tag checkout {}".format(tag_id), codes=[0, 1])
-        code, msg = _run_cmd("pijul log --output-format json --channel {}".format(tag_id))
+        _run_cmd("pijul tag checkout {}".format(tag_id), path, codes=[0, 1])
+        code, msg = _run_cmd("pijul log --output-format json --channel {}".format(tag_id), path)
         if msg.strip() == "":
             tag_commits = []  # type: list
         else:
@@ -1832,6 +1858,7 @@ class Version:
         tag_branch: Optional[str] = None,
         full_commit: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1859,13 +1886,14 @@ class Version:
             This is only used for Git and Mercurial.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
-        vcs = _detect_vcs_from_archival()
+        vcs = _detect_vcs_from_archival(path)
         if vcs is None:
-            vcs = _detect_vcs()
+            vcs = _detect_vcs(None, path)
         return cls._do_vcs_callback(
-            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict
+            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path
         )
 
     @classmethod
@@ -1878,6 +1906,7 @@ class Version:
         tag_branch: Optional[str] = None,
         full_commit: bool = False,
         strict: bool = False,
+        path: Optional[Path] = None,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -1899,10 +1928,11 @@ class Version:
             This is only used for Git and Mercurial.
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
+        :param path: Directory to inspect, if not the current working directory.
         :returns: Detected version.
         """
         return cls._do_vcs_callback(
-            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict
+            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path
         )
 
     @classmethod
@@ -1915,6 +1945,7 @@ class Version:
         tag_branch: Optional[str],
         full_commit: bool,
         strict: bool,
+        path: Optional[Path],
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -1926,12 +1957,16 @@ class Version:
             Vcs.Fossil: cls.from_fossil,
             Vcs.Pijul: cls.from_pijul,
         }  # type: Mapping[Vcs, Callable[..., "Version"]]
-        kwargs = {"pattern": pattern, "latest_tag": latest_tag, "strict": strict}  # type: dict
+        kwargs = {}
         callback = mapping[vcs]
         for kwarg, value in [
+            ("pattern", pattern),
+            ("latest_tag", latest_tag),
+            ("tag_dir", tag_dir),
             ("tag_branch", tag_branch),
             ("full_commit", full_commit),
-            ("tag_dir", tag_dir),
+            ("strict", strict),
+            ("path", path),
         ]:
             if kwarg in inspect.getfullargspec(callback).args:
                 kwargs[kwarg] = value

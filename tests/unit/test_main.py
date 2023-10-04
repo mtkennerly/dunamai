@@ -23,6 +23,7 @@ def test__parse_args__from():
         tag_branch=None,
         full_commit=False,
         strict=False,
+        path=None,
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "git", "--tag-branch", "foo"]).tag_branch == "foo"
@@ -49,6 +50,7 @@ def test__parse_args__from():
     assert parse_args(["from", "any", "--debug"]).debug is True
     assert parse_args(["from", "any", "--tagged-metadata"]).tagged_metadata is True
     assert parse_args(["from", "any", "--strict"]).strict is True
+    assert parse_args(["from", "any", "--path", "/tmp"]).path == "/tmp"
     assert parse_args(["from", "subversion", "--tag-dir", "foo"]).tag_dir == "foo"
 
     with pytest.raises(SystemExit):
@@ -67,8 +69,8 @@ def test__parse_args__check():
 
 
 def test__cli_check():
-    _run_cmd("dunamai check 0.01.0")
-    _run_cmd("dunamai check v0.1.0", codes=[1])
-    _run_cmd("dunamai check 0.01.0 --style semver", codes=[1])
-    _run_cmd("dunamai check", codes=[1])
-    _run_cmd("echo 0.01.0 | dunamai check", shell=True)
+    _run_cmd("dunamai check 0.01.0", where=None)
+    _run_cmd("dunamai check v0.1.0", where=None, codes=[1])
+    _run_cmd("dunamai check 0.01.0 --style semver", where=None, codes=[1])
+    _run_cmd("dunamai check", where=None, codes=[1])
+    _run_cmd("echo 0.01.0 | dunamai check", where=None, shell=True)
