@@ -1,6 +1,7 @@
-## Unreleased
+## v1.19.0 (2023-10-04)
 
 * Added a `--path` option to inspect a directory other than the current one.
+  The `Version.from_*` methods now also take a `path` argument.
 
 ## v1.18.1 (2023-09-22)
 
