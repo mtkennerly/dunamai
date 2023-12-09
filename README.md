@@ -1,10 +1,9 @@
 
 # Dunamai
 Dunamai is a Python 3.5+ library and command line tool for producing dynamic,
-standards-compliant version strings, derived from tags in your version
-control system. This facilitates uniquely identifying nightly or per-commit
-builds in continuous integration and releasing new versions of your software
-simply by creating a tag.
+standards-compliant version strings, derived from tags in your version control system.
+This facilitates uniquely identifying nightly or per-commit builds in continuous integration
+and releasing new versions of your software simply by creating a tag.
 
 Dunamai is also available as a [GitHub Action](https://github.com/marketplace/actions/run-dunamai).
 
@@ -85,9 +84,8 @@ assert version.serialize(style=Style.SemVer) == "0.1.0-rc.5.post.44+g644252b"
 ```
 
 The `serialize()` method gives you an opinionated, PEP 440-compliant default
-that ensures that versions for untagged commits are compatible with Pip's
-`--pre` flag. The individual parts of the version are also available for you
-to use and inspect as you please:
+that ensures that versions for untagged commits are compatible with Pip's `--pre` flag.
+The individual parts of the version are also available for you to use and inspect as you please:
 
 ```python
 assert version.base == "0.1.0"
@@ -102,8 +100,9 @@ assert version.tagged_metadata == "linux"
 ```
 
 ### Tips
-By default, the "v" prefix on the tag is required, unless you specify
-a custom tag pattern. You can either write a regular expression:
+By default, the "v" prefix on the tag is required,
+unless you specify a custom tag pattern.
+You can either write a regular expression:
 
 ```console
 $ dunamai from any --pattern "(?P<base>\d+\.\d+\.\d+)"
@@ -154,8 +153,8 @@ Dunamai can still detect a version in some of these cases:
   It will also recognize `.hgtags` if present.
 
 ### Custom formats
-Here are the available substitutions for custom formats. If you have a tag like
-`v9!0.1.2-beta.3+other`, then:
+Here are the available substitutions for custom formats.
+If you have a tag like `v9!0.1.2-beta.3+other`, then:
 
 * `{base}` = `0.1.2`
 * `{stage}` = `beta`
@@ -182,23 +181,22 @@ fi
 ```
 
 ## Comparison to Versioneer
-[Versioneer](https://github.com/warner/python-versioneer) is another great
-library for dynamic versions, but there are some design decisions that
-prompted the creation of Dunamai as an alternative:
+[Versioneer](https://github.com/warner/python-versioneer)
+is another great library for dynamic versions,
+but there are some design decisions that prompted the creation of Dunamai as an alternative:
 
-* Versioneer requires a setup.py file to exist, or else `versioneer install`
-  will fail, rendering it incompatible with non-setuptools-based projects
-  such as those using Poetry or Flit. Dunamai can be used regardless of the
-  project's build system.
-* Versioneer has a CLI that generates Python code which needs to be committed
-  into your repository, whereas Dunamai is just a normal importable library
+* Versioneer requires a setup.py file to exist, or else `versioneer install` will fail,
+  rendering it incompatible with non-setuptools-based projects such as those using Poetry or Flit.
+  Dunamai can be used regardless of the project's build system.
+* Versioneer has a CLI that generates Python code which needs to be committed into your repository,
+  whereas Dunamai is just a normal importable library
   with an optional CLI to help statically include your version string.
-* Versioneer produces the version as an opaque string, whereas Dunamai provides
-  a Version class with discrete parts that can then be inspected and serialized
-  separately.
-* Versioneer provides customizability through a config file, whereas Dunamai
-  aims to offer customizability through its library API and CLI for both
-  scripting support and use in other libraries.
+* Versioneer produces the version as an opaque string,
+  whereas Dunamai provides a Version class with discrete parts
+  that can then be inspected and serialized separately.
+* Versioneer provides customizability through a config file,
+  whereas Dunamai aims to offer customizability through its library API and CLI
+  for both scripting support and use in other libraries.
 
 ## Integration
 * Setting a `__version__` statically:
@@ -255,5 +253,6 @@ prompted the creation of Dunamai as an alternative:
   we cannot reliably determine which one should be considered the newest.
   The solution is to use annotated tags instead.
 * When using Git, the initial commit must **not** be both tagged and empty
-  (i.e., created with `--allow-empty`). This is related to a reporting issue
-  in Git. For more info, [click here](https://github.com/mtkennerly/dunamai/issues/14).
+  (i.e., created with `--allow-empty`).
+  This is related to a reporting issue in Git.
+  For more info, [click here](https://github.com/mtkennerly/dunamai/issues/14).
