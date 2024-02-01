@@ -479,10 +479,16 @@ class _GitRefInfo:
     def from_git_tag_topo_order(
         tag_branch: str, git_version: List[int], path: Optional[Path]
     ) -> Mapping[str, int]:
-        cmd = (
-            "git log --simplify-by-decoration --topo-order --decorate=full"
-            ' {} "--format=%H%d"'.format(tag_branch)
-        )
+        if git_version < [2, 10]:
+            cmd = (
+                "git log --simplify-by-decoration --topo-order"
+                ' --decorate=full {} "--format=%H%d"'.format(tag_branch)
+            )
+        else:
+            cmd = (
+                "git -c log.showsignature=false log --simplify-by-decoration --topo-order"
+                ' --decorate=full {} "--format=%H%d"'.format(tag_branch)
+            )
         if git_version >= [2, 16]:
             cmd += " --decorate-refs=refs/tags/"
         code, logmsg = _run_cmd(cmd, path)
@@ -1088,11 +1094,20 @@ class Version:
         else:
             branch = msg
 
-        code, msg = _run_cmd(
-            'git log -n 1 --format="format:{}"'.format("%H" if full_commit else "%h"),
-            path,
-            codes=[0, 128],
-        )
+        if git_version < [2, 10]:
+            code, msg = _run_cmd(
+                'git log -n 1 --format="format:{}"'.format("%H" if full_commit else "%h"),
+                path,
+                codes=[0, 128],
+            )
+        else:
+            code, msg = _run_cmd(
+                'git -c log.showsignature=false log -n 1 --format="format:{}"'.format(
+                    "%H" if full_commit else "%h"
+                ),
+                path,
+                codes=[0, 128],
+            )
         if code == 128:
             return cls._fallback(
                 strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs
@@ -1104,9 +1119,12 @@ class Version:
             code, msg = _run_cmd('git log -n 1 --pretty=format:"%ci"', path)
             timestamp = _parse_git_timestamp_iso(msg)
         else:
-            code, msg = _run_cmd(
-                'git -c log.showsignature=false log -n 1 --pretty=format:"%cI"', path
-            )
+            if git_version < [2, 10]:
+                code, msg = _run_cmd('git log -n 1 --pretty=format:"%cI"', path)
+            else:
+                code, msg = _run_cmd(
+                    'git -c log.showsignature=false log -n 1 --pretty=format:"%cI"', path
+                )
             timestamp = _parse_git_timestamp_iso_strict(msg)
 
         code, msg = _run_cmd("git describe --always --dirty", path)
