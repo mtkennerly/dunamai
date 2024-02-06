@@ -327,6 +327,13 @@ def _get_git_version() -> List[int]:
     return []
 
 
+def _git_log(git_version: List[int]) -> str:
+    if git_version < [2, 10]:
+        return "git log"
+    else:
+        return "git -c log.showsignature=false log"
+
+
 def _detect_vcs(expected_vcs: Optional[Vcs], path: Optional[Path]) -> Vcs:
     checks = OrderedDict(
         [
@@ -479,16 +486,9 @@ class _GitRefInfo:
     def from_git_tag_topo_order(
         tag_branch: str, git_version: List[int], path: Optional[Path]
     ) -> Mapping[str, int]:
-        if git_version < [2, 10]:
-            cmd = (
-                "git log --simplify-by-decoration --topo-order"
-                ' --decorate=full {} "--format=%H%d"'.format(tag_branch)
-            )
-        else:
-            cmd = (
-                "git -c log.showsignature=false log --simplify-by-decoration --topo-order"
-                ' --decorate=full {} "--format=%H%d"'.format(tag_branch)
-            )
+        cmd = (
+            '{} --simplify-by-decoration --topo-order --decorate=full {} "--format=%H%d"'
+        ).format(_git_log(git_version), tag_branch)
         if git_version >= [2, 16]:
             cmd += " --decorate-refs=refs/tags/"
         code, logmsg = _run_cmd(cmd, path)
@@ -1094,20 +1094,13 @@ class Version:
         else:
             branch = msg
 
-        if git_version < [2, 10]:
-            code, msg = _run_cmd(
-                'git log -n 1 --format="format:{}"'.format("%H" if full_commit else "%h"),
-                path,
-                codes=[0, 128],
-            )
-        else:
-            code, msg = _run_cmd(
-                'git -c log.showsignature=false log -n 1 --format="format:{}"'.format(
-                    "%H" if full_commit else "%h"
-                ),
-                path,
-                codes=[0, 128],
-            )
+        code, msg = _run_cmd(
+            '{} -n 1 --format="format:{}"'.format(
+                _git_log(git_version), "%H" if full_commit else "%h"
+            ),
+            path,
+            codes=[0, 128],
+        )
         if code == 128:
             return cls._fallback(
                 strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs
@@ -1116,15 +1109,14 @@ class Version:
 
         timestamp = None
         if git_version < [2, 2]:
-            code, msg = _run_cmd('git log -n 1 --pretty=format:"%ci"', path)
+            code, msg = _run_cmd(
+                '{} -n 1 --pretty=format:"%ci"'.format(_git_log(git_version)), path
+            )
             timestamp = _parse_git_timestamp_iso(msg)
         else:
-            if git_version < [2, 10]:
-                code, msg = _run_cmd('git log -n 1 --pretty=format:"%cI"', path)
-            else:
-                code, msg = _run_cmd(
-                    'git -c log.showsignature=false log -n 1 --pretty=format:"%cI"', path
-                )
+            code, msg = _run_cmd(
+                '{} -n 1 --pretty=format:"%cI"'.format(_git_log(git_version)), path
+            )
             timestamp = _parse_git_timestamp_iso_strict(msg)
 
         code, msg = _run_cmd("git describe --always --dirty", path)

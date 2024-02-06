@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed some `git log` commands that did not include `-c log.showsignature=false`.
+  ([Contributed by pdecat](https://github.com/mtkennerly/dunamai/pull/75))
+
 ## v1.19.0 (2023-10-04)
 
 * Added a `--path` option to inspect a directory other than the current one.
