@@ -1,5 +1,6 @@
 ## Unreleased
 
+* Relaxed Python bounds from `^3.5` to `>=3.5` since Python does not follow Semantic Versioning.
 * Fixed some `git log` commands that did not include `-c log.showsignature=false`.
   ([Contributed by pdecat](https://github.com/mtkennerly/dunamai/pull/75))
 
