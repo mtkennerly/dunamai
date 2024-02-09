@@ -38,8 +38,6 @@ Here is an example of how to configure them:
   ```
   bzr whoami 'foo <foo@example.com>'
   ```
-* Fossil:
-  * May require setting the `HOME` and `USER` environment variables on some platforms.
 * Pijul:
   ```
   pijul key generate test
