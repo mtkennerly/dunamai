@@ -245,6 +245,7 @@ but there are some design decisions that prompted the creation of Dunamai as an 
 
   * For GitHub workflows, invoke `actions/checkout@v3` with `fetch-depth: 0`.
   * For GitLab pipelines, set the `GIT_DEPTH` variable to 0.
+  * For Docker builds, copy the VCS history (e.g., `.git` folder) into the container.
 
   For Git, you can also avoid doing a full clone by specifying a remote branch for tags
   (e.g., `--tag-branch remotes/origin/master`).
