@@ -22,3 +22,25 @@ Development requires Python 3.7+.
   pipx runpip mkdocs install -r docs/requirements.txt
   mkdocs serve
   ```
+
+## VCS setup
+Some of the VCS tools tested require a minimum configuration to work.
+Here is an example of how to configure them:
+
+* Git:
+  ```
+  git config --global user.name "foo"
+  git config --global user.email "foo@example.com"
+  ```
+* Darcs:
+  * Set the `DARCS_EMAIL` environment variable (e.g., `foo <foo@example.com>`).
+* Bazaar:
+  ```
+  bzr whoami 'foo <foo@example.com>'
+  ```
+* Fossil:
+  * May require setting the `HOME` and `USER` environment variables on some platforms.
+* Pijul:
+  ```
+  pijul key generate test
+  ```
