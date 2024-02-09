@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 import shutil
+import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -37,6 +38,17 @@ def chdir(where: Path) -> Iterator[None]:
 def is_git_legacy() -> bool:
     version = _get_git_version()
     return version < [2, 7]
+
+
+def set_missing_env(key: str, value: str, alts: Optional[List[str]] = None) -> None:
+    if alts is None:
+        alts = []
+
+    for k in [key, *alts]:
+        if os.environ.get(k) is not None:
+            return
+
+    os.environ[key] = value
 
 
 def make_run_callback(where: Path) -> Callable:
@@ -795,6 +807,10 @@ def test__version__from_fossil(tmp_path) -> None:
     run = make_run_callback(vcs)
     from_vcs = make_from_callback(Version.from_fossil)
     b = "trunk"
+
+    if sys.platform != "win32":
+        set_missing_env("FOSSIL_HOME", str(REPO / "tests"), ["HOME", "XDG_CONFIG_HOME"])
+        set_missing_env("USER", "dunamai")
 
     with chdir(vcs):
         run("fossil init repo")
