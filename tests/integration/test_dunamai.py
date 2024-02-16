@@ -491,6 +491,9 @@ def test__version__from_git__exclude_decoration(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
 
 
+# Older versions of Git fail with code 128:
+# "fatal: missing object 0000000000000000000000000000000000000000 for refs/tags/bad.txt"
+@pytest.mark.skipif(lacks_git_version([2, 7]), reason="Requires Git 2.7+")
 def test__version__from_git__broken_ref(tmp_path) -> None:
     vcs = tmp_path / "dunamai-git-broken-ref"
     vcs.mkdir()
