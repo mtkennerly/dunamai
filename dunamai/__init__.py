@@ -1184,6 +1184,8 @@ class Version:
 
             for line in msg.strip().splitlines():
                 parts = line.split("@{")
+                if len(parts) != 5:
+                    continue
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
             tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]

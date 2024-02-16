@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed an exception when a Git repository had a broken ref.
+  Git would print a warning that Dunamai failed to parse.
+
 ## v1.19.1 (2024-02-07)
 
 * Relaxed Python bounds from `^3.5` to `>=3.5` since Python does not follow Semantic Versioning.
