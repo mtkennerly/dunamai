@@ -1,4 +1,4 @@
-## Unreleased
+## v1.19.2 (2024-02-16)
 
 * Fixed an exception when a Git repository had a broken ref.
   Git would print a warning that Dunamai failed to parse.
