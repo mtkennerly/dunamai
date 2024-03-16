@@ -8,8 +8,8 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.7'
       - run: |
@@ -45,11 +45,11 @@ jobs:
     env:
       DARCS_EMAIL: foo <foo@example.com>
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: dtolnay/rust-toolchain@1.65.0
+      # - uses: dtolnay/rust-toolchain@1.65.0
       # - uses: Swatinem/rust-cache@v2
       - if: ${{ matrix.git-version != 'default' }}
         env:
