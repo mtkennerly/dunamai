@@ -597,6 +597,7 @@ class Version:
 
         self._matched_tag = None  # type: Optional[str]
         self._newer_unmatched_tags = None  # type: Optional[Sequence[str]]
+        self._smart_bumped = False
 
     def __str__(self) -> str:
         return self.serialize()
@@ -729,8 +730,8 @@ class Version:
         """
         base = self.base
         revision = self.revision
-        if bump and self.distance > 0:
-            bumped = self.bump()
+        if bump:
+            bumped = self.bump(smart=True)
             base = bumped.base
             revision = bumped.revision
 
@@ -782,7 +783,7 @@ class Version:
             if revision is not None:
                 pre_parts.append(str(revision))
         if self.distance > 0:
-            pre_parts.append("pre" if bump else "post")
+            pre_parts.append("pre" if bump or self._smart_bumped else "post")
             pre_parts.append(str(self.distance))
 
         if style == Style.Pep440:
@@ -796,7 +797,7 @@ class Version:
                 stage = None
                 dev = revision
             if self.distance > 0:
-                if bump:
+                if bump or self._smart_bumped:
                     if dev is None:
                         dev = self.distance
                     else:
@@ -914,7 +915,7 @@ class Version:
             epoch=epoch,
         )
 
-    def bump(self, index: int = -1, increment: int = 1) -> "Version":
+    def bump(self, index: int = -1, increment: int = 1, smart: bool = False) -> "Version":
         """
         Increment the version.
 
@@ -927,9 +928,18 @@ class Version:
             the right side and count down from -1.
             Only has an effect when the base is bumped.
         :param increment: By how much to increment the relevant position.
+        :param smart: If true, only bump when distance is not 0.
+            This will also make `Version.serialize()` use pre-release formatting automatically,
+            like calling `Version.serialize(bump=True)`.
         :returns: Bumped version.
         """
         bumped = copy.deepcopy(self)
+
+        if smart:
+            if bumped.distance == 0:
+                return bumped
+            bumped._smart_bumped = True
+
         if bumped.stage is None:
             bumped.base = bump_version(bumped.base, index, increment)
         else:

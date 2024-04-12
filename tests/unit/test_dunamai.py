@@ -508,6 +508,14 @@ def test__version__bump() -> None:
     assert Version("1.2.3", stage=("a", None)).bump().serialize() == "1.2.3a2"
     assert Version("1.2.3", stage=("a", 4)).bump().serialize() == "1.2.3a5"
 
+    assert Version("1.2.3", distance=0).bump(smart=False).serialize() == "1.2.4"
+    assert Version("1.2.3", distance=0).bump(smart=True).serialize() == "1.2.3"
+    assert Version("1.2.3", distance=0).serialize(bump=True) == "1.2.3"
+
+    assert Version("1.2.3", distance=5).bump(smart=False).serialize() == "1.2.4.post5.dev0"
+    assert Version("1.2.3", distance=5).bump(smart=True).serialize() == "1.2.4.dev5"
+    assert Version("1.2.3", distance=5).serialize(bump=True) == "1.2.4.dev5"
+
 
 def test__version__parse():
     assert Version.parse("1.2.3") == Version("1.2.3")

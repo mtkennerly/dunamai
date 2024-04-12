@@ -1,3 +1,10 @@
+## Unreleased
+
+* Updated `Version.bump()` to add a `smart` argument,
+  which only bumps when `distance != 0`.
+  This will also make `Version.serialize()` use pre-release formatting automatically,
+  like calling `Version.serialize(bump=True)`.
+
 ## v1.19.2 (2024-02-16)
 
 * Fixed an exception when a Git repository had a broken ref.
