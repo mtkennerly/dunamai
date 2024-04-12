@@ -1,4 +1,4 @@
-## Unreleased
+## v1.20.0 (2024-04-12)
 
 * Updated `Version.bump()` to add a `smart` argument,
   which only bumps when `distance != 0`.
