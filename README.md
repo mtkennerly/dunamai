@@ -104,27 +104,40 @@ By default, the "v" prefix on the tag is required,
 unless you specify a custom tag pattern.
 You can either write a regular expression:
 
-```console
-$ dunamai from any --pattern "(?P<base>\d+\.\d+\.\d+)"
-```
-
-```python
-from dunamai import Version
-
-version = Version.from_any_vcs(pattern=r"(?P<base>\d+\.\d+\.\d+)")
-```
+* Console:
+  ```console
+  $ dunamai from any --pattern "(?P<base>\d+\.\d+\.\d+)"
+  ```
+* Python:
+  ```python
+  from dunamai import Version
+  version = Version.from_any_vcs(pattern=r"(?P<base>\d+\.\d+\.\d+)")
+  ```
 
 ...or use a named preset:
 
-```console
-$ dunamai from any --pattern default-unprefixed
-```
+* Console:
+  ```console
+  $ dunamai from any --pattern default-unprefixed
+  ```
+* Python:
+  ```python
+  from dunamai import Version, Pattern
+  version = Version.from_any_vcs(pattern=Pattern.DefaultUnprefixed)
+  ```
 
-```python
-from dunamai import Version, Pattern
+You can also keep the default pattern and just specify a prefix.
+For example, this would match tags like `some-package-v1.2.3`:
 
-version = Version.from_any_vcs(pattern=Pattern.DefaultUnprefixed)
-```
+* Console:
+  ```console
+  $ dunamai from any --pattern-prefix some-package-
+  ```
+* Python:
+  ```python
+  from dunamai import Version
+  version = Version.from_any_vcs(pattern_prefix="some-package-")
+  ```
 
 ### VCS archives
 Sometimes, you may only have access to an archive of a repository (e.g., a zip file) without the full history.
