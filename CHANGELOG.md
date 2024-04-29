@@ -1,4 +1,4 @@
-## Unreleased
+## v1.21.0 (2024-04-29)
 
 * Generally, when Dunamai can detect the VCS in use, but there's no version set yet,
   then Dunamai uses 0.0.0 as a fallback, unless strict mode is enabled.
