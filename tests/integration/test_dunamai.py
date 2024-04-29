@@ -124,6 +124,9 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         # Detect dirty if untracked files
         (vcs / "bar.txt").write_text("bye")
         assert from_vcs() == Version("0.0.0", distance=1, dirty=True, branch=b)
+        assert from_vcs(ignore_untracked=True) == Version(
+            "0.0.0", distance=1, dirty=False, branch=b
+        )
 
         # Once the untracked file is removed we are no longer dirty
         (vcs / "bar.txt").unlink()

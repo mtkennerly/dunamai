@@ -14,6 +14,7 @@
   For example, `--pattern default --pattern-prefix some-package-`
   would match tags like `some-package-v1.2.3`.
   This is useful if you just want a custom prefix without writing a whole pattern.
+* Added `--ignore-untracked` option to control checking whether the repository is dirty.
 
 ## v1.20.0 (2024-04-12)
 

@@ -28,6 +28,13 @@ common_sub_args = [
         "help": "Include dirty flag if applicable. Ignored when --format is used",
     },
     {
+        "vcs": [Vcs.Git],
+        "triggers": ["--ignore-untracked"],
+        "action": "store_true",
+        "dest": "ignore_untracked",
+        "help": "Ignore untracked files when determining whether the repository is dirty",
+    },
+    {
         "triggers": ["--tagged-metadata"],
         "action": "store_true",
         "dest": "tagged_metadata",

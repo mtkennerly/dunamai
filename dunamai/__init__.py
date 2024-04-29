@@ -1015,6 +1015,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        ignore_untracked: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -1031,6 +1032,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param ignore_untracked:
+            Ignore untracked files when determining whether the repository is dirty.
         :returns: Detected version.
         """
         vcs = Vcs.Git
@@ -1168,7 +1171,7 @@ class Version:
         code, msg = _run_cmd("git describe --always --dirty", path)
         dirty = msg.endswith("-dirty")
 
-        if not dirty:
+        if not dirty and not ignore_untracked:
             code, msg = _run_cmd("git status --porcelain", path)
             if msg.strip() != "":
                 dirty = True
@@ -2022,6 +2025,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        ignore_untracked: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -2051,13 +2055,25 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param ignore_untracked:
+            Ignore untracked files when determining whether the repository is dirty.
+            This is only used for Git currently.
         :returns: Detected version.
         """
         vcs = _detect_vcs_from_archival(path)
         if vcs is None:
             vcs = _detect_vcs(None, path)
         return cls._do_vcs_callback(
-            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path
+            vcs,
+            pattern,
+            latest_tag,
+            tag_dir,
+            tag_branch,
+            full_commit,
+            strict,
+            path,
+            pattern_prefix,
+            ignore_untracked,
         )
 
     @classmethod
@@ -2072,6 +2088,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        ignore_untracked: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -2095,10 +2112,22 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param ignore_untracked:
+            Ignore untracked files when determining whether the repository is dirty.
+            This is only used for Git currently.
         :returns: Detected version.
         """
         return cls._do_vcs_callback(
-            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path, pattern_prefix
+            vcs,
+            pattern,
+            latest_tag,
+            tag_dir,
+            tag_branch,
+            full_commit,
+            strict,
+            path,
+            pattern_prefix,
+            ignore_untracked,
         )
 
     @classmethod
@@ -2113,6 +2142,7 @@ class Version:
         strict: bool,
         path: Optional[Path],
         pattern_prefix: Optional[str] = None,
+        ignore_untracked: bool = False,
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -2135,6 +2165,7 @@ class Version:
             ("strict", strict),
             ("path", path),
             ("pattern_prefix", pattern_prefix),
+            ("ignore_untracked", ignore_untracked),
         ]:
             if kwarg in inspect.getfullargspec(callback).args:
                 kwargs[kwarg] = value
