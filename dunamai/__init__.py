@@ -226,8 +226,8 @@ _MatchedVersionPattern = NamedTuple(
 
 
 def _match_version_pattern(
-    pattern: Union[str, Pattern], sources: Sequence[str], latest_source: bool
-) -> _MatchedVersionPattern:
+    pattern: Union[str, Pattern], sources: Sequence[str], latest_source: bool, strict: bool
+) -> Optional[_MatchedVersionPattern]:
     """
     :returns: Tuple of:
         * matched tag
@@ -281,8 +281,10 @@ def _match_version_pattern(
                     sources,
                 )
             )
-        else:
+        elif strict:
             raise ValueError(_pattern_error("The pattern did not match any tags", pattern, sources))
+        else:
+            return None
 
     stage = pattern_match.groupdict().get("stage")
     revision = pattern_match.groupdict().get("revision")
@@ -845,9 +847,13 @@ class Version:
         if not version.startswith("v") and pattern in [VERSION_SOURCE_PATTERN, Pattern.Default]:
             normalized = "v{}".format(version)
 
+        failed = False
         try:
-            matched_pattern = _match_version_pattern(pattern, [normalized], True)
+            matched_pattern = _match_version_pattern(pattern, [normalized], True, strict=True)
         except ValueError:
+            failed = True
+
+        if failed or matched_pattern is None:
             replaced = re.sub(r"(\.post(\d+)\.dev\d+)", r".dev\2", version, 1)
             if replaced != version:
                 alt = Version.parse(replaced, pattern)
@@ -1060,9 +1066,19 @@ class Version:
                         vcs=vcs,
                     )
 
-                tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-                    pattern, [tag], latest_tag
-                )
+                matched_pattern = _match_version_pattern(pattern, [tag], latest_tag, strict)
+                if matched_pattern is None:
+                    return cls._fallback(
+                        strict,
+                        distance=distance,
+                        commit=commit,
+                        dirty=dirty,
+                        branch=branch,
+                        timestamp=timestamp,
+                        vcs=vcs,
+                    )
+                tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
+
                 version = cls(
                     base,
                     stage=stage,
@@ -1158,9 +1174,7 @@ class Version:
                     vcs=vcs,
                 )
             tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
-            tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-                pattern, tags, latest_tag
-            )
+            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
         else:
             code, msg = _run_cmd(
                 'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
@@ -1199,9 +1213,28 @@ class Version:
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
             tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
-            tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-                pattern, tags, latest_tag
+            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+
+        if matched_pattern is None:
+            distance = 0
+
+            code, msg = _run_cmd("git rev-list --max-parents=0 HEAD", path)
+            if msg:
+                initial_commit = msg.splitlines()[0].strip()
+                code, msg = _run_cmd("git rev-list --count {}..HEAD".format(initial_commit), path)
+                distance = int(msg)
+
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+                concerns=concerns,
+                vcs=vcs,
             )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
         code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag), path)
         distance = int(msg)
@@ -1281,9 +1314,17 @@ class Version:
                         continue
                     all_tags.append(parts[1])
 
-            tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-                pattern, all_tags, latest_tag
-            )
+            matched_pattern = _match_version_pattern(pattern, all_tags, latest_tag, strict)
+            if matched_pattern is None:
+                return cls._fallback(
+                    strict,
+                    distance=distance,
+                    commit=commit,
+                    branch=branch,
+                    vcs=vcs,
+                )
+            tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
+
             version = cls(
                 base,
                 stage=stage,
@@ -1336,9 +1377,19 @@ class Version:
                 vcs=vcs,
             )
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, tags, latest_tag
-        )
+
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        if matched_pattern is None:
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+                vcs=vcs,
+            )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
         code, msg = _run_cmd('hg log -r "{0}::{1} - {0}" --template "."'.format(tag, commit), path)
         # The tag itself is in the list, so offset by 1.
@@ -1407,9 +1458,18 @@ class Version:
                 strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
             )
         tags = msg.splitlines()
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, tags, latest_tag
-        )
+
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        if matched_pattern is None:
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                timestamp=timestamp,
+                vcs=vcs,
+            )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
         code, msg = _run_cmd("darcs log --from-tag {} --count".format(tag), path)
         # The tag itself is in the list, so offset by 1.
@@ -1501,9 +1561,18 @@ class Version:
                     source = int(match.group(1))
                     tags_to_sources_revs[tag] = (source, rev)
         tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, tags, latest_tag
-        )
+
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        if matched_pattern is None:
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                timestamp=timestamp,
+                vcs=vcs,
+            )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
         source, rev = tags_to_sources_revs[tag]
         # The tag itself is in the list, so offset by 1.
@@ -1589,9 +1658,19 @@ class Version:
             if line.split()[1] != "?"
         }
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, tags, latest_tag
-        )
+
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        if matched_pattern is None:
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+                vcs=vcs,
+            )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
         distance = int(commit) - tags_to_revs[tag]
 
@@ -1712,9 +1791,22 @@ class Version:
             (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
             for line in msg.splitlines()
         ]
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, [t for t, d in tags_to_distance], latest_tag
+
+        matched_pattern = _match_version_pattern(
+            pattern, [t for t, d in tags_to_distance], latest_tag, strict
         )
+        if matched_pattern is None:
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+                vcs=vcs,
+            )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
+
         distance = dict(tags_to_distance)[tag]
 
         version = cls(
@@ -1841,9 +1933,19 @@ class Version:
             t["message"]
             for t in sorted(tag_meta_by_msg.values(), key=lambda x: x["timestamp"], reverse=True)
         ]
-        tag, base, stage, unmatched, tagged_metadata, epoch = _match_version_pattern(
-            pattern, tags, latest_tag
-        )
+
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        if matched_pattern is None:
+            return cls._fallback(
+                strict,
+                distance=distance,
+                commit=commit,
+                dirty=dirty,
+                branch=branch,
+                timestamp=timestamp,
+                vcs=vcs,
+            )
+        tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
         tag_id = tag_meta_by_msg[tag]["state"]
         _run_cmd("pijul tag checkout {}".format(tag_id), path, codes=[0, 1])

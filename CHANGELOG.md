@@ -1,3 +1,16 @@
+## Unreleased
+
+* Generally, when Dunamai can detect the VCS in use, but there's no version set yet,
+  then Dunamai uses 0.0.0 as a fallback, unless strict mode is enabled.
+  This is useful for new projects that do not yet have a release.
+
+  However, if there were some tags and none matched the version pattern,
+  then Dunamai would yield an error.
+  That wouldn't be helpful for a new project with some non-version tag,
+  and it could be incorrect for a monorepo with different tags for different packages.
+
+  Now, Dunamai will use 0.0.0 in this case as well, unless strict mode is enabled.
+
 ## v1.20.0 (2024-04-12)
 
 * Updated `Version.bump()` to add a `smart` argument,

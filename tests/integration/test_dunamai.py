@@ -132,8 +132,9 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         # Additional one-off check not in other VCS integration tests:
         # when the only tag in the repository does not match the pattern.
         run("git tag other -m Annotated")
+        assert from_vcs() == Version("0.0.0", dirty=False, branch=b)
         with pytest.raises(ValueError):
-            from_vcs()
+            from_vcs(strict=True)
 
         avoid_identical_ref_timestamps()
         run("git tag v0.1.0 -m Annotated")
