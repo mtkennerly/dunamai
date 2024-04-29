@@ -63,13 +63,19 @@ from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 def test__pattern__regex() -> None:
     assert Pattern.Default.regex() == VERSION_SOURCE_PATTERN
-    assert Pattern.DefaultUnprefixed.regex() != VERSION_SOURCE_PATTERN
+    assert Pattern.DefaultUnprefixed.regex() == VERSION_SOURCE_PATTERN.replace("^v", "^v?", 1)
+    assert Pattern.Default.regex("foo-") == VERSION_SOURCE_PATTERN.replace("^", "^foo-", 1)
 
 
 def test__pattern__parse() -> None:
     assert Pattern.parse(r"(?P<base>\d+)") == r"(?P<base>\d+)"
+    assert Pattern.parse(r"(?P<base>\d+)", "foo-") == r"(?P<base>\d+)"
+    assert Pattern.parse(r"^(?P<base>\d+)", "foo-") == r"^foo-(?P<base>\d+)"
+
     assert Pattern.parse("default") == Pattern.Default.regex()
     assert Pattern.parse("default-unprefixed") == Pattern.DefaultUnprefixed.regex()
+    assert Pattern.parse("default", "foo-") == Pattern.Default.regex("foo-")
+
     with pytest.raises(ValueError):
         Pattern.parse(r"foo")
 

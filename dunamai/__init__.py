@@ -113,20 +113,26 @@ class Pattern(Enum):
     DefaultUnprefixed = "default-unprefixed"
     """Default pattern, but without `v` prefix."""
 
-    def regex(self) -> str:
+    def regex(self, prefix: Optional[str] = None) -> str:
         """
         Get the regular expression for this preset pattern.
 
+        :param prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Regular expression.
         """
         variants = {
             Pattern.Default: VERSION_SOURCE_PATTERN,
             Pattern.DefaultUnprefixed: VERSION_SOURCE_PATTERN.replace("^v", "^v?", 1),
         }
-        return variants[self]
+
+        out = variants[self]
+        if prefix:
+            out = out.replace("^", "^{}".format(prefix), 1)
+
+        return out
 
     @staticmethod
-    def parse(pattern: Union[str, "Pattern"]) -> str:
+    def parse(pattern: Union[str, "Pattern"], prefix: Optional[str] = None) -> str:
         """
         Parse a pattern string into a regular expression.
 
@@ -135,10 +141,14 @@ class Pattern(Enum):
         `Pattern` enum.
 
         :param pattern: Pattern to parse.
+        :param prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Regular expression.
         """
         if isinstance(pattern, str) and "?P<base>" in pattern:
-            return pattern
+            if prefix:
+                return pattern.replace("^", "^{}".format(prefix), 1)
+            else:
+                return pattern
 
         try:
             pattern = Pattern(pattern)
@@ -152,7 +162,7 @@ class Pattern(Enum):
                     pattern,
                 )
             )
-        return pattern.regex()
+        return pattern.regex(prefix)
 
 
 class Concern(Enum):
@@ -226,7 +236,11 @@ _MatchedVersionPattern = NamedTuple(
 
 
 def _match_version_pattern(
-    pattern: Union[str, Pattern], sources: Sequence[str], latest_source: bool, strict: bool
+    pattern: Union[str, Pattern],
+    sources: Sequence[str],
+    latest_source: bool,
+    strict: bool,
+    pattern_prefix: Optional[str],
 ) -> Optional[_MatchedVersionPattern]:
     """
     :returns: Tuple of:
@@ -245,7 +259,7 @@ def _match_version_pattern(
     tagged_metadata = None
     epoch = None  # type: Optional[Union[str, int]]
 
-    pattern = Pattern.parse(pattern)
+    pattern = Pattern.parse(pattern, pattern_prefix)
 
     for source in sources[:1] if latest_source else sources:
         try:
@@ -849,7 +863,9 @@ class Version:
 
         failed = False
         try:
-            matched_pattern = _match_version_pattern(pattern, [normalized], True, strict=True)
+            matched_pattern = _match_version_pattern(
+                pattern, [normalized], True, strict=True, pattern_prefix=None
+            )
         except ValueError:
             failed = True
 
@@ -998,6 +1014,7 @@ class Version:
         full_commit: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -1013,6 +1030,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Git
@@ -1066,7 +1084,9 @@ class Version:
                         vcs=vcs,
                     )
 
-                matched_pattern = _match_version_pattern(pattern, [tag], latest_tag, strict)
+                matched_pattern = _match_version_pattern(
+                    pattern, [tag], latest_tag, strict, pattern_prefix
+                )
                 if matched_pattern is None:
                     return cls._fallback(
                         strict,
@@ -1174,7 +1194,9 @@ class Version:
                     vcs=vcs,
                 )
             tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
-            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+            matched_pattern = _match_version_pattern(
+                pattern, tags, latest_tag, strict, pattern_prefix
+            )
         else:
             code, msg = _run_cmd(
                 'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
@@ -1213,7 +1235,9 @@ class Version:
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
             tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
-            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+            matched_pattern = _match_version_pattern(
+                pattern, tags, latest_tag, strict, pattern_prefix
+            )
 
         if matched_pattern is None:
             distance = 0
@@ -1264,6 +1288,7 @@ class Version:
         full_commit: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -1277,6 +1302,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Mercurial
@@ -1314,7 +1340,9 @@ class Version:
                         continue
                     all_tags.append(parts[1])
 
-            matched_pattern = _match_version_pattern(pattern, all_tags, latest_tag, strict)
+            matched_pattern = _match_version_pattern(
+                pattern, all_tags, latest_tag, strict, pattern_prefix
+            )
             if matched_pattern is None:
                 return cls._fallback(
                     strict,
@@ -1378,7 +1406,7 @@ class Version:
             )
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1418,6 +1446,7 @@ class Version:
         latest_tag: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
@@ -1430,6 +1459,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Darcs
@@ -1459,7 +1489,7 @@ class Version:
             )
         tags = msg.splitlines()
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1498,6 +1528,7 @@ class Version:
         tag_dir: str = "tags",
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -1511,6 +1542,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Subversion
@@ -1562,7 +1594,7 @@ class Version:
                     tags_to_sources_revs[tag] = (source, rev)
         tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1600,6 +1632,7 @@ class Version:
         latest_tag: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
@@ -1612,6 +1645,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Bazaar
@@ -1659,7 +1693,7 @@ class Version:
         }
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1697,6 +1731,7 @@ class Version:
         latest_tag: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
@@ -1708,6 +1743,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Fossil
@@ -1793,7 +1829,7 @@ class Version:
         ]
 
         matched_pattern = _match_version_pattern(
-            pattern, [t for t, d in tags_to_distance], latest_tag, strict
+            pattern, [t for t, d in tags_to_distance], latest_tag, strict, pattern_prefix
         )
         if matched_pattern is None:
             return cls._fallback(
@@ -1832,6 +1868,7 @@ class Version:
         latest_tag: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on Pijul tags.
@@ -1844,6 +1881,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = Vcs.Pijul
@@ -1934,7 +1972,7 @@ class Version:
             for t in sorted(tag_meta_by_msg.values(), key=lambda x: x["timestamp"], reverse=True)
         ]
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1983,6 +2021,7 @@ class Version:
         full_commit: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -2011,6 +2050,7 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         vcs = _detect_vcs_from_archival(path)
@@ -2031,6 +2071,7 @@ class Version:
         full_commit: bool = False,
         strict: bool = False,
         path: Optional[Path] = None,
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -2053,10 +2094,11 @@ class Version:
         :param strict: Elevate warnings to errors.
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
+        :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :returns: Detected version.
         """
         return cls._do_vcs_callback(
-            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path
+            vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path, pattern_prefix
         )
 
     @classmethod
@@ -2070,6 +2112,7 @@ class Version:
         full_commit: bool,
         strict: bool,
         path: Optional[Path],
+        pattern_prefix: Optional[str] = None,
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -2091,6 +2134,7 @@ class Version:
             ("full_commit", full_commit),
             ("strict", strict),
             ("path", path),
+            ("pattern_prefix", pattern_prefix),
         ]:
             if kwarg in inspect.getfullargspec(callback).args:
                 kwargs[kwarg] = value

@@ -167,6 +167,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             # Verify tags with '/' work
             run("git tag test/v0.1.0")
             assert run(r'dunamai from any --pattern "^test/v(?P<base>\d\.\d\.\d)"') == "0.1.0"
+            assert run('dunamai from any --pattern-prefix "test/"') == "0.1.0"
 
         (vcs / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True, branch=b)

@@ -10,6 +10,10 @@
   and it could be incorrect for a monorepo with different tags for different packages.
 
   Now, Dunamai will use 0.0.0 in this case as well, unless strict mode is enabled.
+* You can now specify a pattern prefix.
+  For example, `--pattern default --pattern-prefix some-package-`
+  would match tags like `some-package-v1.2.3`.
+  This is useful if you just want a custom prefix without writing a whole pattern.
 
 ## v1.20.0 (2024-04-12)
 

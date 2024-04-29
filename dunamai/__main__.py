@@ -51,6 +51,10 @@ common_sub_args = [
         ).format(", ".join(["`{}`".format(x.value) for x in Pattern])),
     },
     {
+        "triggers": ["--pattern-prefix"],
+        "help": "Insert this after the pattern's start anchor (`^`).",
+    },
+    {
         "triggers": ["--format"],
         "help": (
             "Custom output format. Available substitutions:"
@@ -256,9 +260,10 @@ def from_vcs(
     full_commit: bool,
     strict: bool,
     path: Optional[Path],
+    pattern_prefix: Optional[str],
 ) -> None:
     version = Version.from_vcs(
-        vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path
+        vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path, pattern_prefix
     )
 
     for concern in version.concerns:
@@ -294,6 +299,7 @@ def main() -> None:
                 full_commit,
                 args.strict,
                 Path(args.path) if args.path is not None else None,
+                args.pattern_prefix,
             )
         elif args.command == "check":
             version = from_stdin(args.version)
