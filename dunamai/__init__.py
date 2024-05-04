@@ -1243,13 +1243,11 @@ class Version:
             )
 
         if matched_pattern is None:
-            distance = 0
-
-            code, msg = _run_cmd("git rev-list --max-parents=0 HEAD", path)
-            if msg:
-                initial_commit = msg.splitlines()[0].strip()
-                code, msg = _run_cmd("git rev-list --count {}..HEAD".format(initial_commit), path)
+            try:
+                code, msg = _run_cmd("git rev-list --count HEAD", path)
                 distance = int(msg)
+            except Exception:
+                distance = 0
 
             return cls._fallback(
                 strict,

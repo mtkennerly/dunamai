@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed: Distance was calculated inconsistently for Git
+  when there were some tags and none matched the version pattern.
+
 ## v1.21.0 (2024-04-29)
 
 * Generally, when Dunamai can detect the VCS in use, but there's no version set yet,
