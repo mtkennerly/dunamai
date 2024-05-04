@@ -1,4 +1,4 @@
-## Unreleased
+## v1.21.1 (2024-05-03)
 
 * Fixed: Distance was calculated inconsistently for Git
   when there were some tags and none matched the version pattern.
