@@ -45,6 +45,9 @@ jobs:
     env:
       DARCS_EMAIL: foo <foo@example.com>
     steps:
+      - if: ${{ matrix.python-version == '3.5' }}
+        run: |
+          echo "PIP_TRUSTED_HOST=pypi.python.org pypi.org files.pythonhosted.org" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -90,8 +93,7 @@ jobs:
       - if: ${{ matrix.python-version == '3.5' || matrix.python-version == '3.6' }}
         run: |
           cp poetry.legacy.lock poetry.lock
-          echo "PIP_ARGS=--trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org" >> $GITHUB_ENV
       - run: |
-          pip install ${PIP_ARGS} poetry
+          pip install poetry
           poetry install
           poetry run pytest --verbose --cov --cov-report term-missing
