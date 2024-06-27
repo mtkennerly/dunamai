@@ -64,6 +64,11 @@ _VALID_SEMVER = r"""
 """.strip()
 _VALID_PVP = r"^\d+(\.\d+)*(-[a-zA-Z0-9]+)*$"
 
+_TIMESTAMP_GENERIC = "%Y-%m-%dT%H:%M:%S.%f%z"
+_TIMESTAMP_GENERIC_SPACE = "%Y-%m-%d %H:%M:%S.%f%z"
+_TIMESTAMP_GIT_ISO_STRICT = "%Y-%m-%dT%H:%M:%S%z"
+_TIMESTAMP_GIT_ISO = "%Y-%m-%d %H:%M:%S %z"
+
 _T = TypeVar("_T")
 
 
@@ -1860,7 +1865,9 @@ class Version:
                 if line.startswith("State "):
                     tag_state = line.split("State ", 1)[1]
                 elif line.startswith("Date:"):
-                    tag_timestamp = _parse_timestamp(line.split("Date: ", 1)[1].replace(" UTC", "Z"), space=True)
+                    tag_timestamp = _parse_timestamp(
+                        line.split("Date: ", 1)[1].replace(" UTC", "Z"), format=_TIMESTAMP_GENERIC_SPACE
+                    )
                 elif line.startswith("    "):
                     tag_message += line[4:]
                     tag_after_header = True
@@ -2297,21 +2304,16 @@ def bump_version(base: str, index: int = -1, increment: int = 1) -> str:
 def _parse_git_timestamp_iso_strict(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.*T.*[-+]\d+):(\d+)", r"\1\2", raw)
-    return dt.datetime.strptime(compat, "%Y-%m-%dT%H:%M:%S%z")
+    return _parse_timestamp(compat, _TIMESTAMP_GIT_ISO_STRICT)
 
 
 def _parse_git_timestamp_iso(raw: str) -> dt.datetime:
     # Remove colon from timezone offset for pre-3.7 Python:
     compat = re.sub(r"(.* .* [-+]\d+):(\d+)", r"\1\2", raw)
-    return dt.datetime.strptime(compat, "%Y-%m-%d %H:%M:%S %z")
+    return _parse_timestamp(compat, _TIMESTAMP_GIT_ISO)
 
 
-def _parse_timestamp(raw: str, space: bool = False) -> dt.datetime:
-    if space:
-        format = "%Y-%m-%d %H:%M:%S.%f%z"
-    else:
-        format = "%Y-%m-%dT%H:%M:%S.%f%z"
-
+def _parse_timestamp(raw: str, format: str = _TIMESTAMP_GENERIC) -> dt.datetime:
     # Normalize "Z" for pre-3.7 compatibility:
     normalized = re.sub(r"Z$", "+0000", raw)
     # Truncate %f to six digits:
