@@ -186,9 +186,7 @@ class Concern(Enum):
             return ""
 
 
-def _pattern_error(
-    primary: str, pattern: Union[str, Pattern], tags: Optional[Sequence[str]] = None
-) -> str:
+def _pattern_error(primary: str, pattern: Union[str, Pattern], tags: Optional[Sequence[str]] = None) -> str:
     parts = [primary, "Pattern:\n{}".format(pattern)]
 
     if tags is not None:
@@ -214,11 +212,7 @@ def _run_cmd(
     )
     output = result.stdout.decode().strip()
     if codes and result.returncode not in codes:
-        raise RuntimeError(
-            "The command '{}' returned code {}. Output:\n{}".format(
-                command, result.returncode, output
-            )
-        )
+        raise RuntimeError("The command '{}' returned code {}. Output:\n{}".format(command, result.returncode, output))
     return (result.returncode, output)
 
 
@@ -267,9 +261,7 @@ def _match_version_pattern(
         except re.error as e:
             raise re.error(
                 _pattern_error(
-                    "The pattern is an invalid regular expression: {}".format(
-                        e.msg  # type: ignore
-                    ),
+                    "The pattern is an invalid regular expression: {}".format(e.msg),  # type: ignore
                     pattern,
                 ),
                 e.pattern,  # type: ignore
@@ -283,9 +275,7 @@ def _match_version_pattern(
             if base is not None:
                 break
         except IndexError:
-            raise ValueError(
-                _pattern_error("The pattern did not include required capture group 'base'", pattern)
-            )
+            raise ValueError(_pattern_error("The pattern did not include required capture group 'base'", pattern))
     if pattern_match is None or base is None:
         if latest_source:
             raise ValueError(
@@ -315,9 +305,7 @@ def _match_version_pattern(
         except ValueError:
             raise ValueError("Epoch '{}' is not a valid number".format(epoch))
 
-    return _MatchedVersionPattern(
-        source, base, stage_revision, newer_unmatched_tags, tagged_metadata, epoch
-    )
+    return _MatchedVersionPattern(source, base, stage_revision, newer_unmatched_tags, tagged_metadata, epoch)
 
 
 def _blank(value: Optional[_T], default: _T) -> _T:
@@ -375,9 +363,7 @@ def _detect_vcs(expected_vcs: Optional[Vcs], path: Optional[Path]) -> Vcs:
         if code != 0:
             if expected_vcs == Vcs.Git and dubious_ownership_flag in msg:
                 raise RuntimeError(dubious_ownership_error)
-            raise RuntimeError(
-                "This does not appear to be a {} project".format(expected_vcs.value.title())
-            )
+            raise RuntimeError("This does not appear to be a {} project".format(expected_vcs.value.title()))
         return expected_vcs
     else:
         disproven = []
@@ -415,9 +401,7 @@ def _detect_vcs_from_archival(path: Optional[Path]) -> Optional[Vcs]:
     return None
 
 
-def _find_higher_file(
-    name: str, start: Optional[Path], limit: Optional[str] = None
-) -> Optional[Path]:
+def _find_higher_file(name: str, start: Optional[Path], limit: Optional[str] = None) -> Optional[Path]:
     """
     :param name: Bare name of a file we'd like to find.
     :param limit: Give up if we find a file/folder with this name.
@@ -435,9 +419,7 @@ def _find_higher_file(
 
 
 class _GitRefInfo:
-    def __init__(
-        self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str
-    ):
+    def __init__(self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str):
         self.fullref = ref
         self.commit = commit
         self.creatordate = self.normalize_git_dt(creatordate)
@@ -457,10 +439,7 @@ class _GitRefInfo:
             return _parse_git_timestamp_iso_strict(timestamp)
 
     def __repr__(self):
-        return (
-            "_GitRefInfo(ref={!r}, commit={!r}, creatordate={!r},"
-            " committerdate={!r}, taggerdate={!r})"
-        ).format(
+        return ("_GitRefInfo(ref={!r}, commit={!r}, creatordate={!r}," " committerdate={!r}, taggerdate={!r})").format(
             self.fullref, self.commit_offset, self.creatordate, self.committerdate, self.taggerdate
         )
 
@@ -478,9 +457,7 @@ class _GitRefInfo:
             return self.tag_topo_lookup[self.fullref]
         except KeyError:
             raise RuntimeError(
-                "Unable to determine commit offset for ref {} in data: {}".format(
-                    self.fullref, self.tag_topo_lookup
-                )
+                "Unable to determine commit offset for ref {} in data: {}".format(self.fullref, self.tag_topo_lookup)
             )
 
     @property
@@ -499,19 +476,15 @@ class _GitRefInfo:
             return "refs/tags/{}".format(ref)
 
     @staticmethod
-    def from_git_tag_topo_order(
-        tag_branch: str, git_version: List[int], path: Optional[Path]
-    ) -> Mapping[str, int]:
-        cmd = (
-            '{} --simplify-by-decoration --topo-order --decorate=full {} "--format=%H%d"'
-        ).format(_git_log(git_version), tag_branch)
+    def from_git_tag_topo_order(tag_branch: str, git_version: List[int], path: Optional[Path]) -> Mapping[str, int]:
+        cmd = ('{} --simplify-by-decoration --topo-order --decorate=full {} "--format=%H%d"').format(
+            _git_log(git_version), tag_branch
+        )
         if git_version >= [2, 16]:
             cmd += " --decorate-refs=refs/tags/"
         code, logmsg = _run_cmd(cmd, path)
 
-        filtered_lines = [
-            x for x in logmsg.strip().splitlines(keepends=False) if " (" not in x or "tag: " in x
-        ]
+        filtered_lines = [x for x in logmsg.strip().splitlines(keepends=False) if " (" not in x or "tag: " in x]
 
         tag_lookup = {}
         for tag_offset, line in enumerate(filtered_lines):
@@ -522,9 +495,7 @@ class _GitRefInfo:
             if tags:
                 # remove trailing ')'
                 tags = tags[:-1]
-                taglist = [
-                    tag.strip() for tag in tags.split(", ") if tag.strip().startswith("tag: ")
-                ]
+                taglist = [tag.strip() for tag in tags.split(", ") if tag.strip().startswith("tag: ")]
                 taglist = [tag.split()[-1] for tag in taglist]
                 taglist = [_GitRefInfo.normalize_tag_ref(tag) for tag in taglist]
                 for tag in taglist:
@@ -637,9 +608,7 @@ class Version:
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Version):
-            raise TypeError(
-                "Cannot compare Version with type {}".format(other.__class__.__qualname__)
-            )
+            raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
         return (
             self.base == other.base
             and self.stage == other.stage
@@ -676,9 +645,7 @@ class Version:
 
     def __lt__(self, other: Any) -> bool:
         if not isinstance(other, Version):
-            raise TypeError(
-                "Cannot compare Version with type {}".format(other.__class__.__qualname__)
-            )
+            raise TypeError("Cannot compare Version with type {}".format(other.__class__.__qualname__))
 
         import packaging.version as pv
 
@@ -863,9 +830,7 @@ class Version:
 
         failed = False
         try:
-            matched_pattern = _match_version_pattern(
-                pattern, [normalized], True, strict=True, pattern_prefix=None
-            )
+            matched_pattern = _match_version_pattern(pattern, [normalized], True, strict=True, pattern_prefix=None)
         except ValueError:
             failed = True
 
@@ -1087,9 +1052,7 @@ class Version:
                         vcs=vcs,
                     )
 
-                matched_pattern = _match_version_pattern(
-                    pattern, [tag], latest_tag, strict, pattern_prefix
-                )
+                matched_pattern = _match_version_pattern(pattern, [tag], latest_tag, strict, pattern_prefix)
                 if matched_pattern is None:
                     return cls._fallback(
                         strict,
@@ -1144,28 +1107,20 @@ class Version:
             branch = msg
 
         code, msg = _run_cmd(
-            '{} -n 1 --format="format:{}"'.format(
-                _git_log(git_version), "%H" if full_commit else "%h"
-            ),
+            '{} -n 1 --format="format:{}"'.format(_git_log(git_version), "%H" if full_commit else "%h"),
             path,
             codes=[0, 128],
         )
         if code == 128:
-            return cls._fallback(
-                strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs
-            )
+            return cls._fallback(strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs)
         commit = msg
 
         timestamp = None
         if git_version < [2, 2]:
-            code, msg = _run_cmd(
-                '{} -n 1 --pretty=format:"%ci"'.format(_git_log(git_version)), path
-            )
+            code, msg = _run_cmd('{} -n 1 --pretty=format:"%ci"'.format(_git_log(git_version)), path)
             timestamp = _parse_git_timestamp_iso(msg)
         else:
-            code, msg = _run_cmd(
-                '{} -n 1 --pretty=format:"%cI"'.format(_git_log(git_version)), path
-            )
+            code, msg = _run_cmd('{} -n 1 --pretty=format:"%cI"'.format(_git_log(git_version)), path)
             timestamp = _parse_git_timestamp_iso_strict(msg)
 
         code, msg = _run_cmd("git describe --always --dirty", path)
@@ -1177,9 +1132,7 @@ class Version:
                 dirty = True
 
         if git_version < [2, 7]:
-            code, msg = _run_cmd(
-                'git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate', path
-            )
+            code, msg = _run_cmd('git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate', path)
             if not msg:
                 try:
                     code, msg = _run_cmd("git rev-list --count HEAD", path)
@@ -1197,13 +1150,10 @@ class Version:
                     vcs=vcs,
                 )
             tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
-            matched_pattern = _match_version_pattern(
-                pattern, tags, latest_tag, strict, pattern_prefix
-            )
+            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         else:
             code, msg = _run_cmd(
-                'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch)
-                + ' --format "%(refname)'
+                'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch) + ' --format "%(refname)'
                 "@{%(objectname)"
                 "@{%(creatordate:iso-strict)"
                 "@{%(*committerdate:iso-strict)"
@@ -1238,9 +1188,7 @@ class Version:
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
             tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
-            matched_pattern = _match_version_pattern(
-                pattern, tags, latest_tag, strict, pattern_prefix
-            )
+            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
 
         if matched_pattern is None:
             try:
@@ -1325,9 +1273,7 @@ class Version:
             branch = data.get("branch")
 
             if tag is None or tag == "null":
-                return cls._fallback(
-                    strict, distance=distance, commit=commit, branch=branch, vcs=vcs
-                )
+                return cls._fallback(strict, distance=distance, commit=commit, branch=branch, vcs=vcs)
 
             all_tags_file = _find_higher_file(".hgtags", path, ".hg")
             if all_tags_file is None:
@@ -1341,9 +1287,7 @@ class Version:
                         continue
                     all_tags.append(parts[1])
 
-            matched_pattern = _match_version_pattern(
-                pattern, all_tags, latest_tag, strict, pattern_prefix
-            )
+            matched_pattern = _match_version_pattern(pattern, all_tags, latest_tag, strict, pattern_prefix)
             if matched_pattern is None:
                 return cls._fallback(
                     strict,
@@ -1376,9 +1320,7 @@ class Version:
         code, msg = _run_cmd("hg branch", path)
         branch = msg
 
-        code, msg = _run_cmd(
-            'hg id --template "{}"'.format("{id}" if full_commit else "{id|short}"), path
-        )
+        code, msg = _run_cmd('hg id --template "{}"'.format("{id}" if full_commit else "{id|short}"), path)
         commit = msg if set(msg) != {"0"} else None
 
         code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"', path)
@@ -1485,9 +1427,7 @@ class Version:
                 distance = int(msg)
             except Exception:
                 distance = 0
-            return cls._fallback(
-                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
-            )
+            return cls._fallback(strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs)
         tags = msg.splitlines()
 
         matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
@@ -1569,9 +1509,7 @@ class Version:
             timestamp = _parse_timestamp(msg)
 
         if not commit:
-            return cls._fallback(
-                strict, distance=0, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
-            )
+            return cls._fallback(strict, distance=0, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs)
         code, msg = _run_cmd('svn ls -v -r {} "{}/{}"'.format(commit, url, tag_dir), path)
         lines = [line.split(maxsplit=5) for line in msg.splitlines()[1:]]
         tags_to_revs = {line[-1].strip("/"): int(line[0]) for line in lines}
@@ -1580,14 +1518,10 @@ class Version:
                 distance = int(commit)
             except Exception:
                 distance = 0
-            return cls._fallback(
-                strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs
-            )
+            return cls._fallback(strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs)
         tags_to_sources_revs = {}
         for tag, rev in tags_to_revs.items():
-            code, msg = _run_cmd(
-                'svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag), path
-            )
+            code, msg = _run_cmd('svn log -v "{}/{}/{}" --stop-on-copy'.format(url, tag_dir, tag), path)
             for line in msg.splitlines():
                 match = re.search(r"A /{}/{} \(from .+?:(\d+)\)".format(tag_dir, tag), line)
                 if match:
@@ -1687,11 +1621,7 @@ class Version:
                 timestamp=timestamp,
                 vcs=vcs,
             )
-        tags_to_revs = {
-            line.split()[0]: int(line.split()[1])
-            for line in msg.splitlines()
-            if line.split()[1] != "?"
-        }
+        tags_to_revs = {line.split()[0]: int(line.split()[1]) for line in msg.splitlines() if line.split()[1] != "?"}
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
 
         matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
@@ -1756,9 +1686,7 @@ class Version:
         code, msg = _run_cmd("fossil branch current", path)
         branch = msg
 
-        code, msg = _run_cmd(
-            "fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\"", path
-        )
+        code, msg = _run_cmd("fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\"", path)
         commit = msg.strip("'")
 
         code, msg = _run_cmd(
@@ -1825,8 +1753,7 @@ class Version:
             )
 
         tags_to_distance = [
-            (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1)
-            for line in msg.splitlines()
+            (line.rsplit(",", 1)[0][5:-1], int(line.rsplit(",", 1)[1]) - 1) for line in msg.splitlines()
         ]
 
         matched_pattern = _match_version_pattern(
@@ -1933,9 +1860,7 @@ class Version:
                 if line.startswith("State "):
                     tag_state = line.split("State ", 1)[1]
                 elif line.startswith("Date:"):
-                    tag_timestamp = _parse_timestamp(
-                        line.split("Date: ", 1)[1].replace(" UTC", "Z"), space=True
-                    )
+                    tag_timestamp = _parse_timestamp(line.split("Date: ", 1)[1].replace(" UTC", "Z"), space=True)
                 elif line.startswith("    "):
                     tag_message += line[4:]
                     tag_after_header = True
@@ -1956,9 +1881,7 @@ class Version:
                 else:
                     tag_message += line
         if tag_after_header:
-            tag_meta.append(
-                {"state": tag_state, "timestamp": tag_timestamp, "message": tag_message.strip()}
-            )
+            tag_meta.append({"state": tag_state, "timestamp": tag_timestamp, "message": tag_message.strip()})
 
         tag_meta_by_msg = {}  # type: dict
         for meta in tag_meta:
@@ -1968,10 +1891,7 @@ class Version:
             ):
                 tag_meta_by_msg[meta["message"]] = meta
 
-        tags = [
-            t["message"]
-            for t in sorted(tag_meta_by_msg.values(), key=lambda x: x["timestamp"], reverse=True)
-        ]
+        tags = [t["message"] for t in sorted(tag_meta_by_msg.values(), key=lambda x: x["timestamp"], reverse=True)]
 
         matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
         if matched_pattern is None:

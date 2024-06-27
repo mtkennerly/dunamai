@@ -62,9 +62,7 @@ def test__parse_args__from():
 
 
 def test__parse_args__check():
-    assert parse_args(["check", "0.1.0"]) == Namespace(
-        command="check", version="0.1.0", style="pep440"
-    )
+    assert parse_args(["check", "0.1.0"]) == Namespace(command="check", version="0.1.0", style="pep440")
     assert parse_args(["check", "0.1.0", "--style", "semver"]).style == "semver"
     assert parse_args(["check", "0.1.0", "--style", "pvp"]).style == "pvp"
 

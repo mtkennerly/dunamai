@@ -43,10 +43,10 @@ ruff = {version = "^0.0.272", python = "^3.7"}
 dunamai = 'dunamai.__main__:main'
 
 [tool.black]
-line-length = 100
+line-length = 120
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 extend-select = ["W605", "N"]
 
 [build-system]

@@ -59,9 +59,7 @@ def make_run_callback(where: Path) -> Callable:
     return inner
 
 
-def make_from_callback(
-    function: Callable, clear: bool = True, chronological: bool = True
-) -> Callable:
+def make_from_callback(function: Callable, clear: bool = True, chronological: bool = True) -> Callable:
     def inner(*args, fresh: bool = False, **kwargs):
         version = function(*args, **kwargs)
         if fresh:
@@ -124,9 +122,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         # Detect dirty if untracked files
         (vcs / "bar.txt").write_text("bye")
         assert from_vcs() == Version("0.0.0", distance=1, dirty=True, branch=b)
-        assert from_vcs(ignore_untracked=True) == Version(
-            "0.0.0", distance=1, dirty=False, branch=b
-        )
+        assert from_vcs(ignore_untracked=True) == Version("0.0.0", distance=1, dirty=False, branch=b)
 
         # Once the untracked file is removed we are no longer dirty
         (vcs / "bar.txt").unlink()
@@ -159,12 +155,8 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert from_explicit_vcs(Vcs.Any) == Version("0.1.0", dirty=False, branch=b)
         assert from_explicit_vcs(Vcs.Git) == Version("0.1.0", dirty=False, branch=b)
         assert run("dunamai from any --bump") == "0.1.0"
-        assert run('dunamai from git --format "{commit}"') != run(
-            'dunamai from git --format "{commit}" --full-commit'
-        )
-        assert run('dunamai from any --format "{commit}"') != run(
-            'dunamai from any --format "{commit}" --full-commit'
-        )
+        assert run('dunamai from git --format "{commit}"') != run('dunamai from git --format "{commit}" --full-commit')
+        assert run('dunamai from any --format "{commit}"') != run('dunamai from any --format "{commit}" --full-commit')
 
         if not legacy:
             # Verify tags with '/' work
@@ -425,9 +417,7 @@ def test__version__from_git__archival_untagged() -> None:
 
         assert Version.from_any_vcs() == detected
 
-        assert (
-            Version.from_git(full_commit=True).commit == "8fe614dbf9e767e70442ab8f56e99bd08d7e782d"
-        )
+        assert Version.from_git(full_commit=True).commit == "8fe614dbf9e767e70442ab8f56e99bd08d7e782d"
 
         with pytest.raises(RuntimeError):
             Version.from_git(strict=True)
@@ -549,9 +539,7 @@ def test__version__from_mercurial(tmp_path) -> None:
         assert run('dunamai from mercurial --format "{commit}"') != run(
             'dunamai from mercurial --format "{commit}" --full-commit'
         )
-        assert run('dunamai from any --format "{commit}"') != run(
-            'dunamai from any --format "{commit}" --full-commit'
-        )
+        assert run('dunamai from any --format "{commit}"') != run('dunamai from any --format "{commit}" --full-commit')
 
         run("hg tag v0.1.0")
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
@@ -662,9 +650,7 @@ def test__version__from_darcs(tmp_path) -> None:
     assert from_vcs(path=vcs) == Version("0.1.0", dirty=False)
 
 
-@pytest.mark.skipif(
-    None in [shutil.which("svn"), shutil.which("svnadmin")], reason="Requires Subversion"
-)
+@pytest.mark.skipif(None in [shutil.which("svn"), shutil.which("svnadmin")], reason="Requires Subversion")
 def test__version__from_subversion(tmp_path) -> None:
     vcs = tmp_path / "dunamai-svn"
     vcs.mkdir()
@@ -706,9 +692,7 @@ def test__version__from_subversion(tmp_path) -> None:
             # Two commits, but still no tag. Version should still be 0.0.0.
             assert from_vcs() == Version("0.0.0", distance=2, commit="2", dirty=False)
 
-            run(
-                'svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri)
-            )  # commit 3 and first tag!
+            run('svn copy {0}/trunk {0}/tags/v0.1.0 -m "Tag 1"'.format(vcs_srv_uri))  # commit 3 and first tag!
             run("svn update")
 
             # 3 commits, one tag (v.0.1.0), version should be 0.1.0.
@@ -753,9 +737,7 @@ def test__version__from_subversion(tmp_path) -> None:
             # #3), so version should be 0.1.0.
             run("svn update -r 3")
             assert from_vcs() == Version("0.1.0", distance=0, commit="3", dirty=False)
-            assert from_vcs(latest_tag=True) == Version(
-                "0.1.0", distance=0, commit="3", dirty=False
-            )
+            assert from_vcs(latest_tag=True) == Version("0.1.0", distance=0, commit="3", dirty=False)
 
     assert from_vcs(path=vcs) == Version("0.1.0", distance=0, commit="3", dirty=False)
 
@@ -792,9 +774,7 @@ def test__version__from_bazaar(tmp_path) -> None:
         run("bzr add .")
         run('bzr commit -m "Second"')
         assert from_vcs() == Version("0.1.0", distance=1, commit="2", dirty=False, branch=b)
-        assert from_any_vcs_unmocked() == Version(
-            "0.1.0", distance=1, commit="2", dirty=False, branch=b
-        )
+        assert from_any_vcs_unmocked() == Version("0.1.0", distance=1, commit="2", dirty=False, branch=b)
 
         run("bzr tag unmatched")
         assert from_vcs() == Version("0.1.0", distance=1, commit="2", dirty=False, branch=b)
