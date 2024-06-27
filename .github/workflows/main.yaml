@@ -90,7 +90,8 @@ jobs:
       - if: ${{ matrix.python-version == '3.5' || matrix.python-version == '3.6' }}
         run: |
           cp poetry.legacy.lock poetry.lock
+          echo "PIP_ARGS=--trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org" >> $GITHUB_ENV
       - run: |
-          pip install poetry
+          pip install ${PIP_ARGS} poetry
           poetry install
           poetry run pytest --verbose --cov --cov-report term-missing
