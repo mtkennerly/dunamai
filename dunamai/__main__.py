@@ -234,8 +234,12 @@ def build_parser(
     return parser
 
 
+def get_parser() -> argparse.ArgumentParser:
+    return build_parser(cli_spec)
+
+
 def parse_args(argv=None) -> argparse.Namespace:
-    return build_parser(cli_spec).parse_args(argv)
+    return get_parser().parse_args(argv)
 
 
 def from_stdin(value: Optional[str]) -> Optional[str]:

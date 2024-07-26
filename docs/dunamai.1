@@ -1,0 +1,751 @@
+.TH DUNAMAI "1" "2024\-07\-26" "dunamai 1.21.2" "Dunamai"
+.SH NAME
+dunamai
+.SH SYNOPSIS
+.B dunamai
+[-h] {from,check} ...
+.SH DESCRIPTION
+Generate dynamic versions
+
+.SH
+POSITIONAL ARGUMENTS
+.SS \fBdunamai from\fR
+Generate version from a particular VCS
+
+usage: dunamai from [\-h]
+                    {any,git,mercurial,darcs,subversion,bazaar,fossil,pijul}
+                    ...
+
+Generate version from a particular VCS
+
+.SS \fBdunamai from any\fR
+Generate version from any detected VCS
+
+usage: dunamai from any [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                        [\-\-ignore\-untracked] [\-\-tagged\-metadata]
+                        [\-\-pattern PATTERN] [\-\-pattern\-prefix PATTERN_PREFIX]
+                        [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
+                        [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
+                        [\-\-bump] [\-\-full\-commit] [\-\-tag\-branch TAG_BRANCH]
+                        [\-\-tag\-dir TAG_DIR]
+
+Generate version from any detected VCS
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-ignore\-untracked\fR
+Ignore untracked files when determining whether the repository is dirty (only:
+Git)
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-full\-commit\fR
+Get the full commit hash instead of the short form (only: Git, Mercurial)
+
+.TP
+\fB\-\-tag\-branch\fR \fI\,TAG_BRANCH\/\fR
+Branch on which to find tags, if different than the current branch (only: Git)
+
+.TP
+\fB\-\-tag\-dir\fR \fI\,TAG_DIR\/\fR
+Location of tags relative to the root (only: Subversion)
+.RE
+
+.SS \fBdunamai from git\fR
+Generate version from Git
+
+usage: dunamai from git [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                        [\-\-ignore\-untracked] [\-\-tagged\-metadata]
+                        [\-\-pattern PATTERN] [\-\-pattern\-prefix PATTERN_PREFIX]
+                        [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
+                        [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
+                        [\-\-bump] [\-\-full\-commit] [\-\-tag\-branch TAG_BRANCH]
+
+Generate version from Git
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-ignore\-untracked\fR
+Ignore untracked files when determining whether the repository is dirty (only:
+Git)
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-full\-commit\fR
+Get the full commit hash instead of the short form (only: Git, Mercurial)
+
+.TP
+\fB\-\-tag\-branch\fR \fI\,TAG_BRANCH\/\fR
+Branch on which to find tags, if different than the current branch (only: Git)
+.RE
+
+.SS \fBdunamai from mercurial\fR
+Generate version from Mercurial
+
+usage: dunamai from mercurial [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                              [\-\-tagged\-metadata] [\-\-pattern PATTERN]
+                              [\-\-pattern\-prefix PATTERN_PREFIX]
+                              [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
+                              [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
+                              [\-\-debug] [\-\-bump] [\-\-full\-commit]
+
+Generate version from Mercurial
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-full\-commit\fR
+Get the full commit hash instead of the short form (only: Git, Mercurial)
+.RE
+
+.SS \fBdunamai from darcs\fR
+Generate version from Darcs
+
+usage: dunamai from darcs [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                          [\-\-tagged\-metadata] [\-\-pattern PATTERN]
+                          [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
+                          [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
+                          [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+
+Generate version from Darcs
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+.RE
+
+.SS \fBdunamai from subversion\fR
+Generate version from Subversion
+
+usage: dunamai from subversion [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                               [\-\-tagged\-metadata] [\-\-pattern PATTERN]
+                               [\-\-pattern\-prefix PATTERN_PREFIX]
+                               [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
+                               [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
+                               [\-\-debug] [\-\-bump] [\-\-tag\-dir TAG_DIR]
+
+Generate version from Subversion
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-tag\-dir\fR \fI\,TAG_DIR\/\fR
+Location of tags relative to the root (only: Subversion)
+.RE
+
+.SS \fBdunamai from bazaar\fR
+Generate version from Bazaar
+
+usage: dunamai from bazaar [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                           [\-\-tagged\-metadata] [\-\-pattern PATTERN]
+                           [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
+                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
+                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+
+Generate version from Bazaar
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+.RE
+
+.SS \fBdunamai from fossil\fR
+Generate version from Fossil
+
+usage: dunamai from fossil [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                           [\-\-tagged\-metadata] [\-\-pattern PATTERN]
+                           [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
+                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
+                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+
+Generate version from Fossil
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+.RE
+
+.SS \fBdunamai from pijul\fR
+Generate version from Pijul
+
+usage: dunamai from pijul [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
+                          [\-\-tagged\-metadata] [\-\-pattern PATTERN]
+                          [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
+                          [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
+                          [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+
+Generate version from Pijul
+
+options:
+.RS 7
+.TP
+\fB\-\-metadata\fR
+Always include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-no\-metadata\fR
+Never include metadata. Ignored when \-\-format is used
+
+.TP
+\fB\-\-dirty\fR
+Include dirty flag if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-tagged\-metadata\fR
+Include tagged metadata if applicable. Ignored when \-\-format is used
+
+.TP
+\fB\-\-pattern\fR \fI\,PATTERN\/\fR
+Regular expression matched against the version source. This must contain one
+capture group named `base` corresponding to the release segment of the source.
+Optionally, it may contain another two groups named `stage` and `revision`
+corresponding to a prerelease type (such as 'alpha' or 'rc') and number (such
+as in 'alpha\-2' or 'rc3'). It may also contain a group named `tagged_metadata`
+corresponding to extra metadata after the main part of the version (typically
+after a plus sign). There may also be a group named `epoch` for the PEP 440
+concept. If the `base` group is not present, then instead this will be
+interpreted as a named preset, which may be one of the following: `default`,
+`default\-unprefixed`
+
+.TP
+\fB\-\-pattern\-prefix\fR \fI\,PATTERN_PREFIX\/\fR
+Insert this after the pattern's start anchor (`^`).
+
+.TP
+\fB\-\-format\fR \fI\,FORMAT\/\fR
+Custom output format. Available substitutions: {base}, {stage}, {revision},
+{distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
+{branch_escaped}, {timestamp}
+
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Preconfigured output format. Will default to PEP 440 if not set and no custom
+format given. If you specify both a style and a custom format, then the format
+will be validated against the style's rules
+
+.TP
+\fB\-\-latest\-tag\fR
+Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-strict\fR
+Elevate warnings to errors. When there are no tags, fail instead of falling
+back to 0.0.0
+
+.TP
+\fB\-\-path\fR \fI\,PATH\/\fR
+Directory to inspect, if not the current working directory
+
+.TP
+\fB\-\-debug\fR
+Display additional information on stderr for troubleshooting
+
+.TP
+\fB\-\-bump\fR
+Increment the last part of the version `base` by 1, unless the `stage` is set,
+in which case increment the `revision` by 1 or set it to a default of 2 if
+there was no `revision` Does nothing when on a commit with a version tag.
+.RE
+
+.SS \fBdunamai check\fR
+Check if a version is valid for a style
+
+usage: dunamai check [\-h] [\-\-style {pep440,semver,pvp}] [version]
+
+Check if a version is valid for a style
+
+arguments:
+.RS 7
+.TP
+\fBversion\fR
+Version to check; may be piped in
+.RE
+
+
+options:
+.RS 7
+.TP
+\fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
+Style against which to check
+.RE
+
+
+.SH AUTHOR
+.nf
+'Matthew T. Kennerly (mtkennerly)'
+.fi
+
+.SH DISTRIBUTION
+The latest version of dunamai may be downloaded from
+.UR https://github.com/mtkennerly/dunamai
+.UE
