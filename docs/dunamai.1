@@ -1,4 +1,4 @@
-.TH DUNAMAI "1" "2024\-07\-26" "dunamai 1.21.2" "Dunamai"
+.TH DUNAMAI "1" "2024\-08\-07" "dunamai 1.22.0" "Dunamai"
 .SH NAME
 dunamai
 .SH SYNOPSIS
@@ -26,8 +26,9 @@ usage: dunamai from any [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                         [\-\-pattern PATTERN] [\-\-pattern\-prefix PATTERN_PREFIX]
                         [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
                         [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
-                        [\-\-bump] [\-\-full\-commit] [\-\-tag\-branch TAG_BRANCH]
-                        [\-\-tag\-dir TAG_DIR]
+                        [\-\-bump] [\-\-full\-commit]
+                        [\-\-commit\-length COMMIT_LENGTH]
+                        [\-\-tag\-branch TAG_BRANCH] [\-\-tag\-dir TAG_DIR]
 
 Generate version from any detected VCS
 
@@ -111,6 +112,10 @@ there was no `revision` Does nothing when on a commit with a version tag.
 Get the full commit hash instead of the short form (only: Git, Mercurial)
 
 .TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
+
+.TP
 \fB\-\-tag\-branch\fR \fI\,TAG_BRANCH\/\fR
 Branch on which to find tags, if different than the current branch (only: Git)
 
@@ -127,7 +132,9 @@ usage: dunamai from git [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                         [\-\-pattern PATTERN] [\-\-pattern\-prefix PATTERN_PREFIX]
                         [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
                         [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
-                        [\-\-bump] [\-\-full\-commit] [\-\-tag\-branch TAG_BRANCH]
+                        [\-\-bump] [\-\-full\-commit]
+                        [\-\-commit\-length COMMIT_LENGTH]
+                        [\-\-tag\-branch TAG_BRANCH]
 
 Generate version from Git
 
@@ -211,6 +218,10 @@ there was no `revision` Does nothing when on a commit with a version tag.
 Get the full commit hash instead of the short form (only: Git, Mercurial)
 
 .TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
+
+.TP
 \fB\-\-tag\-branch\fR \fI\,TAG_BRANCH\/\fR
 Branch on which to find tags, if different than the current branch (only: Git)
 .RE
@@ -224,6 +235,7 @@ usage: dunamai from mercurial [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty
                               [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
                               [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
                               [\-\-debug] [\-\-bump] [\-\-full\-commit]
+                              [\-\-commit\-length COMMIT_LENGTH]
 
 Generate version from Mercurial
 
@@ -300,6 +312,10 @@ there was no `revision` Does nothing when on a commit with a version tag.
 .TP
 \fB\-\-full\-commit\fR
 Get the full commit hash instead of the short form (only: Git, Mercurial)
+
+.TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
 .RE
 
 .SS \fBdunamai from darcs\fR
@@ -310,6 +326,7 @@ usage: dunamai from darcs [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                           [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+                          [\-\-commit\-length COMMIT_LENGTH]
 
 Generate version from Darcs
 
@@ -382,6 +399,10 @@ Display additional information on stderr for troubleshooting
 Increment the last part of the version `base` by 1, unless the `stage` is set,
 in which case increment the `revision` by 1 or set it to a default of 2 if
 there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
 .RE
 
 .SS \fBdunamai from subversion\fR
@@ -392,7 +413,9 @@ usage: dunamai from subversion [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirt
                                [\-\-pattern\-prefix PATTERN_PREFIX]
                                [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
                                [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
-                               [\-\-debug] [\-\-bump] [\-\-tag\-dir TAG_DIR]
+                               [\-\-debug] [\-\-bump]
+                               [\-\-commit\-length COMMIT_LENGTH]
+                               [\-\-tag\-dir TAG_DIR]
 
 Generate version from Subversion
 
@@ -465,6 +488,10 @@ Display additional information on stderr for troubleshooting
 Increment the last part of the version `base` by 1, unless the `stage` is set,
 in which case increment the `revision` by 1 or set it to a default of 2 if
 there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
 
 .TP
 \fB\-\-tag\-dir\fR \fI\,TAG_DIR\/\fR
@@ -479,6 +506,7 @@ usage: dunamai from bazaar [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                            [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                            [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                            [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+                           [\-\-commit\-length COMMIT_LENGTH]
 
 Generate version from Bazaar
 
@@ -551,6 +579,10 @@ Display additional information on stderr for troubleshooting
 Increment the last part of the version `base` by 1, unless the `stage` is set,
 in which case increment the `revision` by 1 or set it to a default of 2 if
 there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
 .RE
 
 .SS \fBdunamai from fossil\fR
@@ -561,6 +593,7 @@ usage: dunamai from fossil [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                            [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                            [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                            [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+                           [\-\-commit\-length COMMIT_LENGTH]
 
 Generate version from Fossil
 
@@ -633,6 +666,10 @@ Display additional information on stderr for troubleshooting
 Increment the last part of the version `base` by 1, unless the `stage` is set,
 in which case increment the `revision` by 1 or set it to a default of 2 if
 there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
 .RE
 
 .SS \fBdunamai from pijul\fR
@@ -643,6 +680,7 @@ usage: dunamai from pijul [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                           [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
+                          [\-\-commit\-length COMMIT_LENGTH]
 
 Generate version from Pijul
 
@@ -715,6 +753,10 @@ Display additional information on stderr for troubleshooting
 Increment the last part of the version `base` by 1, unless the `stage` is set,
 in which case increment the `revision` by 1 or set it to a default of 2 if
 there was no `revision` Does nothing when on a commit with a version tag.
+
+.TP
+\fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
+Use this many characters from the start of the full commit hash
 .RE
 
 .SS \fBdunamai check\fR

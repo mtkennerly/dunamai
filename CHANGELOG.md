@@ -1,4 +1,4 @@
-## Unreleased
+## v1.22.0 (2024-08-07)
 
 * Fixed: The `--ignore-untracked` CLI flag was ignored.
 * Added: `--commit-length` option.
