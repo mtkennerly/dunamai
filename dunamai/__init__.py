@@ -986,6 +986,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -1004,9 +1005,12 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param ignore_untracked:
             Ignore untracked files when determining whether the repository is dirty.
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Git
+        full_commit = full_commit or commit_length is not None
 
         archival = _find_higher_file(".git_archival.json", path, ".git")
         if archival is not None:
@@ -1018,6 +1022,9 @@ class Version:
                     commit = data.get("hash-full")
                 else:
                     commit = data.get("hash-short")
+
+                if commit is not None:
+                    commit = commit[:commit_length]
 
                 timestamp = None
                 raw_timestamp = data.get("timestamp")
@@ -1118,7 +1125,7 @@ class Version:
         )
         if code == 128:
             return cls._fallback(strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs)
-        commit = msg
+        commit = msg[:commit_length]
 
         timestamp = None
         if git_version < [2, 2]:
@@ -1243,6 +1250,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -1257,9 +1265,12 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Mercurial
+        full_commit = full_commit or commit_length is not None
 
         archival = _find_higher_file(".hg_archival.txt", path, ".hg")
         if archival is not None:
@@ -1275,6 +1286,8 @@ class Version:
             # The distance is 1 on a new repo or on a tagged commit.
             distance = int(data.get("latesttagdistance", 1)) - 1
             commit = data.get("node")
+            if commit is not None:
+                commit = commit[:commit_length]
             branch = data.get("branch")
 
             if tag is None or tag == "null":
@@ -1326,7 +1339,7 @@ class Version:
         branch = msg
 
         code, msg = _run_cmd('hg id --template "{}"'.format("{id}" if full_commit else "{id|short}"), path)
-        commit = msg if set(msg) != {"0"} else None
+        commit = msg[:commit_length] if set(msg) != {"0"} else None
 
         code, msg = _run_cmd('hg log --limit 1 --template "{date|rfc3339date}"', path)
         timestamp = _parse_git_timestamp_iso_strict(msg) if msg != "" else None
@@ -1395,6 +1408,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
@@ -1408,6 +1422,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Darcs
@@ -1423,6 +1439,8 @@ class Version:
             timestamp = None
         else:
             commit = root[0].attrib["hash"]
+            if commit is not None:
+                commit = commit[:commit_length]
             timestamp = dt.datetime.strptime(root[0].attrib["date"] + "+0000", "%Y%m%d%H%M%S%z")
 
         code, msg = _run_cmd("darcs show tags", path)
@@ -1475,6 +1493,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -1489,6 +1508,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Subversion
@@ -1506,7 +1527,7 @@ class Version:
         if not msg or msg == "0":
             commit = None
         else:
-            commit = msg
+            commit = msg[:commit_length]
 
         timestamp = None
         if commit:
@@ -1573,6 +1594,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
@@ -1586,6 +1608,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Bazaar
@@ -1601,7 +1625,7 @@ class Version:
         for line in msg.splitlines():
             info = line.split("revno: ", maxsplit=1)
             if len(info) == 2:
-                commit = info[1]
+                commit = info[1][:commit_length]
 
             info = line.split("branch nick: ", maxsplit=1)
             if len(info) == 2:
@@ -1668,6 +1692,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
@@ -1680,6 +1705,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Fossil
@@ -1692,7 +1719,7 @@ class Version:
         branch = msg
 
         code, msg = _run_cmd("fossil sql \"SELECT value FROM vvar WHERE name = 'checkout-hash' LIMIT 1\"", path)
-        commit = msg.strip("'")
+        commit = msg.strip("'")[:commit_length]
 
         code, msg = _run_cmd(
             'fossil sql "'
@@ -1802,6 +1829,7 @@ class Version:
         strict: bool = False,
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on Pijul tags.
@@ -1815,6 +1843,8 @@ class Version:
             When there are no tags, fail instead of falling back to 0.0.0.
         :param path: Directory to inspect, if not the current working directory.
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = Vcs.Pijul
@@ -1835,7 +1865,7 @@ class Version:
         if len(limited_commits) == 0:
             return cls._fallback(strict, dirty=dirty, branch=branch, vcs=vcs)
 
-        commit = limited_commits[0]["hash"]
+        commit = limited_commits[0]["hash"][:commit_length]
         timestamp = _parse_timestamp(limited_commits[0]["timestamp"])
 
         code, msg = _run_cmd("pijul log --output-format json", path)
@@ -1951,6 +1981,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -1983,6 +2014,8 @@ class Version:
         :param ignore_untracked:
             Ignore untracked files when determining whether the repository is dirty.
             This is only used for Git currently.
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         vcs = _detect_vcs_from_archival(path)
@@ -1999,6 +2032,7 @@ class Version:
             path,
             pattern_prefix,
             ignore_untracked,
+            commit_length,
         )
 
     @classmethod
@@ -2014,6 +2048,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -2040,6 +2075,8 @@ class Version:
         :param ignore_untracked:
             Ignore untracked files when determining whether the repository is dirty.
             This is only used for Git currently.
+        :param commit_length:
+            Use this many characters from the start of the full commit hash.
         :returns: Detected version.
         """
         return cls._do_vcs_callback(
@@ -2053,6 +2090,7 @@ class Version:
             path,
             pattern_prefix,
             ignore_untracked,
+            commit_length,
         )
 
     @classmethod
@@ -2068,6 +2106,7 @@ class Version:
         path: Optional[Path],
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
+        commit_length: Optional[int] = None,
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -2091,6 +2130,7 @@ class Version:
             ("path", path),
             ("pattern_prefix", pattern_prefix),
             ("ignore_untracked", ignore_untracked),
+            ("commit_length", commit_length),
         ]:
             if kwarg in inspect.getfullargspec(callback).args:
                 kwargs[kwarg] = value

@@ -26,6 +26,7 @@ def test__parse_args__from():
         path=None,
         pattern_prefix=None,
         ignore_untracked=False,
+        commit_length=None,
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "git", "--tag-branch", "foo"]).tag_branch == "foo"
@@ -55,6 +56,7 @@ def test__parse_args__from():
     assert parse_args(["from", "any", "--path", "/tmp"]).path == "/tmp"
     assert parse_args(["from", "any", "--pattern-prefix", "foo-"]).pattern_prefix == "foo-"
     assert parse_args(["from", "any", "--ignore-untracked"]).ignore_untracked is True
+    assert parse_args(["from", "any", "--commit-length", "10"]).commit_length == 10
     assert parse_args(["from", "subversion", "--tag-dir", "foo"]).tag_dir == "foo"
 
     with pytest.raises(SystemExit):
