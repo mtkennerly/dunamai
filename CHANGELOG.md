@@ -1,3 +1,7 @@
+## Unreleased
+
+* Fixed: The `--ignore-untracked` CLI flag was ignored.
+
 ## v1.21.2 (2024-06-26)
 
 * Fixed: Some timestamps could fail to parse on Python 3.5 and 3.6.

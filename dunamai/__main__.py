@@ -269,8 +269,11 @@ def from_vcs(
     strict: bool,
     path: Optional[Path],
     pattern_prefix: Optional[str],
+    ignore_untracked: bool,
 ) -> None:
-    version = Version.from_vcs(vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path, pattern_prefix)
+    version = Version.from_vcs(
+        vcs, pattern, latest_tag, tag_dir, tag_branch, full_commit, strict, path, pattern_prefix, ignore_untracked
+    )
 
     for concern in version.concerns:
         print("Warning: {}".format(concern.message()), file=sys.stderr)
@@ -289,6 +292,7 @@ def main() -> None:
             tag_dir = getattr(args, "tag_dir", "tags")
             tag_branch = getattr(args, "tag_branch", None)
             full_commit = getattr(args, "full_commit", False)
+            ignore_untracked = getattr(args, "ignore_untracked", False)
             from_vcs(
                 Vcs(args.vcs),
                 args.pattern,
@@ -306,6 +310,7 @@ def main() -> None:
                 args.strict,
                 Path(args.path) if args.path is not None else None,
                 args.pattern_prefix,
+                ignore_untracked,
             )
         elif args.command == "check":
             version = from_stdin(args.version)
