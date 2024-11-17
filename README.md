@@ -180,6 +180,9 @@ If you have a tag like `v9!0.1.2-beta.3+other`, then:
 * `{branch}` = `feature/foo`
 * `{branch_escaped}` = `featurefoo`
 * `{timestamp}` is in the format `YYYYmmddHHMMSS` as UTC
+* `{major}` = `0`
+* `{minor}` = `1`
+* `{patch}` = `2`
 
 If you specify a substitution, its value will always be included in the output.
 For conditional formatting, you can do something like this (Bash):

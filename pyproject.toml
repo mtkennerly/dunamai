@@ -49,6 +49,7 @@ line-length = 120
 [tool.ruff]
 line-length = 120
 extend-select = ["W605", "N"]
+ignore = ["E501"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

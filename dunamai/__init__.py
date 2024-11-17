@@ -703,6 +703,9 @@ class Version:
             * {branch}
             * {branch_escaped} which omits any non-letter/number characters
             * {timestamp} which expands to YYYYmmddHHMMSS as UTC
+            * {major} (first part of `base` split on `.`, or 0)
+            * {minor} (second part of `base` split on `.`, or 0)
+            * {patch} (third part of `base` split on `.`, or 0)
         :param style: Built-in output formats. Will default to PEP 440 if not
             set and no custom format given. If you specify both a style and a
             custom format, then the format will be validated against the
@@ -731,6 +734,8 @@ class Version:
                 out = format(new_version)
             else:
                 try:
+                    base_parts = base.split(".")
+
                     out = format.format(
                         base=base,
                         stage=_blank(self.stage, ""),
@@ -743,6 +748,9 @@ class Version:
                         branch=_blank(self.branch, ""),
                         branch_escaped=_escape_branch(_blank(self.branch, "")),
                         timestamp=self.timestamp.strftime("%Y%m%d%H%M%S") if self.timestamp else "",
+                        major=base_parts[0] if len(base_parts) > 0 else "0",
+                        minor=base_parts[1] if len(base_parts) > 1 else "0",
+                        patch=base_parts[2] if len(base_parts) > 2 else "0",
                     )
                 except KeyError as e:
                     raise KeyError("Format contains invalid placeholder: {}".format(e))

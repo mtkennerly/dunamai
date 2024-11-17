@@ -379,8 +379,8 @@ def test__version__serialize__pvp_with_dirty() -> None:
 
 
 def test__version__serialize__format_as_str() -> None:
-    format = "{base},{stage},{revision},{distance},{commit},{dirty}" ",{branch},{branch_escaped},{timestamp}"
-    assert Version("0.1.0").serialize(format=format) == "0.1.0,,,0,,clean,,,"
+    format = "{base},{stage},{revision},{distance},{commit},{dirty},{branch},{branch_escaped},{timestamp},{major},{minor},{patch}"
+    assert Version("0.1.0").serialize(format=format) == "0.1.0,,,0,,clean,,,,0,1,0"
     assert (
         Version(
             "1",
@@ -391,7 +391,7 @@ def test__version__serialize__format_as_str() -> None:
             branch="a/b",
             timestamp=dt.datetime(2001, 2, 3, 4, 5, 6, tzinfo=dt.timezone.utc),
         ).serialize(format=format)
-        == "1,a,2,3,abc,dirty,a/b,ab,20010203040506"
+        == "1,a,2,3,abc,dirty,a/b,ab,20010203040506,1,0,0"
     )
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format="v{base}", style=Style.Pep440)

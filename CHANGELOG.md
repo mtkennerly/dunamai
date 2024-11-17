@@ -1,3 +1,7 @@
+## Unreleased
+
+* Added: `{major}`, `{minor}`, and `{patch}` format placeholders.
+
 ## v1.22.0 (2024-08-07)
 
 * Fixed: The `--ignore-untracked` CLI flag was ignored.
