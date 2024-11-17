@@ -30,6 +30,8 @@ jobs:
           - '3.9'
           - '3.10'
           - '3.11'
+          - '3.12'
+          - '3.13'
         git-version:
           - default  # 2.28.0 or newer
         include:
@@ -93,6 +95,9 @@ jobs:
       - if: ${{ matrix.python-version == '3.5' || matrix.python-version == '3.6' }}
         run: |
           cp poetry.legacy.lock poetry.lock
+      - if: ${{ matrix.python-version == '3.12' || matrix.python-version == '3.13' }}
+        run: |
+          rm poetry.lock
       - run: |
           pip install poetry
           poetry install
