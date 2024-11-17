@@ -444,7 +444,7 @@ class _GitRefInfo:
             return _parse_git_timestamp_iso_strict(timestamp)
 
     def __repr__(self):
-        return ("_GitRefInfo(ref={!r}, commit={!r}, creatordate={!r}," " committerdate={!r}, taggerdate={!r})").format(
+        return ("_GitRefInfo(ref={!r}, commit={!r}, creatordate={!r}, committerdate={!r}, taggerdate={!r})").format(
             self.fullref, self.commit_offset, self.creatordate, self.committerdate, self.taggerdate
         )
 

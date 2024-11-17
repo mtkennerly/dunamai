@@ -92,7 +92,7 @@ common_sub_args = [
         "action": "store_true",
         "dest": "strict",
         "default": False,
-        "help": ("Elevate warnings to errors." " When there are no tags, fail instead of falling back to 0.0.0"),
+        "help": ("Elevate warnings to errors. When there are no tags, fail instead of falling back to 0.0.0"),
     },
     {
         "triggers": ["--path"],
