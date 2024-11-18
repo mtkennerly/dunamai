@@ -1,4 +1,4 @@
-## Unreleased
+## v1.23.0 (2024-11-17)
 
 * Added: `{major}`, `{minor}`, and `{patch}` format placeholders.
 
