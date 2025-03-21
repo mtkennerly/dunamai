@@ -1,4 +1,4 @@
-## Unreleased
+## v1.23.1 (2025-03-20)
 
 * Fixed: `Version.__lt__` checked if *all* fields were less than the other instance,
   rather than using the proper field precedence and version ordering.
