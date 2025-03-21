@@ -130,6 +130,14 @@ def test__version__ordering() -> None:
     assert Version("0.1.0") != Version("0.1.0", dirty=True)
     assert Version("0.1.0") != Version("0.1.0", dirty=False)
 
+    assert Version("0.2.0") < Version("0.2.1")
+    assert Version("1.1.0") < Version("1.2.0")
+    assert Version("1.0.0", stage=("rc", 1)) < Version("1.0.0")
+    assert Version("1.0.0", stage=("a", 1)) < Version("1.0.0", stage=("b", 1))
+    assert Version("1.0.0") < Version("1.0.0", stage=("post", 1))
+    assert Version("1.0.0", epoch=1) < Version("1.0.0", epoch=2)
+    assert Version("1.0.0", stage=("bar", 1)) < Version("1.0.0", stage=("foo", 1))
+
 
 def test__version__serialize__pep440() -> None:
     assert Version("0.1.0").serialize() == "0.1.0"

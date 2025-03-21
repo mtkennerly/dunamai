@@ -654,19 +654,47 @@ class Version:
 
         import packaging.version as pv
 
-        return (
-            pv.Version(self.base) < pv.Version(other.base)
-            and _blank(self.stage, "") < _blank(other.stage, "")
-            and _blank(self.revision, 0) < _blank(other.revision, 0)
-            and _blank(self.distance, 0) < _blank(other.distance, 0)
-            and _blank(self.commit, "") < _blank(other.commit, "")
-            and bool(self.dirty) < bool(other.dirty)
-            and _blank(self.tagged_metadata, "") < _blank(other.tagged_metadata, "")
-            and _blank(self.epoch, 0) < _blank(other.epoch, 0)
-            and _blank(self.branch, "") < _blank(other.branch, "")
-            and _blank(self.timestamp, dt.datetime(0, 0, 0, 0, 0, 0))
-            < _blank(other.timestamp, dt.datetime(0, 0, 0, 0, 0, 0))
-        )
+        parsable = True
+        try:
+            us = pv.Version(self.serialize(metadata=False))
+            them = pv.Version(other.serialize(metadata=False))
+            if us < them:
+                return True
+            elif us > them:
+                return False
+        except Exception:
+            parsable = False
+
+        common_pairs = [
+            (_blank(self.distance, 0), _blank(other.distance, 0)),
+            (_blank(self.commit, ""), _blank(other.commit, "")),
+            (bool(self.dirty), bool(other.dirty)),
+            (_blank(self.tagged_metadata, ""), _blank(other.tagged_metadata, "")),
+            (_blank(self.branch, ""), _blank(other.branch, "")),
+            (
+                _blank(self.timestamp, dt.datetime(1, 1, 1, 0, 0, 0)),
+                _blank(other.timestamp, dt.datetime(1, 1, 1, 0, 0, 0)),
+            ),
+        ]
+
+        if parsable:
+            pairs = common_pairs
+        else:
+            pairs = [
+                (_blank(self.epoch, 0), _blank(other.epoch, 0)),
+                (pv.Version(self.base), pv.Version(other.base)),
+                (_blank(self.stage, ""), _blank(other.stage, "")),
+                (_blank(self.revision, 0), _blank(other.revision, 0)),
+                *common_pairs,
+            ]
+
+        for (a, b) in pairs:
+            if a < b:  # type: ignore
+                return True
+            elif a > b:  # type: ignore
+                return False
+
+        return False
 
     def serialize(
         self,
