@@ -1,4 +1,4 @@
-.TH DUNAMAI "1" "2024\-08\-07" "dunamai 1.22.0" "Dunamai"
+.TH DUNAMAI "1" "2025\-03\-20" "dunamai 1.23.1" "Dunamai"
 .SH NAME
 dunamai
 .SH SYNOPSIS
@@ -76,7 +76,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -182,7 +182,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -278,7 +278,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -369,7 +369,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -458,7 +458,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -549,7 +549,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -636,7 +636,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -723,7 +723,7 @@ Insert this after the pattern's start anchor (`^`).
 \fB\-\-format\fR \fI\,FORMAT\/\fR
 Custom output format. Available substitutions: {base}, {stage}, {revision},
 {distance}, {commit}, {dirty}, {tagged_metadata}, {epoch}, {branch},
-{branch_escaped}, {timestamp}
+{branch_escaped}, {timestamp}, {major}, {minor}, {patch}
 
 .TP
 \fB\-\-style\fR \fI\,{pep440,semver,pvp}\/\fR
@@ -784,7 +784,7 @@ Style against which to check
 
 .SH AUTHOR
 .nf
-'Matthew T. Kennerly (mtkennerly)'
+Matthew T. Kennerly (mtkennerly)
 .fi
 
 .SH DISTRIBUTION

@@ -42,3 +42,9 @@ Here is an example of how to configure them:
   ```
   pijul key generate test
   ```
+
+## Release
+* Run `invoke prerelease`
+* Verify the changes and `git add` them
+* Run `invoke release`
+* Create a release on GitHub for the new tag and attach the artifacts from `dist`
