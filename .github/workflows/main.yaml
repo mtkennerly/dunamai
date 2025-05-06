@@ -18,13 +18,13 @@ jobs:
           poetry run pre-commit run --all-files --show-diff-on-failure
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         python-version:
-          - '3.5'
-          - '3.6'
+          # - '3.5'
+          # - '3.6'
           - '3.7'
           - '3.8'
           - '3.9'
