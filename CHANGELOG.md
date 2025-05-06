@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed: `Version.from_git` would fail if the `GIT_TRACE` environment variable were set,
+  due to unexpected output from Git.
+
 ## v1.23.1 (2025-03-20)
 
 * Fixed: `Version.__lt__` checked if *all* fields were less than the other instance,

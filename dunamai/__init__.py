@@ -14,6 +14,7 @@ import copy
 import datetime as dt
 import inspect
 import json
+import os
 import re
 import shlex
 import shutil
@@ -1047,6 +1048,7 @@ class Version:
         """
         vcs = Vcs.Git
         full_commit = full_commit or commit_length is not None
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_TRACE")}
 
         archival = _find_higher_file(".git_archival.json", path, ".git")
         if archival is not None:
@@ -1141,14 +1143,14 @@ class Version:
             if flag_file:
                 concerns.add(Concern.ShallowRepository)
         else:
-            code, msg = _run_cmd("git rev-parse --is-shallow-repository", path)
+            code, msg = _run_cmd("git rev-parse --is-shallow-repository", path, env=env)
             if msg.strip() == "true":
                 concerns.add(Concern.ShallowRepository)
 
         if strict and concerns:
             raise RuntimeError("\n".join(x.message() for x in concerns))
 
-        code, msg = _run_cmd("git symbolic-ref --short HEAD", path, codes=[0, 128])
+        code, msg = _run_cmd("git symbolic-ref --short HEAD", path, codes=[0, 128], env=env)
         if code == 128:
             branch = None
         else:
@@ -1158,6 +1160,7 @@ class Version:
             '{} -n 1 --format="format:{}"'.format(_git_log(git_version), "%H" if full_commit else "%h"),
             path,
             codes=[0, 128],
+            env=env,
         )
         if code == 128:
             return cls._fallback(strict, distance=0, dirty=True, branch=branch, concerns=concerns, vcs=vcs)
@@ -1165,25 +1168,27 @@ class Version:
 
         timestamp = None
         if git_version < [2, 2]:
-            code, msg = _run_cmd('{} -n 1 --pretty=format:"%ci"'.format(_git_log(git_version)), path)
+            code, msg = _run_cmd('{} -n 1 --pretty=format:"%ci"'.format(_git_log(git_version)), path, env=env)
             timestamp = _parse_git_timestamp_iso(msg)
         else:
-            code, msg = _run_cmd('{} -n 1 --pretty=format:"%cI"'.format(_git_log(git_version)), path)
+            code, msg = _run_cmd('{} -n 1 --pretty=format:"%cI"'.format(_git_log(git_version)), path, env=env)
             timestamp = _parse_git_timestamp_iso_strict(msg)
 
-        code, msg = _run_cmd("git describe --always --dirty", path)
+        code, msg = _run_cmd("git describe --always --dirty", path, env=env)
         dirty = msg.endswith("-dirty")
 
         if not dirty and not ignore_untracked:
-            code, msg = _run_cmd("git status --porcelain", path)
+            code, msg = _run_cmd("git status --porcelain", path, env=env)
             if msg.strip() != "":
                 dirty = True
 
         if git_version < [2, 7]:
-            code, msg = _run_cmd('git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate', path)
+            code, msg = _run_cmd(
+                'git for-each-ref "refs/tags/**" --format "%(refname)" --sort -creatordate', path, env=env
+            )
             if not msg:
                 try:
-                    code, msg = _run_cmd("git rev-list --count HEAD", path)
+                    code, msg = _run_cmd("git rev-list --count HEAD", path, env=env)
                     distance = int(msg)
                 except Exception:
                     distance = 0
@@ -1208,10 +1213,11 @@ class Version:
                 "@{%(taggerdate:iso-strict)"
                 '"',
                 path,
+                env=env,
             )
             if not msg:
                 try:
-                    code, msg = _run_cmd("git rev-list --count HEAD", path)
+                    code, msg = _run_cmd("git rev-list --count HEAD", path, env=env)
                     distance = int(msg)
                 except Exception:
                     distance = 0
@@ -1240,7 +1246,7 @@ class Version:
 
         if matched_pattern is None:
             try:
-                code, msg = _run_cmd("git rev-list --count HEAD", path)
+                code, msg = _run_cmd("git rev-list --count HEAD", path, env=env)
                 distance = int(msg)
             except Exception:
                 distance = 0
@@ -1257,7 +1263,7 @@ class Version:
             )
         tag, base, stage, unmatched, tagged_metadata, epoch = matched_pattern
 
-        code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag), path)
+        code, msg = _run_cmd("git rev-list --count refs/tags/{}..HEAD".format(tag), path, env=env)
         distance = int(msg)
 
         version = cls(

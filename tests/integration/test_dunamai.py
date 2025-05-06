@@ -467,6 +467,23 @@ def test__version__from_git__shallow(tmp_path) -> None:
             Version.from_git(strict=True)
 
 
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+@pytest.mark.skipif(is_git_legacy(), reason="Requires non-legacy Git")
+def test__version__from_git__trace_env_var(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-trace-env-var"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+    env = {**os.environ, "GIT_TRACE": "1"}
+
+    with chdir(vcs):
+        run("git init")
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Initial")
+        run("git tag v0.1.0 -m Release")
+        assert run("dunamai from git", env=env) == "0.1.0"
+
+
 @pytest.mark.skipif(lacks_git_version([2, 27]), reason="Requires Git 2.27+")
 def test__version__from_git__exclude_decoration(tmp_path) -> None:
     vcs = tmp_path / "dunamai-git-exclude-decoration"
