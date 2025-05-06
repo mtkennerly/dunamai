@@ -1,4 +1,4 @@
-## Unreleased
+## v1.23.2 (2025-05-06)
 
 * Fixed: `Version.from_git` would fail if the `GIT_TRACE` environment variable were set,
   due to unexpected output from Git.
