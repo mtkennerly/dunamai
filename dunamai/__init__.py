@@ -426,6 +426,10 @@ def _find_higher_file(name: str, start: Optional[Path], limit: Optional[str] = N
 
 
 class _GitRefInfo:
+    """
+    This assumes Git 2.7+.
+    """
+
     def __init__(self, ref: str, commit: str, creatordate: str, committerdate: str, taggerdate: str):
         self.fullref = ref
         self.commit = commit
@@ -458,23 +462,16 @@ class _GitRefInfo:
         else:
             return self.creatordate
 
-    def commit_offset(self, git_version: List[int]) -> int:
+    def commit_offset(self) -> int:
         try:
             return self.tag_topo_lookup[self.fullref]
         except KeyError:
-            if git_version < [2, 7]:
-                raise RuntimeError(
-                    "Unable to determine commit offset for ref {}. Is the initial commit both tagged and empty? Data: {}".format(
-                        self.fullref, self.tag_topo_lookup
-                    )
-                )
-            else:
-                return sys.maxsize
+            # This can happen when the initial commit is both tagged and empty.
+            return sys.maxsize
 
-    def sort_key(self, git_version: List[int]) -> Tuple[int, Optional[dt.datetime]]:
-        return (-self.commit_offset(git_version), self.best_date())
+    def sort_key(self) -> Tuple[int, Optional[dt.datetime]]:
+        return (-self.commit_offset(), self.best_date())
 
-    @property
     def ref(self) -> str:
         return self.fullref.replace("refs/tags/", "")
 
@@ -1245,7 +1242,7 @@ class Version:
                     continue
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
-            tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key(git_version), reverse=True)]
+            tags = [t.ref() for t in sorted(detailed_tags, key=lambda x: x.sort_key(), reverse=True)]
             matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
 
         if matched_pattern is None:
