@@ -540,7 +540,16 @@ def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
         assert run("dunamai from git").startswith("0.1.0.post1.dev0+")
 
         run("git tag v0.2.0 -m Release")
-        assert run("dunamai from git") == "0.2.0"
+        if _get_git_version() < [2, 7]:
+            assert run("dunamai from git").startswith("0.1.0.post1.dev0+")
+        else:
+            assert run("dunamai from git") == "0.2.0"
+
+        (vcs / "foo.txt").write_text("hi")
+        run("git add .")
+        run("git commit --no-gpg-sign -m Third")
+        run("git tag v0.3.0 -m Release")
+        assert run("dunamai from git") == "0.3.0"
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
