@@ -458,19 +458,21 @@ class _GitRefInfo:
         else:
             return self.creatordate
 
-    @property
-    def commit_offset(self) -> int:
+    def commit_offset(self, git_version: List[int]) -> int:
         try:
             return self.tag_topo_lookup[self.fullref]
         except KeyError:
-            # This mainly happens when the initial commit is both empty and tagged.
-            # People can't really fix this in an old/existing repository,
-            # so we just sort the tag to the oldest position.
-            return sys.maxsize
+            if git_version < [2, 7]:
+                raise RuntimeError(
+                    "Unable to determine commit offset for ref {}. Is the initial commit both tagged and empty? Data: {}".format(
+                        self.fullref, self.tag_topo_lookup
+                    )
+                )
+            else:
+                return sys.maxsize
 
-    @property
-    def sort_key(self) -> Tuple[int, Optional[dt.datetime]]:
-        return (-self.commit_offset, self.best_date())
+    def sort_key(self, git_version: List[int]) -> Tuple[int, Optional[dt.datetime]]:
+        return (-self.commit_offset(git_version), self.best_date())
 
     @property
     def ref(self) -> str:
@@ -1243,7 +1245,7 @@ class Version:
                     continue
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
-            tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key, reverse=True)]
+            tags = [t.ref for t in sorted(detailed_tags, key=lambda x: x.sort_key(git_version), reverse=True)]
             matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
 
         if matched_pattern is None:
