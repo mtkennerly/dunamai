@@ -89,14 +89,12 @@ from_explicit_vcs = make_from_callback(Version.from_vcs)
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__with_annotated_tags(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-annotated"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
     legacy = is_git_legacy()
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
         try:
             # Compatibility for newer Git versions:
@@ -111,7 +109,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         with pytest.raises(RuntimeError):
             from_vcs(strict=True)
 
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
         assert from_vcs(fresh=True).concerns == set()
 
@@ -120,12 +118,12 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert from_vcs() == Version("0.0.0", distance=1, dirty=False, branch=b)
 
         # Detect dirty if untracked files
-        (vcs / "bar.txt").write_text("bye")
+        (tmp_path / "bar.txt").write_text("bye")
         assert from_vcs() == Version("0.0.0", distance=1, dirty=True, branch=b)
         assert from_vcs(ignore_untracked=True) == Version("0.0.0", distance=1, dirty=False, branch=b)
 
         # Once the untracked file is removed we are no longer dirty
-        (vcs / "bar.txt").unlink()
+        (tmp_path / "bar.txt").unlink()
         assert from_vcs() == Version("0.0.0", distance=1, dirty=False, branch=b)
 
         # Additional one-off check not in other VCS integration tests:
@@ -164,7 +162,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             assert run(r'dunamai from any --pattern "^test/v(?P<base>\d\.\d\.\d)"') == "0.1.0"
             assert run('dunamai from any --pattern-prefix "test/"') == "0.1.0"
 
-        (vcs / "foo.txt").write_text("bye")
+        (tmp_path / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True, branch=b)
 
         run("git add .")
@@ -203,7 +201,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
 
         # Additional one-off check not in other VCS integration tests:
         run("git checkout master")
-        (vcs / "foo.txt").write_text("third")
+        (tmp_path / "foo.txt").write_text("third")
         run("git add .")
         run('git commit --no-gpg-sign -m "Third"')
         # bumping:
@@ -216,28 +214,26 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
 
         if not legacy:
             # Additional one-off check: tag containing comma.
-            (vcs / "foo.txt").write_text("fourth")
+            (tmp_path / "foo.txt").write_text("fourth")
             run("git add .")
             run('git commit --no-gpg-sign -m "Fourth"')
             run("git tag v0.3.0+a,b -m Annotated")
             assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
     if not legacy:
-        assert from_vcs(path=vcs) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
+        assert from_vcs(path=tmp_path) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-lightweight"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
     legacy = is_git_legacy()
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
 
@@ -247,14 +243,14 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
         assert run("dunamai from git") == "0.1.0"
         assert run("dunamai from any") == "0.1.0"
 
-        (vcs / "foo.txt").write_text("bye")
+        (tmp_path / "foo.txt").write_text("bye")
         run("git add .")
         avoid_identical_ref_timestamps()
         run('git commit --no-gpg-sign -m "Second"')
         assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
         assert from_any_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
 
-        (vcs / "foo.txt").write_text("again")
+        (tmp_path / "foo.txt").write_text("again")
         run("git add .")
         avoid_identical_ref_timestamps()
         run('git commit --no-gpg-sign -m "Third"')
@@ -274,20 +270,18 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__with_mixed_tags(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-mixed"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
 
         run("git tag v0.1.0")
-        (vcs / "foo.txt").write_text("hi 2")
+        (tmp_path / "foo.txt").write_text("hi 2")
         run("git add .")
         avoid_identical_ref_timestamps()
         run('git commit --no-gpg-sign -m "Second"')
@@ -296,7 +290,7 @@ def test__version__from_git__with_mixed_tags(tmp_path) -> None:
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
-        (vcs / "foo.txt").write_text("hi 3")
+        (tmp_path / "foo.txt").write_text("hi 3")
         run("git add .")
         avoid_identical_ref_timestamps()
         run('git commit --no-gpg-sign -m "Third"')
@@ -308,16 +302,14 @@ def test__version__from_git__with_mixed_tags(tmp_path) -> None:
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-nonchronological"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git, chronological=False)
     b = "master"
     legacy = is_git_legacy()
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run(
             'git commit --no-gpg-sign -m "Initial commit"',
@@ -329,7 +321,7 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
         )
 
         run("git tag v0.1.0")
-        (vcs / "foo.txt").write_text("hi 2")
+        (tmp_path / "foo.txt").write_text("hi 2")
         run("git add .")
         avoid_identical_ref_timestamps()
         run(
@@ -351,27 +343,25 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 @pytest.mark.skipif(is_git_legacy(), reason="Requires non-legacy Git")
 def test__version__from_git__gitflow(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-gitflow"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
     b2 = "develop"
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
         run("git tag v0.1.0 -m Release")
 
         run("git checkout -b develop")
-        (vcs / "foo.txt").write_text("second")
+        (tmp_path / "foo.txt").write_text("second")
         run("git add .")
         run("git commit --no-gpg-sign -m Second")
 
         run("git checkout -b release/v0.2.0")
-        (vcs / "foo.txt").write_text("bugfix")
+        (tmp_path / "foo.txt").write_text("bugfix")
         run("git add .")
         run("git commit --no-gpg-sign -m Bugfix")
 
@@ -391,7 +381,7 @@ def test__version__from_git__gitflow(tmp_path) -> None:
         assert run('dunamai from any --tag-branch master --format "{base}+{distance}"') == "0.2.0+1"
         assert run('dunamai from git --tag-branch master --format "{base}+{distance}"') == "0.2.0+1"
 
-        (vcs / "foo.txt").write_text("feature")
+        (tmp_path / "foo.txt").write_text("feature")
         run("git add .")
         run("git commit --no-gpg-sign -m Feature")
         assert from_vcs() == Version("0.1.0", distance=4, dirty=False, branch=b2)
@@ -455,11 +445,9 @@ def test__version__from_git__archival_tagged_post() -> None:
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__shallow(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-shallow"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git clone --depth 1 https://github.com/mtkennerly/dunamai.git .")
         assert Version.from_git().concerns == {Concern.ShallowRepository}
 
@@ -470,14 +458,12 @@ def test__version__from_git__shallow(tmp_path) -> None:
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 @pytest.mark.skipif(is_git_legacy(), reason="Requires non-legacy Git")
 def test__version__from_git__trace_env_var(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-trace-env-var"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     env = {**os.environ, "GIT_TRACE": "1"}
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
         run("git tag v0.1.0 -m Release")
@@ -486,15 +472,13 @@ def test__version__from_git__trace_env_var(tmp_path) -> None:
 
 @pytest.mark.skipif(lacks_git_version([2, 27]), reason="Requires Git 2.27+")
 def test__version__from_git__exclude_decoration(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-exclude-decoration"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
         run("git tag v0.1.0 -m Release")
@@ -507,19 +491,17 @@ def test__version__from_git__exclude_decoration(tmp_path) -> None:
 # "fatal: missing object 0000000000000000000000000000000000000000 for refs/tags/bad.txt"
 @pytest.mark.skipif(lacks_git_version([2, 7]), reason="Requires Git 2.7+")
 def test__version__from_git__broken_ref(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-broken-ref"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
     b = "master"
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
         run("git tag v0.1.0 -m Release")
-        (vcs / ".git/refs/tags/bad.txt").touch()
+        (tmp_path / ".git/refs/tags/bad.txt").touch()
 
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
 
@@ -527,11 +509,9 @@ def test__version__from_git__broken_ref(tmp_path) -> None:
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 @pytest.mark.skipif(is_git_legacy(), reason="Requires non-legacy Git")
 def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-git-initial-commit-empty-and-tagged"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("git init")
         run("git commit --no-gpg-sign --allow-empty -m Initial")
         run("git tag v0.1.0 -m Release")
@@ -543,7 +523,7 @@ def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
         run("git tag v0.2.0 -m Release")
         assert run("dunamai from git") == "0.2.0"
 
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Third")
         run("git tag v0.3.0 -m Release")
@@ -552,28 +532,24 @@ def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__not_a_repository(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-not-a-repo"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         assert run("dunamai from git", 1) == "This does not appear to be a Git project"
 
 
 @pytest.mark.skipif(shutil.which("hg") is None, reason="Requires Mercurial")
 def test__version__from_mercurial(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-hg"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_mercurial)
     b = "default"
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("hg init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
         assert from_vcs(fresh=True).vcs == Vcs.Mercurial
 
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
 
         run("hg add .")
@@ -590,7 +566,7 @@ def test__version__from_mercurial(tmp_path) -> None:
         assert run("dunamai from mercurial") == "0.1.0"
         assert run("dunamai from any") == "0.1.0"
 
-        (vcs / "foo.txt").write_text("bye")
+        (tmp_path / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True, branch=b)
 
         run("hg add .")
@@ -615,7 +591,7 @@ def test__version__from_mercurial(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.0", dirty=False, branch=b)
 
-    assert from_vcs(path=vcs) == Version("0.1.0", dirty=False, branch=b)
+    assert from_vcs(path=tmp_path) == Version("0.1.0", dirty=False, branch=b)
 
 
 def test__version__from_mercurial__archival_untagged() -> None:
@@ -649,17 +625,15 @@ def test__version__from_mercurial__archival_tagged() -> None:
 
 @pytest.mark.skipif(shutil.which("darcs") is None, reason="Requires Darcs")
 def test__version__from_darcs(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-darcs"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_darcs)
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("darcs init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False)
         assert from_vcs(fresh=True).vcs == Vcs.Darcs
 
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True)
 
         run("darcs add foo.txt")
@@ -672,7 +646,7 @@ def test__version__from_darcs(tmp_path) -> None:
         assert run("dunamai from darcs") == "0.1.0"
         assert run("dunamai from any") == "0.1.0"
 
-        (vcs / "foo.txt").write_text("bye")
+        (tmp_path / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True)
 
         run('darcs record -am "Second"')
@@ -690,7 +664,7 @@ def test__version__from_darcs(tmp_path) -> None:
         run("darcs obliterate --all --last 3")
         assert from_vcs() == Version("0.1.0", dirty=False)
 
-    assert from_vcs(path=vcs) == Version("0.1.0", dirty=False)
+    assert from_vcs(path=tmp_path) == Version("0.1.0", dirty=False)
 
 
 @pytest.mark.skipif(None in [shutil.which("svn"), shutil.which("svnadmin")], reason="Requires Subversion")
@@ -851,9 +825,7 @@ def test__version__from_bazaar(tmp_path) -> None:
 
 @pytest.mark.skipif(shutil.which("fossil") is None, reason="Requires Fossil")
 def test__version__from_fossil(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-fossil"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_fossil)
     b = "trunk"
 
@@ -861,13 +833,13 @@ def test__version__from_fossil(tmp_path) -> None:
         set_missing_env("FOSSIL_HOME", str(REPO / "tests"), ["HOME", "XDG_CONFIG_HOME"])
         set_missing_env("USER", "dunamai")
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("fossil init repo")
         run("fossil open repo --force")
         assert from_vcs() == Version("0.0.0", distance=0, dirty=False, branch=b)
         assert from_vcs().vcs == Vcs.Fossil
 
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         assert from_vcs() == Version("0.0.0", distance=0, dirty=True, branch=b)
 
         run("fossil add .")
@@ -880,7 +852,7 @@ def test__version__from_fossil(tmp_path) -> None:
         assert run("dunamai from fossil") == "0.1.0"
         assert run("dunamai from any") == "0.1.0"
 
-        (vcs / "foo.txt").write_text("bye")
+        (tmp_path / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True, branch=b)
 
         run("fossil add .")
@@ -893,7 +865,7 @@ def test__version__from_fossil(tmp_path) -> None:
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
-        (vcs / "foo.txt").write_text("third")
+        (tmp_path / "foo.txt").write_text("third")
         run("fossil add .")
         run("fossil commit --tag v0.2.0 -m 'Third'")
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
@@ -907,23 +879,21 @@ def test__version__from_fossil(tmp_path) -> None:
         assert from_vcs() == Version("0.1.1", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False, branch=b)
 
-    assert from_vcs(path=vcs) == Version("0.1.1", dirty=False, branch=b)
+    assert from_vcs(path=tmp_path) == Version("0.1.1", dirty=False, branch=b)
 
 
 @pytest.mark.skipif(shutil.which("pijul") is None, reason="Requires Pijul")
 def test__version__from_pijul(tmp_path) -> None:
-    vcs = tmp_path / "dunamai-pijul"
-    vcs.mkdir()
-    run = make_run_callback(vcs)
+    run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_pijul)
     b = "main"
 
-    with chdir(vcs):
+    with chdir(tmp_path):
         run("pijul init")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
         assert from_vcs(fresh=True).vcs == Vcs.Pijul
 
-        (vcs / "foo.txt").write_text("hi")
+        (tmp_path / "foo.txt").write_text("hi")
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=False, branch=b)
 
         run("pijul add foo.txt")
@@ -937,7 +907,7 @@ def test__version__from_pijul(tmp_path) -> None:
         assert run("dunamai from pijul") == "0.1.0"
         assert run("dunamai from any") == "0.1.0"
 
-        (vcs / "foo.txt").write_text("bye")
+        (tmp_path / "foo.txt").write_text("bye")
         assert from_vcs() == Version("0.1.0", dirty=True, branch=b)
 
         run('pijul record . -am "Second"')
@@ -949,4 +919,4 @@ def test__version__from_pijul(tmp_path) -> None:
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
-    assert from_vcs(path=vcs) == Version("0.1.0", distance=1, dirty=False, branch=b)
+    assert from_vcs(path=tmp_path) == Version("0.1.0", distance=1, dirty=False, branch=b)
