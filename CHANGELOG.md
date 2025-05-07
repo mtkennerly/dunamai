@@ -1,10 +1,10 @@
 ## Unreleased
 
-* Changed: Previously, if Git's initial commit were both tagged and empty,
+* Changed: Previously, for Git 2.7+,
+  if the initial commit were both tagged and empty,
   Dunamai would raise an exception due to Git not reporting that tag in
   `git log --simplify-by-decoration`.
   Now, if a tag is missing from that list, Dunamai treats it as the oldest tag.
-  This new behavior is only enabled for Git 2.7+.
 
 ## v1.23.2 (2025-05-06)
 
