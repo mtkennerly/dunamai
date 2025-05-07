@@ -1,3 +1,11 @@
+## Unreleased
+
+* Changed: Previously, if the initial commit were both tagged and empty,
+  Dunamai would raise an exception due to Git not reporting that tag in
+  `git log --simplify-by-decoration`.
+  Now, if a tag is missing from that list, Dunamai treats it as the oldest tag,
+  since, in practice, this only seems to affect the initial commit.
+
 ## v1.23.2 (2025-05-06)
 
 * Fixed: `Version.from_git` would fail if the `GIT_TRACE` environment variable were set,

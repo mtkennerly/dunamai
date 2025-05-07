@@ -19,6 +19,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 from collections import OrderedDict
 from enum import Enum
 from functools import total_ordering
@@ -462,9 +463,10 @@ class _GitRefInfo:
         try:
             return self.tag_topo_lookup[self.fullref]
         except KeyError:
-            raise RuntimeError(
-                "Unable to determine commit offset for ref {} in data: {}".format(self.fullref, self.tag_topo_lookup)
-            )
+            # This mainly happens when the initial commit is both empty and tagged.
+            # People can't really fix this in an old/existing repository,
+            # so we just sort the tag to the oldest position.
+            return sys.maxsize
 
     @property
     def sort_key(self) -> Tuple[int, Optional[dt.datetime]]:

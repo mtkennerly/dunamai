@@ -525,6 +525,25 @@ def test__version__from_git__broken_ref(tmp_path) -> None:
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
+def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
+    vcs = tmp_path / "dunamai-git-initial-commit-empty-and-tagged"
+    vcs.mkdir()
+    run = make_run_callback(vcs)
+
+    with chdir(vcs):
+        run("git init")
+        run("git commit --no-gpg-sign --allow-empty -m Initial")
+        run("git tag v0.1.0 -m Release")
+        assert run("dunamai from git") == "0.1.0"
+
+        run("git commit --no-gpg-sign --allow-empty -m Second")
+        assert run("dunamai from git").startswith("0.1.0.post1.dev0+")
+
+        run("git tag v0.2.0 -m Release")
+        assert run("dunamai from git") == "0.2.0"
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__not_a_repository(tmp_path) -> None:
     vcs = tmp_path / "dunamai-not-a-repo"
     vcs.mkdir()

@@ -269,7 +269,9 @@ but there are some design decisions that prompted the creation of Dunamai as an 
   Therefore, if a commit has multiple lightweight tags,
   we cannot reliably determine which one should be considered the newest.
   The solution is to use annotated tags instead.
-* When using Git, the initial commit must **not** be both tagged and empty
+* When using Git, the initial commit should not be both tagged and empty
   (i.e., created with `--allow-empty`).
   This is related to a reporting issue in Git.
   For more info, [click here](https://github.com/mtkennerly/dunamai/issues/14).
+  Dunamai tries to work around this,
+  but multiple tags on an empty initial commit may not be sorted correctly.
