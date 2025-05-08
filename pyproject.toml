@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dunamai"
-version = "1.23.2"
+version = "1.24.0"
 description = "Dynamic version generation"
 license = "MIT"
 authors = ["Matthew T. Kennerly <mtkennerly@gmail.com>"]

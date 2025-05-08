@@ -1,4 +1,4 @@
-## Unreleased
+## v1.24.0 (2025-05-07)
 
 * Changed: Previously, for Git 2.7+,
   if the initial commit were both tagged and empty,
