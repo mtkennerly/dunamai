@@ -878,7 +878,7 @@ class Version:
             failed = True
 
         if failed or matched_pattern is None:
-            replaced = re.sub(r"(\.post(\d+)\.dev\d+)", r".dev\2", version, 1)
+            replaced = re.sub(r"(\.post(\d+)\.dev\d+)", r".dev\2", version, count=1)
             if replaced != version:
                 alt = Version.parse(replaced, pattern)
                 if alt.base != replaced:
