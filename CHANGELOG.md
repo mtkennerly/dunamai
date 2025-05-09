@@ -1,4 +1,4 @@
-## Unreleased
+## v1.24.1 (2025-05-09)
 
 * Fixed: Deprecation warning from `re.sub()` using Python 3.13+.
   ([Contributed by emmanuel-ferdman](https://github.com/mtkennerly/dunamai/pull/103))
