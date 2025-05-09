@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed: Deprecation warning from `re.sub()` using Python 3.13+.
+  ([Contributed by emmanuel-ferdman](https://github.com/mtkennerly/dunamai/pull/103))
+
 ## v1.24.0 (2025-05-07)
 
 * Changed: Previously, for Git 2.7+,
