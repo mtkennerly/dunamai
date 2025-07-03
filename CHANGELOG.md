@@ -1,6 +1,9 @@
 ## Unreleased
 
-* Added `commit_prefix` option to insert a prefix when serializing commit IDs.
+* Added `commit_prefix` option to `Version.serialize()`
+  to insert a prefix when serializing commit IDs.
+* Added `escape_with` option to `Version.serialize()`
+  to customize how branch names are escaped.
 
 ## v1.24.1 (2025-05-09)
 

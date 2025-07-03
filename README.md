@@ -178,7 +178,7 @@ If you have a tag like `v9!0.1.2-beta.3+other`, then:
 * `{tagged_metadata}` = `other`
 * `{epoch}` = `9`
 * `{branch}` = `feature/foo`
-* `{branch_escaped}` = `featurefoo`
+* `{branch_escaped}` = `featurefoo` (can be customized using `--escape-with`)
 * `{timestamp}` is in the format `YYYYmmddHHMMSS` as UTC
 * `{major}` = `0`
 * `{minor}` = `1`

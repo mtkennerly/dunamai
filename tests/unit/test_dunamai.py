@@ -409,6 +409,7 @@ def test__version__serialize__format_as_str() -> None:
         Version("0.1.0").serialize(format="v{base}", style=Style.Pep440)
 
     assert Version("1", commit="abc").serialize(format="{commit}", commit_prefix="x") == "xabc"
+    assert Version("1", branch="a/b").serialize(format="{branch_escaped}", escape_with=".") == "a.b"
 
 
 def test__version__serialize__format_as_callable() -> None:

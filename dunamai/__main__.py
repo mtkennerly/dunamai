@@ -285,6 +285,7 @@ def from_vcs(
     ignore_untracked: bool,
     commit_length: Optional[int],
     commit_prefix: Optional[str],
+    escape_with: Optional[str],
 ) -> None:
     version = Version.from_vcs(
         vcs,
@@ -303,7 +304,7 @@ def from_vcs(
     for concern in version.concerns:
         print("Warning: {}".format(concern.message()), file=sys.stderr)
 
-    print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata, commit_prefix))
+    print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata, commit_prefix, escape_with))
 
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
@@ -320,6 +321,7 @@ def main() -> None:
             ignore_untracked = getattr(args, "ignore_untracked", False)
             commit_length = getattr(args, "commit_length", None)
             commit_prefix = getattr(args, "commit_prefix", None)
+            escape_with = getattr(args, "escape_with", None)
             from_vcs(
                 Vcs(args.vcs),
                 args.pattern,
@@ -340,6 +342,7 @@ def main() -> None:
                 ignore_untracked,
                 commit_length,
                 commit_prefix,
+                escape_with,
             )
         elif args.command == "check":
             version = from_stdin(args.version)
