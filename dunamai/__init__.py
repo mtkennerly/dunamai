@@ -706,6 +706,7 @@ class Version:
         style: Optional[Style] = None,
         bump: bool = False,
         tagged_metadata: bool = False,
+        commit_prefix: Optional[str] = None,
     ) -> str:
         """
         Create a string from the version info.
@@ -747,6 +748,9 @@ class Version:
         :param tagged_metadata: If true, insert the `tagged_metadata` in the
             version as the first part of the metadata segment.
             This is ignored when `format` is used.
+        :param commit_prefix: Add this prefix to the commit ID.
+            This can be helpful when an all-numeric commit would be misinterpreted.
+            For example, "g" is a common prefix for Git commits.
         :returns: Serialized version.
         """
         base = self.base
@@ -755,6 +759,10 @@ class Version:
             bumped = self.bump(smart=True)
             base = bumped.base
             revision = bumped.revision
+
+        commit = self.commit
+        if commit is not None and commit_prefix is not None:
+            commit = "{}{}".format(commit_prefix, commit)
 
         if format is not None:
             if callable(format):
@@ -771,7 +779,7 @@ class Version:
                         stage=_blank(self.stage, ""),
                         revision=_blank(revision, ""),
                         distance=_blank(self.distance, ""),
-                        commit=_blank(self.commit, ""),
+                        commit=_blank(commit, ""),
                         tagged_metadata=_blank(self.tagged_metadata, ""),
                         dirty="dirty" if self.dirty else "clean",
                         epoch=_blank(self.epoch, ""),
@@ -798,8 +806,8 @@ class Version:
         if metadata is not False:
             if tagged_metadata and self.tagged_metadata:
                 meta_parts.append(self.tagged_metadata)
-            if (metadata or self.distance > 0) and self.commit is not None:
-                meta_parts.append(self.commit)
+            if (metadata or self.distance > 0) and commit is not None:
+                meta_parts.append(commit)
             if dirty and self.dirty:
                 meta_parts.append("dirty")
 

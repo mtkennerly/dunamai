@@ -132,6 +132,12 @@ common_sub_args = [
         "help": "Use this many characters from the start of the full commit hash",
     },
     {
+        "triggers": ["--commit-prefix"],
+        "dest": "commit_prefix",
+        "type": str,
+        "help": "Add this prefix when serializing commit IDs",
+    },
+    {
         "vcs": [Vcs.Git],
         "triggers": ["--tag-branch"],
         "help": "Branch on which to find tags, if different than the current branch",
@@ -278,6 +284,7 @@ def from_vcs(
     pattern_prefix: Optional[str],
     ignore_untracked: bool,
     commit_length: Optional[int],
+    commit_prefix: Optional[str],
 ) -> None:
     version = Version.from_vcs(
         vcs,
@@ -296,7 +303,7 @@ def from_vcs(
     for concern in version.concerns:
         print("Warning: {}".format(concern.message()), file=sys.stderr)
 
-    print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata=tagged_metadata))
+    print(version.serialize(metadata, dirty, format, style, bump, tagged_metadata, commit_prefix))
 
     if debug:
         print("# Matched tag: {}".format(version._matched_tag), file=sys.stderr)
@@ -312,6 +319,7 @@ def main() -> None:
             full_commit = getattr(args, "full_commit", False)
             ignore_untracked = getattr(args, "ignore_untracked", False)
             commit_length = getattr(args, "commit_length", None)
+            commit_prefix = getattr(args, "commit_prefix", None)
             from_vcs(
                 Vcs(args.vcs),
                 args.pattern,
@@ -331,6 +339,7 @@ def main() -> None:
                 args.pattern_prefix,
                 ignore_untracked,
                 commit_length,
+                commit_prefix,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

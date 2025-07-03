@@ -158,6 +158,10 @@ def test__version__serialize__pep440() -> None:
     assert Version("1", stage=("a", 0), distance=3, commit="abc", dirty=False).serialize() == "1a0.post3.dev0+abc"
     assert Version("1", stage=("a", 2), distance=0, commit="abc", dirty=False).serialize() == "1a2"
     assert Version("1", stage=("a", 2), distance=3, commit="000", dirty=False).serialize() == "1a2.post3.dev0+000"
+    assert (
+        Version("1", stage=("a", 0), distance=3, commit="abc", dirty=False).serialize(commit_prefix="x")
+        == "1a0.post3.dev0+xabc"
+    )
 
     assert Version("1", stage=("a", None)).serialize() == "1a0"
     assert Version("1", stage=("b", 2)).serialize() == "1b2"
@@ -403,6 +407,8 @@ def test__version__serialize__format_as_str() -> None:
     )
     with pytest.raises(ValueError):
         Version("0.1.0").serialize(format="v{base}", style=Style.Pep440)
+
+    assert Version("1", commit="abc").serialize(format="{commit}", commit_prefix="x") == "xabc"
 
 
 def test__version__serialize__format_as_callable() -> None:
