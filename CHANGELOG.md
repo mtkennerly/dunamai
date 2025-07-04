@@ -1,4 +1,4 @@
-## Unreleased
+## v1.25.0 (2025-07-04)
 
 * Added `commit_prefix` option to `Version.serialize()`
   to insert a prefix when serializing commit IDs.

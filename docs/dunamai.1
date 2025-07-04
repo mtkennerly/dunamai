@@ -1,4 +1,4 @@
-.TH DUNAMAI "1" "2025\-05\-09" "dunamai 1.24.1" "Dunamai"
+.TH DUNAMAI "1" "2025\-07\-04" "dunamai 1.25.0" "Dunamai"
 .SH NAME
 dunamai
 .SH SYNOPSIS
@@ -28,7 +28,9 @@ usage: dunamai from any [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                         [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
                         [\-\-bump] [\-\-full\-commit]
                         [\-\-commit\-length COMMIT_LENGTH]
-                        [\-\-tag\-branch TAG_BRANCH] [\-\-tag\-dir TAG_DIR]
+                        [\-\-commit\-prefix COMMIT_PREFIX]
+                        [\-\-escape\-with ESCAPE_WITH] [\-\-tag\-branch TAG_BRANCH]
+                        [\-\-tag\-dir TAG_DIR]
 
 Generate version from any detected VCS
 
@@ -116,6 +118,15 @@ Get the full commit hash instead of the short form (only: Git, Mercurial)
 Use this many characters from the start of the full commit hash
 
 .TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
+
+.TP
 \fB\-\-tag\-branch\fR \fI\,TAG_BRANCH\/\fR
 Branch on which to find tags, if different than the current branch (only: Git)
 
@@ -134,7 +145,8 @@ usage: dunamai from git [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                         [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
                         [\-\-bump] [\-\-full\-commit]
                         [\-\-commit\-length COMMIT_LENGTH]
-                        [\-\-tag\-branch TAG_BRANCH]
+                        [\-\-commit\-prefix COMMIT_PREFIX]
+                        [\-\-escape\-with ESCAPE_WITH] [\-\-tag\-branch TAG_BRANCH]
 
 Generate version from Git
 
@@ -222,6 +234,15 @@ Get the full commit hash instead of the short form (only: Git, Mercurial)
 Use this many characters from the start of the full commit hash
 
 .TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
+
+.TP
 \fB\-\-tag\-branch\fR \fI\,TAG_BRANCH\/\fR
 Branch on which to find tags, if different than the current branch (only: Git)
 .RE
@@ -236,6 +257,8 @@ usage: dunamai from mercurial [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty
                               [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
                               [\-\-debug] [\-\-bump] [\-\-full\-commit]
                               [\-\-commit\-length COMMIT_LENGTH]
+                              [\-\-commit\-prefix COMMIT_PREFIX]
+                              [\-\-escape\-with ESCAPE_WITH]
 
 Generate version from Mercurial
 
@@ -316,6 +339,15 @@ Get the full commit hash instead of the short form (only: Git, Mercurial)
 .TP
 \fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
 Use this many characters from the start of the full commit hash
+
+.TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
 .RE
 
 .SS \fBdunamai from darcs\fR
@@ -327,6 +359,8 @@ usage: dunamai from darcs [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
                           [\-\-commit\-length COMMIT_LENGTH]
+                          [\-\-commit\-prefix COMMIT_PREFIX]
+                          [\-\-escape\-with ESCAPE_WITH]
 
 Generate version from Darcs
 
@@ -403,6 +437,15 @@ there was no `revision` Does nothing when on a commit with a version tag.
 .TP
 \fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
 Use this many characters from the start of the full commit hash
+
+.TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
 .RE
 
 .SS \fBdunamai from subversion\fR
@@ -415,7 +458,8 @@ usage: dunamai from subversion [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirt
                                [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
                                [\-\-debug] [\-\-bump]
                                [\-\-commit\-length COMMIT_LENGTH]
-                               [\-\-tag\-dir TAG_DIR]
+                               [\-\-commit\-prefix COMMIT_PREFIX]
+                               [\-\-escape\-with ESCAPE_WITH] [\-\-tag\-dir TAG_DIR]
 
 Generate version from Subversion
 
@@ -492,6 +536,15 @@ there was no `revision` Does nothing when on a commit with a version tag.
 .TP
 \fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
 Use this many characters from the start of the full commit hash
+
+.TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
 
 .TP
 \fB\-\-tag\-dir\fR \fI\,TAG_DIR\/\fR
@@ -507,6 +560,8 @@ usage: dunamai from bazaar [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                            [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                            [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
                            [\-\-commit\-length COMMIT_LENGTH]
+                           [\-\-commit\-prefix COMMIT_PREFIX]
+                           [\-\-escape\-with ESCAPE_WITH]
 
 Generate version from Bazaar
 
@@ -583,6 +638,15 @@ there was no `revision` Does nothing when on a commit with a version tag.
 .TP
 \fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
 Use this many characters from the start of the full commit hash
+
+.TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
 .RE
 
 .SS \fBdunamai from fossil\fR
@@ -594,6 +658,8 @@ usage: dunamai from fossil [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                            [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                            [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
                            [\-\-commit\-length COMMIT_LENGTH]
+                           [\-\-commit\-prefix COMMIT_PREFIX]
+                           [\-\-escape\-with ESCAPE_WITH]
 
 Generate version from Fossil
 
@@ -670,6 +736,15 @@ there was no `revision` Does nothing when on a commit with a version tag.
 .TP
 \fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
 Use this many characters from the start of the full commit hash
+
+.TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
 .RE
 
 .SS \fBdunamai from pijul\fR
@@ -681,6 +756,8 @@ usage: dunamai from pijul [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
                           [\-\-commit\-length COMMIT_LENGTH]
+                          [\-\-commit\-prefix COMMIT_PREFIX]
+                          [\-\-escape\-with ESCAPE_WITH]
 
 Generate version from Pijul
 
@@ -757,6 +834,15 @@ there was no `revision` Does nothing when on a commit with a version tag.
 .TP
 \fB\-\-commit\-length\fR \fI\,COMMIT_LENGTH\/\fR
 Use this many characters from the start of the full commit hash
+
+.TP
+\fB\-\-commit\-prefix\fR \fI\,COMMIT_PREFIX\/\fR
+Add this prefix when serializing commit IDs
+
+.TP
+\fB\-\-escape\-with\fR \fI\,ESCAPE_WITH\/\fR
+When escaping, replace with this substitution. The default is simply to remove
+invalid characters.
 .RE
 
 .SS \fBdunamai check\fR
