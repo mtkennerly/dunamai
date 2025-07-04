@@ -138,6 +138,12 @@ common_sub_args = [
         "help": "Add this prefix when serializing commit IDs",
     },
     {
+        "triggers": ["--escape-with"],
+        "dest": "escape_with",
+        "type": str,
+        "help": "When escaping, replace with this substitution. The default is simply to remove invalid characters.",
+    },
+    {
         "vcs": [Vcs.Git],
         "triggers": ["--tag-branch"],
         "help": "Branch on which to find tags, if different than the current branch",
