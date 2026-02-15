@@ -1,4 +1,4 @@
-.TH DUNAMAI "1" "2025\-07\-04" "dunamai 1.25.0" "Dunamai"
+.TH DUNAMAI "1" "2026\-02\-15" "dunamai 1.26.0" "Dunamai"
 .SH NAME
 dunamai
 .SH SYNOPSIS
@@ -25,8 +25,8 @@ usage: dunamai from any [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                         [\-\-ignore\-untracked] [\-\-tagged\-metadata]
                         [\-\-pattern PATTERN] [\-\-pattern\-prefix PATTERN_PREFIX]
                         [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
-                        [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
-                        [\-\-bump] [\-\-full\-commit]
+                        [\-\-latest\-tag] [\-\-highest\-tag] [\-\-strict]
+                        [\-\-path PATH] [\-\-debug] [\-\-bump] [\-\-full\-commit]
                         [\-\-commit\-length COMMIT_LENGTH]
                         [\-\-commit\-prefix COMMIT_PREFIX]
                         [\-\-escape\-with ESCAPE_WITH] [\-\-tag\-branch TAG_BRANCH]
@@ -91,6 +91,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -142,8 +147,8 @@ usage: dunamai from git [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                         [\-\-ignore\-untracked] [\-\-tagged\-metadata]
                         [\-\-pattern PATTERN] [\-\-pattern\-prefix PATTERN_PREFIX]
                         [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
-                        [\-\-latest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
-                        [\-\-bump] [\-\-full\-commit]
+                        [\-\-latest\-tag] [\-\-highest\-tag] [\-\-strict]
+                        [\-\-path PATH] [\-\-debug] [\-\-bump] [\-\-full\-commit]
                         [\-\-commit\-length COMMIT_LENGTH]
                         [\-\-commit\-prefix COMMIT_PREFIX]
                         [\-\-escape\-with ESCAPE_WITH] [\-\-tag\-branch TAG_BRANCH]
@@ -207,6 +212,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -254,8 +264,8 @@ usage: dunamai from mercurial [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty
                               [\-\-tagged\-metadata] [\-\-pattern PATTERN]
                               [\-\-pattern\-prefix PATTERN_PREFIX]
                               [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
-                              [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
-                              [\-\-debug] [\-\-bump] [\-\-full\-commit]
+                              [\-\-latest\-tag] [\-\-highest\-tag] [\-\-strict]
+                              [\-\-path PATH] [\-\-debug] [\-\-bump] [\-\-full\-commit]
                               [\-\-commit\-length COMMIT_LENGTH]
                               [\-\-commit\-prefix COMMIT_PREFIX]
                               [\-\-escape\-with ESCAPE_WITH]
@@ -314,6 +324,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -357,8 +372,8 @@ usage: dunamai from darcs [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                           [\-\-tagged\-metadata] [\-\-pattern PATTERN]
                           [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
-                          [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
-                          [\-\-commit\-length COMMIT_LENGTH]
+                          [\-\-highest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
+                          [\-\-bump] [\-\-commit\-length COMMIT_LENGTH]
                           [\-\-commit\-prefix COMMIT_PREFIX]
                           [\-\-escape\-with ESCAPE_WITH]
 
@@ -416,6 +431,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -455,8 +475,8 @@ usage: dunamai from subversion [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirt
                                [\-\-tagged\-metadata] [\-\-pattern PATTERN]
                                [\-\-pattern\-prefix PATTERN_PREFIX]
                                [\-\-format FORMAT] [\-\-style {pep440,semver,pvp}]
-                               [\-\-latest\-tag] [\-\-strict] [\-\-path PATH]
-                               [\-\-debug] [\-\-bump]
+                               [\-\-latest\-tag] [\-\-highest\-tag] [\-\-strict]
+                               [\-\-path PATH] [\-\-debug] [\-\-bump]
                                [\-\-commit\-length COMMIT_LENGTH]
                                [\-\-commit\-prefix COMMIT_PREFIX]
                                [\-\-escape\-with ESCAPE_WITH] [\-\-tag\-dir TAG_DIR]
@@ -515,6 +535,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -558,8 +583,8 @@ usage: dunamai from bazaar [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                            [\-\-tagged\-metadata] [\-\-pattern PATTERN]
                            [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                            [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
-                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
-                           [\-\-commit\-length COMMIT_LENGTH]
+                           [\-\-highest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
+                           [\-\-bump] [\-\-commit\-length COMMIT_LENGTH]
                            [\-\-commit\-prefix COMMIT_PREFIX]
                            [\-\-escape\-with ESCAPE_WITH]
 
@@ -617,6 +642,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -656,8 +686,8 @@ usage: dunamai from fossil [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                            [\-\-tagged\-metadata] [\-\-pattern PATTERN]
                            [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                            [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
-                           [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
-                           [\-\-commit\-length COMMIT_LENGTH]
+                           [\-\-highest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
+                           [\-\-bump] [\-\-commit\-length COMMIT_LENGTH]
                            [\-\-commit\-prefix COMMIT_PREFIX]
                            [\-\-escape\-with ESCAPE_WITH]
 
@@ -715,6 +745,11 @@ will be validated against the style's rules
 Only inspect the latest tag on the latest tagged commit for a pattern match
 
 .TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
+
+.TP
 \fB\-\-strict\fR
 Elevate warnings to errors. When there are no tags, fail instead of falling
 back to 0.0.0
@@ -754,8 +789,8 @@ usage: dunamai from pijul [\-h] [\-\-metadata] [\-\-no\-metadata] [\-\-dirty]
                           [\-\-tagged\-metadata] [\-\-pattern PATTERN]
                           [\-\-pattern\-prefix PATTERN_PREFIX] [\-\-format FORMAT]
                           [\-\-style {pep440,semver,pvp}] [\-\-latest\-tag]
-                          [\-\-strict] [\-\-path PATH] [\-\-debug] [\-\-bump]
-                          [\-\-commit\-length COMMIT_LENGTH]
+                          [\-\-highest\-tag] [\-\-strict] [\-\-path PATH] [\-\-debug]
+                          [\-\-bump] [\-\-commit\-length COMMIT_LENGTH]
                           [\-\-commit\-prefix COMMIT_PREFIX]
                           [\-\-escape\-with ESCAPE_WITH]
 
@@ -811,6 +846,11 @@ will be validated against the style's rules
 .TP
 \fB\-\-latest\-tag\fR
 Only inspect the latest tag on the latest tagged commit for a pattern match
+
+.TP
+\fB\-\-highest\-tag\fR
+Only inspect the numerically highest tag across all tagged commits for a
+pattern match
 
 .TP
 \fB\-\-strict\fR

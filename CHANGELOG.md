@@ -1,4 +1,4 @@
-## Unreleased
+## v1.26.0 (2026-02-14)
 
 * Added `--highest-tag` option to select the numerically highest version,
   even if it is not the chronologically latest tag.
