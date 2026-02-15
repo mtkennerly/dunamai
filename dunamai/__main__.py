@@ -88,6 +88,13 @@ common_sub_args = [
         "help": "Only inspect the latest tag on the latest tagged commit for a pattern match",
     },
     {
+        "triggers": ["--highest-tag"],
+        "action": "store_true",
+        "dest": "highest_tag",
+        "default": False,
+        "help": "Only inspect the numerically highest tag across all tagged commits for a pattern match",
+    },
+    {
         "triggers": ["--strict"],
         "action": "store_true",
         "dest": "strict",
@@ -292,6 +299,7 @@ def from_vcs(
     commit_length: Optional[int],
     commit_prefix: Optional[str],
     escape_with: Optional[str],
+    highest_tag: bool,
 ) -> None:
     version = Version.from_vcs(
         vcs,
@@ -305,6 +313,7 @@ def from_vcs(
         pattern_prefix,
         ignore_untracked,
         commit_length,
+        highest_tag,
     )
 
     for concern in version.concerns:
@@ -349,6 +358,7 @@ def main() -> None:
                 commit_length,
                 commit_prefix,
                 escape_with,
+                args.highest_tag,
             )
         elif args.command == "check":
             version = from_stdin(args.version)

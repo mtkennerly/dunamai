@@ -1,3 +1,8 @@
+## Unreleased
+
+* Added `--highest-tag` option to select the numerically highest version,
+  even if it is not the chronologically latest tag.
+
 ## v1.25.0 (2025-07-04)
 
 * Added `commit_prefix` option to `Version.serialize()`

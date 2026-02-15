@@ -240,6 +240,7 @@ def _match_version_pattern(
     pattern: Union[str, Pattern],
     sources: Sequence[str],
     latest_source: bool,
+    highest_source: bool,
     strict: bool,
     pattern_prefix: Optional[str],
 ) -> Optional[_MatchedVersionPattern]:
@@ -262,7 +263,24 @@ def _match_version_pattern(
 
     pattern = Pattern.parse(pattern, pattern_prefix)
 
-    for source in sources[:1] if latest_source else sources:
+    if latest_source:
+        relevant_sources = sources[:1]
+    elif highest_source:
+        selected_source = None
+        selected_parsed = None
+        for source in sources:
+            parsed = Version.parse(source, pattern)
+            try:
+                if selected_parsed is None or parsed > selected_parsed:
+                    selected_source = source
+                    selected_parsed = parsed
+            except Exception:
+                continue
+        relevant_sources = [selected_source] if selected_source is not None else []
+    else:
+        relevant_sources = sources
+
+    for source in relevant_sources:
         try:
             pattern_match = re.search(pattern, source)
         except re.error as e:
@@ -884,7 +902,9 @@ class Version:
 
         failed = False
         try:
-            matched_pattern = _match_version_pattern(pattern, [normalized], True, strict=True, pattern_prefix=None)
+            matched_pattern = _match_version_pattern(
+                pattern, [normalized], True, False, strict=True, pattern_prefix=None
+            )
         except ValueError:
             failed = True
 
@@ -1036,6 +1056,7 @@ class Version:
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Git tags.
@@ -1056,6 +1077,8 @@ class Version:
             Ignore untracked files when determining whether the repository is dirty.
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Git
@@ -1114,7 +1137,9 @@ class Version:
                         vcs=vcs,
                     )
 
-                matched_pattern = _match_version_pattern(pattern, [tag], latest_tag, strict, pattern_prefix)
+                matched_pattern = _match_version_pattern(
+                    pattern, [tag], latest_tag, highest_tag, strict, pattern_prefix
+                )
                 if matched_pattern is None:
                     return cls._fallback(
                         strict,
@@ -1215,7 +1240,7 @@ class Version:
                     vcs=vcs,
                 )
             tags = [line.replace("refs/tags/", "") for line in msg.splitlines()]
-            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
         else:
             code, msg = _run_cmd(
                 'git for-each-ref "refs/tags/**" --merged {}'.format(tag_branch) + ' --format "%(refname)'
@@ -1254,7 +1279,7 @@ class Version:
                 detailed_tags.append(_GitRefInfo(*parts).with_tag_topo_lookup(tag_topo_lookup))
 
             tags = [t.ref() for t in sorted(detailed_tags, key=lambda x: x.sort_key(), reverse=True)]
-            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+            matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
 
         if matched_pattern is None:
             try:
@@ -1305,6 +1330,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Mercurial tags.
@@ -1321,6 +1347,8 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Mercurial
@@ -1359,7 +1387,7 @@ class Version:
                         continue
                     all_tags.append(parts[1])
 
-            matched_pattern = _match_version_pattern(pattern, all_tags, latest_tag, strict, pattern_prefix)
+            matched_pattern = _match_version_pattern(pattern, all_tags, latest_tag, highest_tag, strict, pattern_prefix)
             if matched_pattern is None:
                 return cls._fallback(
                     strict,
@@ -1421,7 +1449,7 @@ class Version:
             )
         tags = [tag for tags in [line.split(":") for line in msg.splitlines()] for tag in tags]
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1463,6 +1491,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Darcs tags.
@@ -1478,6 +1507,8 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Darcs
@@ -1507,7 +1538,7 @@ class Version:
             return cls._fallback(strict, distance=distance, commit=commit, dirty=dirty, timestamp=timestamp, vcs=vcs)
         tags = msg.splitlines()
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1548,6 +1579,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Subversion tags.
@@ -1564,6 +1596,8 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Subversion
@@ -1609,7 +1643,7 @@ class Version:
                     tags_to_sources_revs[tag] = (source, rev)
         tags = sorted(tags_to_sources_revs, key=lambda x: tags_to_sources_revs[x], reverse=True)
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1649,6 +1683,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Bazaar tags.
@@ -1664,6 +1699,8 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Bazaar
@@ -1707,7 +1744,7 @@ class Version:
         tags_to_revs = {line.split()[0]: int(line.split()[1]) for line in msg.splitlines() if line.split()[1] != "?"}
         tags = [x[1] for x in sorted([(v, k) for k, v in tags_to_revs.items()], reverse=True)]
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -1747,6 +1784,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Fossil tags.
@@ -1761,6 +1799,8 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Fossil
@@ -1843,7 +1883,7 @@ class Version:
         ]
 
         matched_pattern = _match_version_pattern(
-            pattern, [t for t, d in tags_to_distance], latest_tag, strict, pattern_prefix
+            pattern, [t for t, d in tags_to_distance], latest_tag, highest_tag, strict, pattern_prefix
         )
         if matched_pattern is None:
             return cls._fallback(
@@ -1884,6 +1924,7 @@ class Version:
         path: Optional[Path] = None,
         pattern_prefix: Optional[str] = None,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on Pijul tags.
@@ -1899,6 +1940,8 @@ class Version:
         :param pattern_prefix: Insert this after the pattern's start anchor (`^`).
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = Vcs.Pijul
@@ -1984,7 +2027,7 @@ class Version:
 
         tags = [t["message"] for t in sorted(tag_meta_by_msg.values(), key=lambda x: x["timestamp"], reverse=True)]
 
-        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, strict, pattern_prefix)
+        matched_pattern = _match_version_pattern(pattern, tags, latest_tag, highest_tag, strict, pattern_prefix)
         if matched_pattern is None:
             return cls._fallback(
                 strict,
@@ -2036,6 +2079,7 @@ class Version:
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a detected version control system.
@@ -2070,6 +2114,8 @@ class Version:
             This is only used for Git currently.
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         vcs = _detect_vcs_from_archival(path)
@@ -2103,6 +2149,7 @@ class Version:
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         r"""
         Determine a version based on a specific VCS setting.
@@ -2131,6 +2178,8 @@ class Version:
             This is only used for Git currently.
         :param commit_length:
             Use this many characters from the start of the full commit hash.
+        :param highest_tag:
+            Only inspect the numerically highest tag across all tagged commits for a pattern match.
         :returns: Detected version.
         """
         return cls._do_vcs_callback(
@@ -2145,6 +2194,7 @@ class Version:
             pattern_prefix,
             ignore_untracked,
             commit_length,
+            highest_tag,
         )
 
     @classmethod
@@ -2161,6 +2211,7 @@ class Version:
         pattern_prefix: Optional[str] = None,
         ignore_untracked: bool = False,
         commit_length: Optional[int] = None,
+        highest_tag: bool = False,
     ) -> "Version":
         mapping = {
             Vcs.Any: cls.from_any_vcs,
@@ -2185,6 +2236,7 @@ class Version:
             ("pattern_prefix", pattern_prefix),
             ("ignore_untracked", ignore_untracked),
             ("commit_length", commit_length),
+            ("highest_tag", highest_tag),
         ]:
             if kwarg in inspect.getfullargspec(callback).args:
                 kwargs[kwarg] = value

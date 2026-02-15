@@ -29,6 +29,7 @@ def test__parse_args__from():
         commit_length=None,
         commit_prefix=None,
         escape_with=None,
+        highest_tag=False,
     )
     assert parse_args(["from", "git"]).vcs == "git"
     assert parse_args(["from", "git", "--tag-branch", "foo"]).tag_branch == "foo"
@@ -61,6 +62,7 @@ def test__parse_args__from():
     assert parse_args(["from", "any", "--commit-length", "10"]).commit_length == 10
     assert parse_args(["from", "any", "--commit-prefix", "x"]).commit_prefix == "x"
     assert parse_args(["from", "any", "--escape-with", "x"]).escape_with == "x"
+    assert parse_args(["from", "any", "--highest-tag"]).highest_tag is True
     assert parse_args(["from", "subversion", "--tag-dir", "foo"]).tag_dir == "foo"
 
     with pytest.raises(SystemExit):

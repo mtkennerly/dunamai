@@ -220,8 +220,14 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             run("git tag v0.3.0+a,b -m Annotated")
             assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
+            # Checking `highest_tag`
+            run("git checkout master")
+            run("git tag v0.2.9 -m Annotated")
+            assert from_vcs(latest_tag=True) == Version("0.2.9", dirty=False, branch=b)
+            assert from_vcs(highest_tag=True) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
+
     if not legacy:
-        assert from_vcs(path=tmp_path) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
+        assert from_vcs(path=tmp_path) == Version("0.2.9", dirty=False, branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
@@ -266,6 +272,11 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
             run("git checkout v0.1.1")
             assert from_vcs() == Version("0.1.1", dirty=False)
             assert from_vcs(latest_tag=True) == Version("0.1.1", dirty=False)
+
+            # Checking `highest_tag`
+            run("git checkout master")
+            run("git tag v0.1.2")
+            assert from_vcs(highest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
