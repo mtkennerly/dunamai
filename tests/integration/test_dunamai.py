@@ -128,13 +128,13 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
 
         # Additional one-off check not in other VCS integration tests:
         # when the only tag in the repository does not match the pattern.
-        run("git tag other -m Annotated")
+        run("git tag --no-sign other -m Annotated")
         assert from_vcs() == Version("0.0.0", distance=1, dirty=False, branch=b)
         with pytest.raises(ValueError):
             from_vcs(strict=True)
 
         avoid_identical_ref_timestamps()
-        run("git tag v0.1.0 -m Annotated")
+        run("git tag --no-sign v0.1.0 -m Annotated")
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.0", dirty=False, branch=b)
         assert run("dunamai from git") == "0.1.0"
@@ -158,7 +158,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
 
         if not legacy:
             # Verify tags with '/' work
-            run("git tag test/v0.1.0")
+            run("git tag --no-sign test/v0.1.0")
             assert run(r'dunamai from any --pattern "^test/v(?P<base>\d\.\d\.\d)"') == "0.1.0"
             assert run('dunamai from any --pattern-prefix "test/"') == "0.1.0"
 
@@ -170,22 +170,22 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
         assert from_any_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
 
-        run("git tag unmatched -m Annotated")
+        run("git tag --no-sign unmatched -m Annotated")
         assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
         with pytest.raises(ValueError):
             from_vcs(latest_tag=True)
 
         # check that we find the expected tag that has the most recent tag creation time
         if legacy:
-            run("git tag -d unmatched")
-            run("git tag v0.2.0 -m Annotated")
+            run("git tag --no-sign -d unmatched")
+            run("git tag --no-sign v0.2.0 -m Annotated")
         if not legacy:
             avoid_identical_ref_timestamps()
-            run("git tag v0.2.0b1 -m Annotated")
+            run("git tag --no-sign v0.2.0b1 -m Annotated")
             avoid_identical_ref_timestamps()
-            run("git tag v0.2.0 -m Annotated")
+            run("git tag --no-sign v0.2.0 -m Annotated")
             avoid_identical_ref_timestamps()
-            run("git tag v0.1.1 HEAD~1 -m Annotated")
+            run("git tag --no-sign v0.1.1 HEAD~1 -m Annotated")
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
@@ -209,7 +209,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
         assert run("dunamai from any --bump") == "0.2.1.dev1+{}".format(commit)
         if not legacy:
             # tag with pre-release segment.
-            run("git tag v0.2.1b3 -m Annotated")
+            run("git tag --no-sign v0.2.1b3 -m Annotated")
             assert from_vcs() == Version("0.2.1", stage=("b", 3), dirty=False, branch=b)
 
         if not legacy:
@@ -217,12 +217,12 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
             (tmp_path / "foo.txt").write_text("fourth")
             run("git add .")
             run('git commit --no-gpg-sign -m "Fourth"')
-            run("git tag v0.3.0+a,b -m Annotated")
+            run("git tag --no-sign v0.3.0+a,b -m Annotated")
             assert from_vcs() == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
             # Checking `highest_tag`
             run("git checkout master")
-            run("git tag v0.2.9 -m Annotated")
+            run("git tag --no-sign v0.2.9 -m Annotated")
             assert from_vcs(latest_tag=True) == Version("0.2.9", dirty=False, branch=b)
             assert from_vcs(highest_tag=True) == Version("0.3.0", dirty=False, tagged_metadata="a,b", branch=b)
 
@@ -243,7 +243,7 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
 
-        run("git tag v0.1.0")
+        run("git tag --no-sign v0.1.0")
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.1.0", dirty=False, branch=b)
         assert run("dunamai from git") == "0.1.0"
@@ -263,8 +263,8 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
         assert from_vcs() == Version("0.1.0", distance=2, dirty=False, branch=b)
         assert from_any_vcs() == Version("0.1.0", distance=2, dirty=False, branch=b)
 
-        run("git tag v0.2.0")
-        run("git tag v0.1.1 HEAD~1")
+        run("git tag --no-sign v0.2.0")
+        run("git tag --no-sign v0.1.1 HEAD~1")
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
@@ -275,7 +275,7 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
 
             # Checking `highest_tag`
             run("git checkout master")
-            run("git tag v0.1.2")
+            run("git tag --no-sign v0.1.2")
             assert from_vcs(highest_tag=True) == Version("0.2.0", dirty=False, branch=b)
 
 
@@ -291,7 +291,7 @@ def test__version__from_git__with_mixed_tags(tmp_path) -> None:
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
 
-        run("git tag v0.1.0")
+        run("git tag --no-sign v0.1.0")
         (tmp_path / "foo.txt").write_text("hi 2")
         run("git add .")
         avoid_identical_ref_timestamps()
@@ -306,7 +306,7 @@ def test__version__from_git__with_mixed_tags(tmp_path) -> None:
         avoid_identical_ref_timestamps()
         run('git commit --no-gpg-sign -m "Third"')
 
-        run("git tag v0.3.0")
+        run("git tag --no-sign v0.3.0")
         assert from_vcs() == Version("0.3.0", dirty=False, branch=b)
         assert from_vcs(latest_tag=True) == Version("0.3.0", dirty=False, branch=b)
 
@@ -331,7 +331,7 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
             },
         )
 
-        run("git tag v0.1.0")
+        run("git tag --no-sign v0.1.0")
         (tmp_path / "foo.txt").write_text("hi 2")
         run("git add .")
         avoid_identical_ref_timestamps()
@@ -344,7 +344,7 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
             },
         )
 
-        run("git tag v0.2.0")
+        run("git tag --no-sign v0.2.0")
         if legacy:
             assert from_vcs() == Version("0.1.0", distance=1, dirty=False, branch=b)
         else:
@@ -364,7 +364,7 @@ def test__version__from_git__gitflow(tmp_path) -> None:
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
-        run("git tag v0.1.0 -m Release")
+        run("git tag --no-sign v0.1.0 -m Release")
 
         run("git checkout -b develop")
         (tmp_path / "foo.txt").write_text("second")
@@ -382,7 +382,7 @@ def test__version__from_git__gitflow(tmp_path) -> None:
         run("git checkout master")
         run("git merge --no-gpg-sign --no-ff release/v0.2.0")
 
-        run("git tag v0.2.0 -m Release")
+        run("git tag --no-sign v0.2.0 -m Release")
         assert from_vcs() == Version("0.2.0", dirty=False, branch=b)
 
         run("git checkout develop")
@@ -477,7 +477,7 @@ def test__version__from_git__trace_env_var(tmp_path) -> None:
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
-        run("git tag v0.1.0 -m Release")
+        run("git tag --no-sign v0.1.0 -m Release")
         assert run("dunamai from git", env=env) == "0.1.0"
 
 
@@ -492,7 +492,7 @@ def test__version__from_git__exclude_decoration(tmp_path) -> None:
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
-        run("git tag v0.1.0 -m Release")
+        run("git tag --no-sign v0.1.0 -m Release")
         run("git config log.excludeDecoration refs/tags/")
 
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
@@ -511,7 +511,7 @@ def test__version__from_git__broken_ref(tmp_path) -> None:
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
-        run("git tag v0.1.0 -m Release")
+        run("git tag --no-sign v0.1.0 -m Release")
         (tmp_path / ".git/refs/tags/bad.txt").touch()
 
         assert from_vcs() == Version("0.1.0", dirty=False, branch=b)
@@ -525,19 +525,19 @@ def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
     with chdir(tmp_path):
         run("git init")
         run("git commit --no-gpg-sign --allow-empty -m Initial")
-        run("git tag v0.1.0 -m Release")
+        run("git tag --no-sign v0.1.0 -m Release")
         assert run("dunamai from git") == "0.1.0"
 
         run("git commit --no-gpg-sign --allow-empty -m Second")
         assert run("dunamai from git").startswith("0.1.0.post1.dev0+")
 
-        run("git tag v0.2.0 -m Release")
+        run("git tag --no-sign v0.2.0 -m Release")
         assert run("dunamai from git") == "0.2.0"
 
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Third")
-        run("git tag v0.3.0 -m Release")
+        run("git tag --no-sign v0.3.0 -m Release")
         assert run("dunamai from git") == "0.3.0"
 
 
