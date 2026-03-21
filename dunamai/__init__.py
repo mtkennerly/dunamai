@@ -2133,6 +2133,7 @@ class Version:
             pattern_prefix,
             ignore_untracked,
             commit_length,
+            highest_tag,
         )
 
     @classmethod
