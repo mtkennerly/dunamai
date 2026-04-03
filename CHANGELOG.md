@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed: The `highest_tag` argument was ignored in `Version.from_any_vcs()`.
+  ([Contributed by ninoseki](https://github.com/mtkennerly/dunamai/pull/110))
+
 ## v1.26.0 (2026-02-14)
 
 * Added `--highest-tag` option to select the numerically highest version,
