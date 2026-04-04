@@ -48,7 +48,7 @@ line-length = 120
 
 [tool.ruff]
 line-length = 120
-extend-select = ["W605", "N"]
+extend-select = ["ARG", "N", "W605"]
 ignore = ["E501"]
 
 [build-system]
