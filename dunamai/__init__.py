@@ -208,11 +208,12 @@ def _run_cmd(
     codes: Sequence[int] = (0,),
     shell: bool = False,
     env: Optional[dict] = None,
+    stderr: bool = True,
 ) -> Tuple[int, str]:
     result = subprocess.run(
         shlex.split(command),
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.STDOUT if stderr else subprocess.DEVNULL,
         cwd=str(where) if where is not None else None,
         shell=shell,
         env=env,
@@ -1957,7 +1958,7 @@ class Version:
                 branch = line.split("* ", 1)[1]
                 break
 
-        code, msg = _run_cmd("pijul log --limit 1 --output-format json", path)
+        code, msg = _run_cmd("pijul log --limit 1 --output-format json", path, stderr=False)
         limited_commits = json.loads(msg)
         if len(limited_commits) == 0:
             return cls._fallback(strict, dirty=dirty, branch=branch, vcs=vcs)
@@ -1992,9 +1993,7 @@ class Version:
                 if line.startswith("State "):
                     tag_state = line.split("State ", 1)[1]
                 elif line.startswith("Date:"):
-                    tag_timestamp = _parse_timestamp(
-                        line.split("Date: ", 1)[1].replace(" UTC", "Z"), format=_TIMESTAMP_GENERIC_SPACE
-                    )
+                    tag_timestamp = _parse_timestamp(line.split("Date: ", 1)[1])
                 elif line.startswith("    "):
                     tag_message += line[4:]
                     tag_after_header = True

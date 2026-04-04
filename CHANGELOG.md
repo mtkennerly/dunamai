@@ -2,6 +2,7 @@
 
 * Fixed: The `highest_tag` argument was ignored in `Version.from_any_vcs()`.
   ([Contributed by ninoseki](https://github.com/mtkennerly/dunamai/pull/110))
+* Fixed: Compatibility with Pijul `1.0.0-beta.11`.
 
 ## v1.26.0 (2026-02-14)
 

@@ -75,17 +75,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y darcs bzr
           # For Pijul:
-          # sudo apt-get install -y libxxhash-dev libzstd-dev expect
+          # sudo apt-get install -y libdbus-1-dev libsodium-dev libxxhash-dev libzstd-dev expect
 
           # rehosted because the official site deletes older artifacts:
           curl -L -o ~/fossil.tgz https://github.com/mtkennerly/storage/raw/06e29a4005b24a65bc7d639c0aa1fc152a85d0b7/software/fossil-linux-x64-2.13.tar.gz
           tar -xvf ~/fossil.tgz -C /opt
-      # TODO: Re-enable Pijul tests once this is fixed: https://nest.pijul.com/pijul/pijul/discussions/777
+      # TODO: Re-enable Pijul tests once this is fixed: https://nest.pijul.org/pijul/pijul/discussions/953
       # - name: Prepare Pijul
       #   run: |
       #     # Same as default features, but without openssl:
-      #     cargo install pijul --version 1.0.0-beta.2 --no-default-features --features keep-changes
-      #     expect -c 'spawn pijul key generate test ; expect "Password for the new key (press enter to leave it unencrypted):" ; send -- "\r" ; expect eof'
+      #     cargo install pijul --version 1.0.0-beta.11 --no-default-features --features keep-changes
+      #     pijul key new --no-link --no-prompt --display-name test --email 'test@example.com' --expiry 3000-01-01T00:00:00Z --username test test
       - run: |
           export PATH="$PATH:/opt"
 
