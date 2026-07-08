@@ -12,6 +12,16 @@ import pytest
 from dunamai import Version, Vcs, Concern, _get_git_version, _run_cmd
 
 
+@pytest.fixture(scope="session", autouse=True)
+def set_env_vars():
+    os.environ["GIT_AUTHOR_NAME"] = "foo"
+    os.environ["GIT_AUTHOR_EMAIL"] = "foo@example.com"
+    os.environ["GIT_COMMITTER_NAME"] = "foo"
+    os.environ["GIT_COMMITTER_EMAIL"] = "foo@example.com"
+    os.environ["DARCS_EMAIL"] = "foo <foo@example.com>"
+    os.environ["BZR_EMAIL"] = "foo <foo@example.com>"
+
+
 def avoid_identical_ref_timestamps() -> None:
     time.sleep(1.2)
 
@@ -53,6 +63,8 @@ def set_missing_env(key: str, value: str, alts: Optional[List[str]] = None) -> N
 
 def make_run_callback(where: Path) -> Callable:
     def inner(command, expected_code: int = 0, env: Optional[dict] = None):
+        if env is not None:
+            env = {**os.environ, **env}
         _, out = _run_cmd(command, where=where, codes=[expected_code], env=env)
         return out
 
@@ -327,7 +339,6 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
             env={
                 "GIT_COMMITTER_DATE": "2000-01-02T01:00:00",
                 "GIT_AUTHOR_DATE": "2000-01-02T01:00:00",
-                **os.environ,
             },
         )
 
@@ -340,7 +351,6 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
             env={
                 "GIT_COMMITTER_DATE": "2000-01-01T01:00:00",
                 "GIT_AUTHOR_DATE": "2000-01-01T01:00:00",
-                **os.environ,
             },
         )
 

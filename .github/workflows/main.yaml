@@ -44,8 +44,6 @@ jobs:
           - python-version: '3.7'
             git-version: '1.8.2.3'
     name: test (python = ${{ matrix.python-version }}, git = ${{ matrix.git-version }})
-    env:
-      DARCS_EMAIL: foo <foo@example.com>
     steps:
       - if: ${{ matrix.python-version == '3.5' }}
         run: |
@@ -88,10 +86,6 @@ jobs:
       #     pijul key new --no-link --no-prompt --display-name test --email 'test@example.com' --expiry 3000-01-01T00:00:00Z --username test test
       - run: |
           export PATH="$PATH:/opt"
-
-          git config --global user.name "foo"
-          git config --global user.email "foo@example.com"
-          bzr whoami 'foo <foo@example.com>'
       - if: ${{ matrix.python-version == '3.5' || matrix.python-version == '3.6' }}
         run: |
           cp poetry.legacy.lock poetry.lock
