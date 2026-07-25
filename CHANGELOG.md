@@ -3,6 +3,7 @@
 * Fixed: With `highest_tag` enabled, a `pattern`/`pattern_prefix` that only some
   tags matched could select a non-matching tag and fall back to the default
   version (e.g. `0.0.0`) instead of the highest matching tag.
+  ([Contributed by Flourish3](https://github.com/mtkennerly/dunamai/pull/112))
 
 ## v1.26.1 (2026-04-04)
 
