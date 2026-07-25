@@ -4,6 +4,8 @@
   tags matched could select a non-matching tag and fall back to the default
   version (e.g. `0.0.0`) instead of the highest matching tag.
   ([Contributed by Flourish3](https://github.com/mtkennerly/dunamai/pull/112))
+* Fixed: Integration with Fossil 2.28 failed due to a SQL formatting mode change.
+  ([Contributed by rosset](https://github.com/mtkennerly/dunamai/issues/113))
 
 ## v1.26.1 (2026-04-04)
 
