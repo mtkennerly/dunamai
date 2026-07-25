@@ -1,3 +1,9 @@
+## Unreleased
+
+* Fixed: With `highest_tag` enabled, a `pattern`/`pattern_prefix` that only some
+  tags matched could select a non-matching tag and fall back to the default
+  version (e.g. `0.0.0`) instead of the highest matching tag.
+
 ## v1.26.1 (2026-04-04)
 
 * Fixed: The `highest_tag` argument was ignored in `Version.from_any_vcs()`.

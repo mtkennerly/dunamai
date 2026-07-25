@@ -270,6 +270,29 @@ def _match_version_pattern(
         selected_source = None
         selected_parsed = None
         for source in sources:
+            try:
+                match = re.search(pattern, source)
+            except re.error as e:
+                raise re.error(
+                    _pattern_error(
+                        "The pattern is an invalid regular expression: {}".format(e.msg),  # type: ignore
+                        pattern,
+                    ),
+                    e.pattern,  # type: ignore
+                    e.pos,  # type: ignore
+                )
+            # Only rank tags that actually match the pattern/prefix. Otherwise a
+            # tag for a different prefix could be selected and then fail to match,
+            # collapsing the result to the fallback version.
+            if match is None:
+                continue
+            try:
+                if match.group("base") is None:
+                    continue
+            except IndexError:
+                raise ValueError(
+                    _pattern_error("The pattern did not include required capture group 'base'", pattern)
+                )
             parsed = Version.parse(source, pattern)
             try:
                 if selected_parsed is None or parsed > selected_parsed:
