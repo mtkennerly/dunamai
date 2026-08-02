@@ -1,4 +1,4 @@
-## Unreleased
+## v1.26.2 (2026-08-01)
 
 * Fixed: With `highest_tag` enabled, a `pattern`/`pattern_prefix` that only some
   tags matched could select a non-matching tag and fall back to the default
