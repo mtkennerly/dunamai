@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed: `Version.bump()` ignored the `increment` when a stage had no revision.
+  ([Contributed by afonsojanu](https://github.com/mtkennerly/dunamai/pull/116))
+
 ## v1.26.2 (2026-08-01)
 
 * Fixed: With `highest_tag` enabled, a `pattern`/`pattern_prefix` that only some
