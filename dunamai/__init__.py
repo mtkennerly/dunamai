@@ -1013,7 +1013,10 @@ class Version:
             bumped.base = bump_version(bumped.base, index, increment)
         else:
             if bumped.revision is None:
-                bumped.revision = 2
+                # A stage without an explicit revision is implicitly revision 1
+                # (e.g. "rc" means "rc1"), so bump from there instead of
+                # ignoring `increment` and always landing on 2.
+                bumped.revision = 1 + increment
             else:
                 bumped.revision += increment
         return bumped
