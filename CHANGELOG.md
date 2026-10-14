@@ -1,4 +1,4 @@
-## Unreleased
+## v1.26.3 (2026-10-14)
 
 * Fixed: `Version.bump()` ignored the `increment` when a stage had no revision.
   ([Contributed by afonsojanu](https://github.com/mtkennerly/dunamai/pull/116))
