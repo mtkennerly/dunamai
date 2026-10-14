@@ -32,6 +32,21 @@ def lacks_git_version(version: List[int]) -> bool:
     return _get_git_version() < version
 
 
+def git_init(run: Callable, name: str, ref_format: Optional[str] = None) -> None:
+    version = _get_git_version()
+
+    if ref_format is not None and version >= [2, 45]:
+        run("git init --ref-format={}".format(ref_format))
+    else:
+        run("git init")
+
+    try:
+        # Compatibility for newer Git versions:
+        run("git branch -m {}".format(name))
+    except Exception:
+        pass
+
+
 REPO = Path(__file__).parent.parent.parent
 
 
@@ -107,12 +122,7 @@ def test__version__from_git__with_annotated_tags(tmp_path) -> None:
     legacy = is_git_legacy()
 
     with chdir(tmp_path):
-        run("git init")
-        try:
-            # Compatibility for newer Git versions:
-            run("git branch -m master")
-        except Exception:
-            pass
+        git_init(run, b)
         assert from_vcs(fresh=True) == Version("0.0.0", distance=0, dirty=True, branch=b)
         assert from_vcs(fresh=True).vcs == Vcs.Git
 
@@ -250,7 +260,7 @@ def test__version__from_git__with_lightweight_tags(tmp_path) -> None:
     legacy = is_git_legacy()
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
@@ -298,7 +308,7 @@ def test__version__from_git__with_mixed_tags(tmp_path) -> None:
     b = "master"
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run('git commit --no-gpg-sign -m "Initial commit"')
@@ -336,7 +346,7 @@ def test__version__from_git__highest_tag_with_pattern_prefix(tmp_path) -> None:
         return from_vcs(pattern="default-unprefixed", pattern_prefix="foo-", **kwargs)
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("1")
         run("git add .")
         run('git commit --no-gpg-sign -m "First"')
@@ -379,7 +389,7 @@ def test__version__from_git__highest_tag_picks_numerically_highest(tmp_path) -> 
         return from_vcs(pattern="default-unprefixed", pattern_prefix="foo-", **kwargs)
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("1")
         run("git add .")
         run('git commit --no-gpg-sign -m "First"')
@@ -400,12 +410,13 @@ def test__version__from_git__highest_tag_picks_numerically_highest(tmp_path) -> 
 def test__version__from_git__highest_tag_with_no_matching_tags(tmp_path) -> None:
     run = make_run_callback(tmp_path)
     from_vcs = make_from_callback(Version.from_git)
+    b = "master"
 
     def from_missing(**kwargs):
         return from_vcs(pattern="default-unprefixed", pattern_prefix="missing-", **kwargs)
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("1")
         run("git add .")
         run('git commit --no-gpg-sign -m "First"')
@@ -425,7 +436,7 @@ def test__version__from_git__with_nonchronological_commits(tmp_path) -> None:
     legacy = is_git_legacy()
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run(
@@ -464,7 +475,7 @@ def test__version__from_git__gitflow(tmp_path) -> None:
     b2 = "develop"
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
@@ -575,9 +586,10 @@ def test__version__from_git__shallow(tmp_path) -> None:
 def test__version__from_git__trace_env_var(tmp_path) -> None:
     run = make_run_callback(tmp_path)
     env = {**os.environ, "GIT_TRACE": "1"}
+    b = "master"
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
@@ -592,7 +604,7 @@ def test__version__from_git__exclude_decoration(tmp_path) -> None:
     b = "master"
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
@@ -611,7 +623,7 @@ def test__version__from_git__broken_ref(tmp_path) -> None:
     b = "master"
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b, ref_format="files")
         (tmp_path / "foo.txt").write_text("hi")
         run("git add .")
         run("git commit --no-gpg-sign -m Initial")
@@ -625,9 +637,10 @@ def test__version__from_git__broken_ref(tmp_path) -> None:
 @pytest.mark.skipif(is_git_legacy(), reason="Requires non-legacy Git")
 def test__version__from_git__initial_commit_empty_and_tagged(tmp_path) -> None:
     run = make_run_callback(tmp_path)
+    b = "master"
 
     with chdir(tmp_path):
-        run("git init")
+        git_init(run, b)
         run("git commit --no-gpg-sign --allow-empty -m Initial")
         run("git tag --no-sign v0.1.0 -m Release")
         assert run("dunamai from git") == "0.1.0"
