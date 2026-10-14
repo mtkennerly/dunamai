@@ -898,6 +898,8 @@ class Version:
 
         This uses inexact heuristics, so its output may vary slightly between
         releases. Consider this a "best effort" conversion.
+        It makes some assumptions about how the version and metadata may be ordered,
+        and is geared toward parsing Dunamai's default output format.
 
         :param version: Full version, such as 0.3.0a3+d7.gb6a9020.dirty.
         :param pattern: Regular expression matched against the version.
