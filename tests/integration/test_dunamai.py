@@ -569,6 +569,38 @@ def test__version__from_git__archival_tagged_post() -> None:
         assert detected._newer_unmatched_tags == []
 
 
+def test__version__from_git__archival_tagged_prerelease() -> None:
+    with chdir(REPO / "tests" / "archival" / "git-tagged-prerelease"):
+        detected = Version.from_git()
+        assert detected == Version(
+            "0.1.0",
+            stage=("rc", 1),
+            branch="master",
+            dirty=False,
+            distance=0,
+            commit="8fe614d",
+            timestamp=dt.datetime(2022, 11, 6, 23, 7, 50, tzinfo=dt.timezone.utc),
+        )
+        assert detected._matched_tag == "v0.1.0-rc.1"
+        assert detected._newer_unmatched_tags == []
+
+
+def test__version__from_git__archival_tagged_prerelease_post() -> None:
+    with chdir(REPO / "tests" / "archival" / "git-tagged-prerelease-post"):
+        detected = Version.from_git()
+        assert detected == Version(
+            "0.1.0",
+            stage=("rc", 1),
+            branch="master",
+            dirty=False,
+            distance=1,
+            commit="1b57ff7",
+            timestamp=dt.datetime(2022, 11, 6, 23, 16, 59, tzinfo=dt.timezone.utc),
+        )
+        assert detected._matched_tag == "v0.1.0-rc.1"
+        assert detected._newer_unmatched_tags == []
+
+
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")
 def test__version__from_git__shallow(tmp_path) -> None:
     run = make_run_callback(tmp_path)
