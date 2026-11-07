@@ -1,3 +1,9 @@
+## Unreleased
+
+* Fixed: Hyphenated tags in the `describe` field in `.git_archival.json` were not parsed correctly
+  when the repository was exactly on a tagged commit.
+  ([Contributed by TohruSu](https://github.com/mtkennerly/dunamai/pull/120))
+
 ## v1.26.3 (2026-10-14)
 
 * Fixed: `Version.bump()` ignored the `increment` when a stage had no revision.
