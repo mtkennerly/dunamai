@@ -1,4 +1,4 @@
-## Unreleased
+## v1.26.4 (2026-11-07)
 
 * Fixed: Hyphenated tags in the `describe` field in `.git_archival.json` were not parsed correctly
   when the repository was exactly on a tagged commit.
