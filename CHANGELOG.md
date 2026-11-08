@@ -1,3 +1,8 @@
+## Unreleased
+
+* Fixed: Using a relative `--path` would not find a `.git_archival.json` file in a parent directory.
+  ([Contributed by TohruSu](https://github.com/mtkennerly/dunamai/pull/122))
+
 ## v1.26.4 (2026-11-07)
 
 * Fixed: Hyphenated tags in the `describe` field in `.git_archival.json` were not parsed correctly
