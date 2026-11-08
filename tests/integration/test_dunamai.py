@@ -9,7 +9,7 @@ from typing import Callable, Iterator, List, Optional
 
 import pytest
 
-from dunamai import Version, Vcs, Concern, _get_git_version, _run_cmd
+from dunamai import Version, Vcs, Concern, _find_higher_file, _get_git_version, _run_cmd
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -599,6 +599,57 @@ def test__version__from_git__archival_tagged_prerelease_post() -> None:
         )
         assert detected._matched_tag == "v0.1.0-rc.1"
         assert detected._newer_unmatched_tags == []
+
+
+def test__version__from_git__archival_relative_path(tmp_path, monkeypatch) -> None:
+    # Keep Git from finding a repository above the temporary directory.
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    root = tmp_path / "root"
+    (root / "sub" / "deep").mkdir(parents=True)
+    shutil.copyfile(REPO / "tests" / "archival" / "git-tagged" / ".git_archival.json", root / ".git_archival.json")
+    expected = Version(
+        "0.1.0",
+        branch="master",
+        dirty=False,
+        distance=0,
+        commit="8fe614d",
+        timestamp=dt.datetime(2022, 11, 6, 23, 7, 50, tzinfo=dt.timezone.utc),
+    )
+
+    with chdir(root / "sub"):
+        assert Version.from_git() == expected
+        assert Version.from_git(path=Path(".")) == expected
+        assert Version.from_git(path=Path.cwd()) == expected
+        assert Version.from_any_vcs(path=Path(".")) == expected
+
+    with chdir(root / "sub" / "deep"):
+        assert Version.from_git(path=Path("..")) == expected
+        assert Version.from_any_vcs(path=Path("..")) == expected
+
+
+def test__find_higher_file__relative_start(tmp_path) -> None:
+    # The file in `deep` must not be found when starting from its parent.
+    root = tmp_path / "root"
+    deep = root / "sub" / "deep"
+    deep.mkdir(parents=True)
+    (root / "target").write_text("")
+    (deep / "target").write_text("")
+    with chdir(deep):
+        assert _find_higher_file("target", Path("..")) == root / "target"
+
+    # A file next to the boundary is still found.
+    (root / "boundary").mkdir()
+    with chdir(root / "sub"):
+        assert _find_higher_file("target", Path("."), "boundary") == root / "target"
+
+    # A file beyond the boundary is not found.
+    inner = root / "inner"
+    (inner / "boundary").mkdir(parents=True)
+    (inner / "sub").mkdir()
+    with chdir(inner / "sub"):
+        assert _find_higher_file("target", Path("."), "boundary") is None
+        assert _find_higher_file("target", Path(".."), "boundary") is None
+        assert _find_higher_file("target", None, "boundary") is None
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="Requires Git")

@@ -443,6 +443,9 @@ def _find_higher_file(name: str, start: Optional[Path], limit: Optional[str] = N
 
     if start is None:
         start = Path.cwd()
+    else:
+        # `parents` is lexical, so make relative paths like `.` or `..` absolute first.
+        start = Path(os.path.abspath(str(start)))
     for level in [start, *start.parents]:
         if (level / name).is_file():
             return level / name
