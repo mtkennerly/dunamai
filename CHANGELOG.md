@@ -1,4 +1,4 @@
-## Unreleased
+## v1.26.5 (2026-11-08)
 
 * Fixed: Using a relative `--path` would not find a `.git_archival.json` file in a parent directory.
   ([Contributed by TohruSu](https://github.com/mtkennerly/dunamai/pull/122))
