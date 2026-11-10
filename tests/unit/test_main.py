@@ -1,9 +1,10 @@
+import sys
 from argparse import Namespace
 
 import pytest
 
 from dunamai import _run_cmd
-from dunamai.__main__ import parse_args, VERSION_SOURCE_PATTERN
+from dunamai.__main__ import main, parse_args, VERSION_SOURCE_PATTERN
 
 
 def test__parse_args__from():
@@ -84,3 +85,21 @@ def test__cli_check():
     _run_cmd("dunamai check 0.01.0 --style semver", where=None, codes=[1])
     _run_cmd("dunamai check", where=None, codes=[1])
     _run_cmd("echo 0.01.0 | dunamai check", where=None, shell=True)
+
+
+def test__cli_latest_tag_highest_tag_conflict(monkeypatch, capsys):
+    # --latest-tag and --highest-tag contradict each other (the matcher
+    # would silently honor only --latest-tag), so the combination is a
+    # usage error instead of a silent acceptance.
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["dunamai", "from", "any", "--latest-tag", "--highest-tag"],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+    assert excinfo.value.code == 2
+    assert (
+        "--latest-tag and --highest-tag are mutually exclusive"
+        in capsys.readouterr().err
+    )
