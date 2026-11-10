@@ -327,7 +327,16 @@ def from_vcs(
 
 
 def main() -> None:
-    args = parse_args()
+    parser = get_parser()
+    args = parser.parse_args()
+    if (
+        args.command == "from"
+        and getattr(args, "latest_tag", False)
+        and getattr(args, "highest_tag", False)
+    ):
+        # The matcher honors --latest-tag first and would silently ignore
+        # --highest-tag, so refuse the contradictory combination up front.
+        parser.error("--latest-tag and --highest-tag are mutually exclusive")
     try:
         if args.command == "from":
             tag_dir = getattr(args, "tag_dir", "tags")
